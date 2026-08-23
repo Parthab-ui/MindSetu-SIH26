@@ -2,7 +2,7 @@ name: Optimize MindSetu AI speed
 
 on:
   push:
-    branches: [ai-speed-work-2]
+    branches: [main]
 
 permissions:
   contents: write
@@ -13,7 +13,6 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-
       - name: Patch AI streaming
         run: |
           python - <<'PY'
@@ -23,19 +22,13 @@ jobs:
           p = Path('backend/main.py')
           s = p.read_text()
           s = s.replace('"stream": False,', '"stream": True,', 1)
-          # Streaming and structured JSON are incompatible for the desired UX.
           s = re.sub(r'\n        "format": \{.*?\n        \},\n', '\n', s, count=1, flags=re.S)
           start = s.index('def stream_ollama_response(payload):')
           end = s.index('\n\n# =========================================================\n# CHAT', start)
           fn = '''def stream_ollama_response(payload):
 
     try:
-        with requests.post(
-            OLLAMA_URL,
-            json=payload,
-            stream=True,
-            timeout=(5, OLLAMA_TIMEOUT),
-        ) as response:
+        with requests.post(OLLAMA_URL, json=payload, stream=True, timeout=(5, OLLAMA_TIMEOUT)) as response:
             if response.status_code != 200:
                 try:
                     detail = response.json().get("error") or "Ollama returned an error."
@@ -43,7 +36,6 @@ jobs:
                     detail = "Ollama returned an HTTP error."
                 yield json.dumps({"type": "error", "message": detail}) + "\\n"
                 return
-
             sent = False
             for raw_line in response.iter_lines(decode_unicode=True):
                 if not raw_line:
@@ -52,19 +44,16 @@ jobs:
                     data = json.loads(raw_line)
                 except (TypeError, json.JSONDecodeError):
                     continue
-                message = data.get("message") or {}
-                content = message.get("content") or ""
+                content = (data.get("message") or {}).get("content") or ""
                 if content:
                     sent = True
                     yield json.dumps({"type": "token", "content": content}) + "\\n"
                 if data.get("done"):
                     break
-
             if not sent:
                 yield json.dumps({"type": "error", "message": "AI returned an empty response."}) + "\\n"
                 return
             yield json.dumps({"type": "done"}) + "\\n"
-
     except requests.exceptions.ConnectionError:
         yield json.dumps({"type": "error", "message": "MindSetu cannot connect to Ollama. Make sure Ollama is running."}) + "\\n"
     except requests.exceptions.Timeout:
@@ -81,9 +70,9 @@ jobs:
 
           p = Path('frontend/src/App.jsx')
           s = p.read_text()
-          start_marker = '    // Small delay between displayed characters.'
-          if start_marker in s:
-              start = s.index(start_marker)
+          marker = '    // Small delay between displayed characters.'
+          if marker in s:
+              start = s.index(marker)
               end = s.index('\n    try {', start)
               replacement = '''    function appendStreamText(textToAppend) {
       if (!textToAppend) return;
@@ -96,26 +85,22 @@ jobs:
     }
 '''
               s = s[:start] + replacement + s[end:]
-
-          # Remove await because appendStreamText is now synchronous.
           s = s.replace('await appendStreamText(\n              token\n            );', 'appendStreamText(token);')
           s = s.replace('await appendStreamText(\n              chunk.content\n            );', 'appendStreamText(chunk.content);')
           p.write_text(s)
           PY
-
       - name: Validate backend
         run: python -m py_compile backend/main.py
-
       - name: Validate frontend
         working-directory: frontend
         run: |
           npm ci
           npm run build
-
       - name: Commit optimization
         run: |
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add backend/main.py frontend/src/App.jsx
+          git diff --cached --quiet && exit 0
           git commit -m 'Optimize MindSetu AI streaming'
           git push
