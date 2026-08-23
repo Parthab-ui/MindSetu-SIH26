@@ -1,0 +1,222 @@
+name: Optimize MindSetu AI Chat
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  optimize:
+    if: ${{ !startsWith(github.event.head_commit.message, 'Optimize MindSetu AI response speed') }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Apply latency optimizations
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import re
+
+          backend = Path('backend/main.py')
+          text = backend.read_text(encoding='utf-8')
+
+          # Let Ollama send partial chat responses instead of waiting
+          # for the complete generation.
+          text = text.replace('"stream": False,', '"stream": True,', 1)
+
+          # Structured JSON forces the model to finish a structured object
+          # before the application can safely consume it. The safety prompt
+          # already requires a plain student-facing answer, so remove the
+          # JSON schema and parse native streamed content instead.
+          text = re.sub(
+              r'\n        # Force the model to return a student-facing response.*?\n        },\n\n        "options":',
+              '\n        "options":',
+              text,
+              count=1,
+              flags=re.S,
+          )
+
+          # Replace the old non-streaming requests.json() implementation
+          # with native Ollama NDJSON streaming. Qwen3 thinking remains
+          # disabled at the top level, so only message.content is exposed.
+          new_stream = r'''def stream_ollama_response(payload):
+
+    try:
+
+        with requests.post(
+            OLLAMA_URL,
+            json=payload,
+            stream=True,
+            timeout=(5, OLLAMA_TIMEOUT),
+        ) as response:
+
+            if response.status_code != 200:
+
+                try:
+                    error_data = response.json()
+                    detail = (
+                        error_data.get("error")
+                        or "Ollama returned an error."
+                    )
+                except Exception:
+                    detail = "Ollama returned an HTTP error."
+
+                yield json.dumps({
+                    "type": "error",
+                    "message": detail,
+                }) + "\n"
+                return
+
+            sent_content = False
+
+            for raw_line in response.iter_lines(decode_unicode=True):
+
+                if not raw_line:
+                    continue
+
+                try:
+                    data = json.loads(raw_line)
+                except (TypeError, json.JSONDecodeError):
+                    continue
+
+                message_data = data.get("message", {})
+                content = message_data.get("content", "")
+
+                # Never expose Qwen's thinking field. Only final content
+                # reaches the student.
+                if content:
+                    sent_content = True
+                    yield json.dumps({
+                        "type": "token",
+                        "content": content,
+                    }) + "\n"
+
+                if data.get("done"):
+                    break
+
+            if not sent_content:
+                yield json.dumps({
+                    "type": "error",
+                    "message": "AI returned an empty response.",
+                }) + "\n"
+                return
+
+            yield json.dumps({
+                "type": "done",
+            }) + "\n"
+
+    except requests.exceptions.ConnectionError:
+
+        yield json.dumps({
+            "type": "error",
+            "message": (
+                "MindSetu cannot connect to Ollama. "
+                "Make sure Ollama is running."
+            ),
+        }) + "\n"
+
+    except requests.exceptions.Timeout:
+
+        yield json.dumps({
+            "type": "error",
+            "message": "Qwen took too long to respond.",
+        }) + "\n"
+
+    except requests.exceptions.RequestException as error:
+
+        print("OLLAMA ERROR:", error)
+
+        yield json.dumps({
+            "type": "error",
+            "message": "The AI service is temporarily unavailable.",
+        }) + "\n"
+
+    except Exception as error:
+
+        print("OLLAMA UNEXPECTED ERROR:", error)
+
+        yield json.dumps({
+            "type": "error",
+            "message": str(error),
+        }) + "\n"
+
+
+# =========================================================
+# CHAT
+# =========================================================
+'''
+
+          text, count = re.subn(
+              r'def stream_ollama_response\(payload\):.*?# =========================================================\n# CHAT\n# =========================================================\n',
+              new_stream,
+              text,
+              count=1,
+              flags=re.S,
+          )
+          if count != 1:
+              raise SystemExit('Could not locate stream_ollama_response block')
+
+          backend.write_text(text, encoding='utf-8')
+
+          frontend = Path('frontend/src/App.jsx')
+          text = frontend.read_text(encoding='utf-8')
+
+          # Remove the artificial 14ms character-by-character typewriter.
+          # React now appends each actual Ollama stream chunk directly.
+          replacement = '''    function appendStreamText(textToAppend) {
+      if (!textToAppend) return;
+
+      setChatMessages((previous) =>
+        previous.map((chatMessage, index) => {
+          if (
+            index === previous.length - 1 &&
+            chatMessage.sender === "ai" &&
+            chatMessage.streaming
+          ) {
+            return {
+              ...chatMessage,
+              text: chatMessage.text + textToAppend,
+            };
+          }
+
+          return chatMessage;
+        })
+      );
+    }
+
+    try {'''
+
+          text, count = re.subn(
+              r'    // Small delay between displayed characters\.\n.*?    try \{',
+              replacement,
+              text,
+              count=1,
+              flags=re.S,
+          )
+          if count != 1:
+              raise SystemExit('Could not locate frontend typewriter block')
+
+          frontend.write_text(text, encoding='utf-8')
+          PY
+
+      - name: Validate Python syntax
+        run: python -m py_compile backend/main.py
+
+      - name: Validate frontend package
+        working-directory: frontend
+        run: |
+          npm ci
+          npm run build
+
+      - name: Commit optimized chat
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add backend/main.py frontend/src/App.jsx
+          git diff --cached --quiet && exit 0
+          git commit -m "Optimize MindSetu AI response speed"
+          git push
