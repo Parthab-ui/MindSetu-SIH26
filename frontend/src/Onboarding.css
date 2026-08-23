@@ -183,3 +183,61 @@
     font-size: 40px;
   }
 }
+
+/* =========================================================
+   DARK MODE — ONBOARDING
+   ========================================================= */
+html[data-theme="dark"] .onboarding-page {
+  background:
+    radial-gradient(circle at 50% 20%, #183b36 0, transparent 34%),
+    #0f1716 !important;
+  color: #edf5f3 !important;
+}
+
+html[data-theme="dark"] .onboarding-header {
+  background: rgba(23,32,31,.94) !important;
+  border-color: #2c3c39 !important;
+  color: #edf5f3 !important;
+}
+
+html[data-theme="dark"] .back-button {
+  background: #17201f !important;
+  color: #c2d0cd !important;
+  border-color: #40534f !important;
+}
+
+html[data-theme="dark"] .privacy-label,
+html[data-theme="dark"] .onboarding-label,
+html[data-theme="dark"] .onboarding-intro,
+html[data-theme="dark"] .onboarding-note {
+  color: #91a29e !important;
+}
+
+html[data-theme="dark"] .privacy-card,
+html[data-theme="dark"] .consent-box {
+  background: #17201f !important;
+  color: #edf5f3 !important;
+  border-color: #2c3c39 !important;
+}
+
+html[data-theme="dark"] .privacy-item {
+  color: #c2d0cd !important;
+  border-color: #2c3c39 !important;
+}
+
+html[data-theme="dark"] .privacy-item strong,
+html[data-theme="dark"] .onboarding-container h1,
+html[data-theme="dark"] .onboarding-container h2,
+html[data-theme="dark"] .onboarding-container p,
+html[data-theme="dark"] .consent-box label {
+  color: #edf5f3 !important;
+}
+
+html[data-theme="dark"] .continue-button {
+  background: #3f938b !important;
+  color: #ffffff !important;
+}
+
+html[data-theme="dark"] .continue-button:hover:not(:disabled) {
+  background: #50a79e !important;
+}
