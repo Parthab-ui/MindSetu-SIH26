@@ -1,0 +1,185 @@
+.onboarding-page {
+  min-height: 100vh;
+  background:
+    radial-gradient(circle at 50% 20%, #e3f2ee 0, transparent 32%),
+    #f7faf9;
+  color: #17332d;
+}
+
+.onboarding-header {
+  height: 76px;
+  padding: 0 7%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid #e3ebe8;
+  background: rgba(247, 250, 249, 0.9);
+}
+
+.onboarding-logo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 21px;
+  font-weight: 750;
+}
+
+.back-button {
+  border: none;
+  background: transparent;
+  color: #55716a;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.privacy-label {
+  color: #55716a;
+  font-size: 13px;
+}
+
+.onboarding-container {
+  width: min(650px, 90%);
+  margin: 0 auto;
+  padding: 70px 0;
+  text-align: center;
+}
+
+.onboarding-icon {
+  width: 64px;
+  height: 64px;
+  margin: 0 auto 22px;
+  display: grid;
+  place-items: center;
+  border-radius: 20px;
+  background: #dff0eb;
+  font-size: 28px;
+}
+
+.onboarding-label {
+  color: #176b5d;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 1.5px;
+}
+
+.onboarding-container h1 {
+  margin: 14px 0;
+  font-size: 48px;
+  line-height: 1.05;
+  letter-spacing: -2px;
+}
+
+.onboarding-container h1 span {
+  color: #176b5d;
+}
+
+.onboarding-intro {
+  max-width: 590px;
+  margin: 0 auto 35px;
+  color: #657a73;
+  line-height: 1.7;
+  font-size: 16px;
+}
+
+.privacy-card {
+  padding: 28px;
+  text-align: left;
+  background: white;
+  border: 1px solid #dfe9e5;
+  border-radius: 18px;
+  box-shadow: 0 15px 45px rgba(23, 75, 65, 0.07);
+}
+
+.privacy-card h2 {
+  margin: 0 0 24px;
+  font-size: 21px;
+}
+
+.privacy-item {
+  display: flex;
+  gap: 16px;
+  padding: 17px 0;
+  border-top: 1px solid #edf2f0;
+}
+
+.privacy-item > div:first-child {
+  width: 40px;
+  height: 40px;
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  border-radius: 12px;
+  background: #edf7f4;
+}
+
+.privacy-item h3 {
+  margin: 0 0 5px;
+  font-size: 15px;
+}
+
+.privacy-item p {
+  margin: 0;
+  color: #70827c;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.consent-box {
+  display: flex;
+  gap: 12px;
+  margin: 24px 0;
+  padding: 16px;
+  text-align: left;
+  border: 1px solid #dfe9e5;
+  border-radius: 12px;
+  background: #ffffff;
+}
+
+.consent-box input {
+  width: 18px;
+  height: 18px;
+  margin-top: 2px;
+  accent-color: #176b5d;
+}
+
+.consent-box label {
+  color: #657a73;
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.continue-button {
+  width: 100%;
+  padding: 15px;
+  border: none;
+  border-radius: 10px;
+  background: #176b5d;
+  color: white;
+  font-weight: 700;
+  font-size: 15px;
+  cursor: pointer;
+}
+
+.continue-button:hover {
+  background: #12584d;
+}
+
+.onboarding-note {
+  margin-top: 15px;
+  color: #82918d;
+  font-size: 12px;
+}
+
+@media (max-width: 600px) {
+  .privacy-label {
+    display: none;
+  }
+
+  .onboarding-container {
+    padding: 45px 0;
+  }
+
+  .onboarding-container h1 {
+    font-size: 40px;
+  }
+}

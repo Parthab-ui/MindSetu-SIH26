@@ -1,189 +1,2579 @@
+import { useEffect, useState } from "react";
 import "./App.css";
 
-function App() {
+const API = "http://127.0.0.1:8000";
+
+const PHQ9_QUESTIONS = [
+  "Little interest or pleasure in doing things",
+  "Feeling down, depressed, or hopeless",
+  "Trouble falling or staying asleep, or sleeping too much",
+  "Feeling tired or having little energy",
+  "Poor appetite or overeating",
+  "Feeling bad about yourself — or that you are a failure or have let yourself or your family down",
+  "Trouble concentrating on things, such as reading or watching television",
+  "Moving or speaking so slowly that other people could have noticed, or the opposite — being unusually fidgety or restless",
+  "Thoughts that you would be better off dead, or of hurting yourself in some way",
+];
+
+const GAD7_QUESTIONS = [
+  "Feeling nervous, anxious, or on edge",
+  "Not being able to stop or control worrying",
+  "Worrying too much about different things",
+  "Trouble relaxing",
+  "Being so restless that it is hard to sit still",
+  "Becoming easily annoyed or irritable",
+  "Feeling afraid, as if something awful might happen",
+];
+
+const OPTIONS = [
+  "Not at all",
+  "Several days",
+  "More than half the days",
+  "Nearly every day",
+];
+
+const MOODS = [
+  { value: 1, emoji: "😞", label: "Very low" },
+  { value: 2, emoji: "😕", label: "Low" },
+  { value: 3, emoji: "😐", label: "Okay" },
+  { value: 4, emoji: "🙂", label: "Good" },
+  { value: 5, emoji: "😄", label: "Great" },
+];
+
+async function apiRequest(endpoint, options = {}) {
+  const response = await fetch(`${API}${endpoint}`, {
+    headers: {
+      "Content-Type": "application/json",
+    },
+    ...options,
+  });
+
+  let data;
+
+  try {
+    data = await response.json();
+  } catch {
+    throw new Error("Invalid response from MindSetu server.");
+  }
+
+  if (!response.ok) {
+    throw new Error(
+      data.detail || "Something went wrong."
+    );
+  }
+
+  return data;
+}
+
+
+// ========================================================
+// HEADER
+// ========================================================
+
+function Header({ darkMode, setDarkMode }) {
   return (
-    <div className="app">
-      <nav className="navbar">
-        <div className="logo">
-          <div className="logo-mark">M</div>
-          <span>MindSetu</span>
+    <header className="topbar">
+      <div className="logo">
+        Mind<span>Setu</span>
+      </div>
+
+      <div className="topbar-right">
+        <div className="topbar-text">
+          Student Wellbeing Platform
         </div>
 
-        <div className="nav-links">
-          <a href="#how">How it works</a>
-          <a href="#support">Support</a>
-          <button className="nav-button">Sign in</button>
-        </div>
-      </nav>
+        <button
+          className="theme-toggle"
+          onClick={() => setDarkMode(!darkMode)}
+          aria-label={
+            darkMode
+              ? "Switch to light mode"
+              : "Switch to dark mode"
+          }
+          title={
+            darkMode
+              ? "Switch to light mode"
+              : "Switch to dark mode"
+          }
+        >
+          {darkMode ? "☀" : "☾"}
+        </button>
+      </div>
+    </header>
+  );
+}
 
-      <main>
-        <section className="hero">
+
+// ========================================================
+// APP
+// ========================================================
+
+function App() {
+  const [screen, setScreen] = useState("home");
+
+  const [darkMode, setDarkMode] = useState(() => {
+    return (
+      localStorage.getItem("mindsetu-theme") ===
+      "dark"
+    );
+  });
+
+  useEffect(() => {
+    document.documentElement.dataset.theme =
+      darkMode ? "dark" : "light";
+
+    localStorage.setItem(
+      "mindsetu-theme",
+      darkMode ? "dark" : "light"
+    );
+  }, [darkMode]);
+
+  const [sessionId, setSessionId] = useState(null);
+
+  const [phqAnswers, setPhqAnswers] = useState(
+    Array(PHQ9_QUESTIONS.length).fill(null)
+  );
+
+  const [gadAnswers, setGadAnswers] = useState(
+    Array(GAD7_QUESTIONS.length).fill(null)
+  );
+
+  const [phqResult, setPhqResult] = useState(null);
+  const [gadResult, setGadResult] = useState(null);
+  const [riskResult, setRiskResult] = useState(null);
+
+  const [chatMessages, setChatMessages] = useState([]);
+  const [chatInput, setChatInput] = useState("");
+
+  const [selectedMood, setSelectedMood] =
+    useState(null);
+
+  const [moodNote, setMoodNote] =
+    useState("");
+
+  const [moodHistory, setMoodHistory] =
+    useState([]);
+
+  const [counsellors, setCounsellors] =
+    useState([]);
+
+  const [
+    selectedCounsellor,
+    setSelectedCounsellor,
+  ] = useState(null);
+
+  const [
+    appointmentTime,
+    setAppointmentTime,
+  ] = useState("");
+
+  const [
+    appointments,
+    setAppointments,
+  ] = useState([]);
+
+  const [
+    bookingResult,
+    setBookingResult,
+  ] = useState(null);
+
+  const [dashboard, setDashboard] =
+    useState(null);
+
+  const [moodTrend, setMoodTrend] =
+    useState([]);
+
+  const [
+    dashboardAssessments,
+    setDashboardAssessments,
+  ] = useState(null);
+
+  const [loading, setLoading] =
+    useState(false);
+
+
+  // ======================================================
+  // START SESSION
+  // ======================================================
+
+  async function startSession() {
+    try {
+      setLoading(true);
+
+      const data = await apiRequest(
+        "/api/sessions",
+        {
+          method: "POST",
+          body: JSON.stringify({
+            consent_given: true,
+          }),
+        }
+      );
+
+      setSessionId(data.session_id);
+      setScreen("phq9");
+    } catch (error) {
+      alert(error.message);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+
+  // ======================================================
+  // PHQ-9
+  // ======================================================
+
+  async function submitPHQ9() {
+    if (
+      phqAnswers.some(
+        (answer) => answer === null
+      )
+    ) {
+      alert(
+        "Please answer every question."
+      );
+      return;
+    }
+
+    try {
+      setLoading(true);
+
+      const data = await apiRequest(
+        "/api/assessments/phq9",
+        {
+          method: "POST",
+          body: JSON.stringify({
+            session_id: sessionId,
+            answers: phqAnswers,
+          }),
+        }
+      );
+
+      setPhqResult(data);
+      setScreen("gad7");
+    } catch (error) {
+      alert(error.message);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+
+  // ======================================================
+  // GAD-7
+  // ======================================================
+
+  async function submitGAD7() {
+    if (
+      gadAnswers.some(
+        (answer) => answer === null
+      )
+    ) {
+      alert(
+        "Please answer every question."
+      );
+      return;
+    }
+
+    try {
+      setLoading(true);
+
+      const data = await apiRequest(
+        "/api/assessments/gad7",
+        {
+          method: "POST",
+          body: JSON.stringify({
+            session_id: sessionId,
+            answers: gadAnswers,
+          }),
+        }
+      );
+
+      setGadResult(data);
+      setScreen("results");
+    } catch (error) {
+      alert(error.message);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+
+  // ======================================================
+  // RISK
+  // ======================================================
+
+  async function getRiskResult() {
+    try {
+      setLoading(true);
+
+      const data = await apiRequest(
+        `/api/risk/${sessionId}`,
+        {
+          method: "POST",
+        }
+      );
+
+      setRiskResult(data);
+      setScreen("support");
+    } catch (error) {
+      alert(error.message);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+
+  // ======================================================
+  // CHAT
+  // ======================================================
+
+  async function sendMessage() {
+    const message = chatInput.trim();
+
+    if (!message || loading) {
+      return;
+    }
+
+    setChatMessages((previous) => [
+      ...previous,
+      {
+        sender: "user",
+        text: message,
+      },
+    ]);
+
+    setChatInput("");
+    setLoading(true);
+
+    // Create the AI bubble immediately.
+    setChatMessages((previous) => [
+      ...previous,
+      {
+        sender: "ai",
+        text: "",
+        streaming: true,
+      },
+    ]);
+
+    // Small delay between displayed characters.
+    // This makes the streaming visibly progressive even
+    // when React/browser/network batching is aggressive.
+    const sleep = (milliseconds) =>
+      new Promise((resolve) =>
+        setTimeout(resolve, milliseconds)
+      );
+
+    async function appendStreamText(textToAppend) {
+      for (const character of textToAppend) {
+        setChatMessages((previous) =>
+          previous.map(
+            (chatMessage, index) => {
+              if (
+                index ===
+                  previous.length - 1 &&
+                chatMessage.sender ===
+                  "ai" &&
+                chatMessage.streaming
+              ) {
+                return {
+                  ...chatMessage,
+                  text:
+                    chatMessage.text +
+                    character,
+                };
+              }
+
+              return chatMessage;
+            }
+          )
+        );
+
+        // 14ms gives a fast but clearly visible
+        // typewriter/streaming effect.
+        await sleep(14);
+      }
+    }
+
+    try {
+      const response = await fetch(
+        `${API}/api/chat`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            session_id: sessionId,
+            message,
+          }),
+        }
+      );
+
+      if (!response.ok) {
+        let detail =
+          `AI server returned ${response.status}.`;
+
+        try {
+          const errorData =
+            await response.json();
+
+          detail =
+            errorData.detail ||
+            errorData.message ||
+            detail;
+        } catch {
+          // Keep HTTP-status fallback.
+        }
+
+        throw new Error(detail);
+      }
+
+      if (!response.body) {
+        throw new Error(
+          "Streaming is not supported by this browser."
+        );
+      }
+
+      const reader =
+        response.body.getReader();
+
+      const decoder =
+        new TextDecoder("utf-8");
+
+      let buffer = "";
+
+      while (true) {
+        const {
+          value,
+          done,
+        } = await reader.read();
+
+        if (done) {
+          break;
+        }
+
+        buffer += decoder.decode(
+          value,
+          { stream: true }
+        );
+
+        const lines =
+          buffer.split("\n");
+
+        // Preserve a partially received JSON line.
+        buffer =
+          lines.pop() || "";
+
+        for (const rawLine of lines) {
+          const line =
+            rawLine.trim();
+
+          if (!line) {
+            continue;
+          }
+
+          let chunk;
+
+          try {
+            chunk =
+              JSON.parse(line);
+          } catch {
+            continue;
+          }
+
+          if (
+            chunk.type ===
+            "token"
+          ) {
+            const token =
+              chunk.content || "";
+
+            if (!token) {
+              continue;
+            }
+
+            // IMPORTANT:
+            // Don't immediately call setState with the
+            // whole token. Display it character-by-character
+            // so the user can actually see the stream.
+            await appendStreamText(
+              token
+            );
+          }
+
+          if (
+            chunk.type ===
+            "error"
+          ) {
+            throw new Error(
+              chunk.message ||
+                "MindSetu AI returned an error."
+            );
+          }
+
+          if (
+            chunk.type ===
+            "done"
+          ) {
+            setChatMessages(
+              (previous) =>
+                previous.map(
+                  (
+                    chatMessage,
+                    index
+                  ) => {
+                    if (
+                      index ===
+                        previous.length - 1 &&
+                      chatMessage.sender ===
+                        "ai"
+                    ) {
+                      return {
+                        ...chatMessage,
+                        streaming: false,
+                      };
+                    }
+
+                    return chatMessage;
+                  }
+                )
+            );
+          }
+        }
+      }
+
+      // Flush decoder remainder.
+      buffer += decoder.decode();
+
+      if (buffer.trim()) {
+        try {
+          const chunk =
+            JSON.parse(
+              buffer.trim()
+            );
+
+          if (
+            chunk.type ===
+              "token" &&
+            chunk.content
+          ) {
+            await appendStreamText(
+              chunk.content
+            );
+          }
+        } catch {
+          // Ignore incomplete final JSON.
+        }
+      }
+
+      // If the backend closed without sending "done",
+      // still remove the cursor.
+      setChatMessages(
+        (previous) =>
+          previous.map(
+            (
+              chatMessage,
+              index
+            ) => {
+              if (
+                index ===
+                  previous.length - 1 &&
+                chatMessage.sender ===
+                  "ai"
+              ) {
+                return {
+                  ...chatMessage,
+                  streaming: false,
+                };
+              }
+
+              return chatMessage;
+            }
+          )
+      );
+
+    } catch (error) {
+      setChatMessages(
+        (previous) =>
+          previous.map(
+            (
+              chatMessage,
+              index
+            ) => {
+              if (
+                index ===
+                  previous.length - 1 &&
+                chatMessage.sender ===
+                  "ai"
+              ) {
+                return {
+                  sender: "ai",
+                  text:
+                    `Unable to connect to MindSetu AI: ${error.message}`,
+                  streaming: false,
+                };
+              }
+
+              return chatMessage;
+            }
+          )
+      );
+
+    } finally {
+      setLoading(false);
+    }
+  }
+
+
+  // ======================================================
+  // MOOD
+  // ======================================================
+
+  async function saveMood() {
+    if (!selectedMood) {
+      alert("Please select your mood.");
+      return;
+    }
+
+    if (!sessionId) {
+      alert(
+        "No active MindSetu session."
+      );
+      return;
+    }
+
+    try {
+      setLoading(true);
+
+      await apiRequest(
+        "/api/mood",
+        {
+          method: "POST",
+          body: JSON.stringify({
+            session_id: sessionId,
+            mood: selectedMood,
+            note:
+              moodNote.trim() || null,
+          }),
+        }
+      );
+
+      setMoodNote("");
+      setSelectedMood(null);
+
+      await loadMoodHistory();
+
+      alert(
+        "Mood saved successfully."
+      );
+    } catch (error) {
+      alert(error.message);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+
+  async function loadMoodHistory() {
+    if (!sessionId) {
+      return;
+    }
+
+    try {
+      const data = await apiRequest(
+        `/api/mood/${sessionId}`
+      );
+
+      setMoodHistory(
+        data.entries || []
+      );
+    } catch (error) {
+      console.error(error);
+    }
+  }
+
+
+  // ======================================================
+  // COUNSELLORS
+  // ======================================================
+
+  async function openCounsellors() {
+    try {
+      setLoading(true);
+
+      const data = await apiRequest(
+        "/api/counsellors"
+      );
+
+      setCounsellors(
+        data.counsellors || []
+      );
+
+      setSelectedCounsellor(null);
+      setBookingResult(null);
+
+      await loadAppointments();
+
+      setScreen("counsellors");
+    } catch (error) {
+      alert(error.message);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+
+  // ======================================================
+  // APPOINTMENTS
+  // ======================================================
+
+  async function loadAppointments() {
+    if (!sessionId) {
+      return;
+    }
+
+    try {
+      const data = await apiRequest(
+        `/api/appointments/${sessionId}`
+      );
+
+      setAppointments(
+        data.appointments || []
+      );
+    } catch (error) {
+      console.error(error);
+    }
+  }
+
+
+  async function bookAppointment() {
+    if (!selectedCounsellor) {
+      alert(
+        "Please choose a counsellor."
+      );
+      return;
+    }
+
+    if (!appointmentTime) {
+      alert(
+        "Please choose a date and time."
+      );
+      return;
+    }
+
+    try {
+      setLoading(true);
+
+      const isoTime = new Date(
+        appointmentTime
+      ).toISOString();
+
+      const data = await apiRequest(
+        "/api/appointments",
+        {
+          method: "POST",
+          body: JSON.stringify({
+            session_id: sessionId,
+            counsellor_id:
+              selectedCounsellor.id,
+            appointment_time:
+              isoTime,
+          }),
+        }
+      );
+
+      setBookingResult(data);
+      setAppointmentTime("");
+
+      await loadAppointments();
+    } catch (error) {
+      alert(error.message);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+
+  // ======================================================
+  // DASHBOARD
+  // ======================================================
+
+  async function openDashboard() {
+    try {
+      setLoading(true);
+
+      const [
+        overview,
+        trend,
+        assessments,
+      ] = await Promise.all([
+        apiRequest(
+          "/api/dashboard/overview"
+        ),
+        apiRequest(
+          "/api/dashboard/mood-trend"
+        ),
+        apiRequest(
+          "/api/dashboard/assessments"
+        ),
+      ]);
+
+      setDashboard(overview);
+
+      setMoodTrend(
+        trend.trend || []
+      );
+
+      setDashboardAssessments(
+        assessments.assessments ||
+          null
+      );
+
+      setScreen("dashboard");
+    } catch (error) {
+      alert(error.message);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+
+  // ======================================================
+  // HOME
+  // ======================================================
+
+  if (screen === "home") {
+    return (
+      <div className="mindsetu-app">
+        <Header
+          darkMode={darkMode}
+          setDarkMode={setDarkMode}
+        />
+
+        <main className="hero">
           <div className="hero-content">
+
             <div className="badge">
-              ✦ Student Mental Health Support
+              CONFIDENTIAL • STUDENT SUPPORT
             </div>
 
             <h1>
-              Your mental health
-              <span> matters.</span>
+              A safer space
+              <br />
+              to start.
             </h1>
 
             <p>
-              A confidential digital support platform designed for
-              students. Talk, reflect, understand how you're feeling,
-              and find the right support when you need it.
+              MindSetu helps students understand
+              their wellbeing, access personalised
+              support, and find the right pathway
+              when they need additional help.
             </p>
 
-            <div className="hero-buttons">
-              <button className="primary-button">
-                Start anonymously →
-              </button>
+            <button
+              className="primary-button"
+              onClick={startSession}
+              disabled={loading}
+            >
+              {loading
+                ? "Starting..."
+                : "Start anonymously →"}
+            </button>
 
-              <button className="secondary-button">
-                Learn how it works
-              </button>
-            </div>
+            <button
+              className="secondary-button dashboard-home-button"
+              onClick={openDashboard}
+              disabled={loading}
+            >
+              Institutional Dashboard
+            </button>
 
-            <div className="trust">
-              <span>🔒</span>
-              Anonymous by default
-              <span className="dot">•</span>
-              Confidential
-              <span className="dot">•</span>
-              Available 24×7
+            <div className="privacy-note">
+              🔒 No name or personal profile is
+              required for this prototype.
             </div>
           </div>
 
-          <div className="hero-visual">
-            <div className="glow"></div>
+          <div className="hero-card">
 
-            <div className="support-card">
-              <div className="card-icon">🧠</div>
+            <div className="hero-card-icon">
+              ◉
+            </div>
 
-              <h3>How are you feeling today?</h3>
+            <h3>
+              How MindSetu works
+            </h3>
 
-              <p>
-                Take a moment to check in with yourself.
-              </p>
+            <div className="flow-item">
+              <span>01</span>
+              Anonymous onboarding
+            </div>
 
-              <div className="moods">
-                <div>😊</div>
-                <div>🙂</div>
-                <div>😐</div>
-                <div>🙁</div>
-                <div>😔</div>
+            <div className="flow-item">
+              <span>02</span>
+              Wellbeing screening
+            </div>
+
+            <div className="flow-item">
+              <span>03</span>
+              Risk-aware support
+            </div>
+
+            <div className="flow-item">
+              <span>04</span>
+              Personalised conversation
+            </div>
+
+            <div className="flow-item">
+              <span>05</span>
+              Ongoing mood tracking
+            </div>
+
+          </div>
+        </main>
+      </div>
+    );
+  }
+
+
+  // ======================================================
+  // PHQ-9
+  // ======================================================
+
+  if (screen === "phq9") {
+    return (
+      <AssessmentScreen
+        title="PHQ-9"
+        subtitle="Depression wellbeing screening"
+        questions={PHQ9_QUESTIONS}
+        answers={phqAnswers}
+        setAnswers={setPhqAnswers}
+        onSubmit={submitPHQ9}
+        loading={loading}
+        step={1}
+        totalSteps={4}
+        darkMode={darkMode}
+        setDarkMode={setDarkMode}
+      />
+    );
+  }
+
+
+  // ======================================================
+  // GAD-7
+  // ======================================================
+
+  if (screen === "gad7") {
+    return (
+      <AssessmentScreen
+        title="GAD-7"
+        subtitle="Anxiety wellbeing screening"
+        questions={GAD7_QUESTIONS}
+        answers={gadAnswers}
+        setAnswers={setGadAnswers}
+        onSubmit={submitGAD7}
+        loading={loading}
+        step={2}
+        totalSteps={4}
+        darkMode={darkMode}
+        setDarkMode={setDarkMode}
+      />
+    );
+  }
+
+
+  // ======================================================
+  // RESULTS
+  // ======================================================
+
+  if (screen === "results") {
+    return (
+      <div className="mindsetu-app">
+
+        <Header
+          darkMode={darkMode}
+          setDarkMode={setDarkMode}
+        />
+
+        <main className="page">
+
+          <div className="result-card">
+
+            <div className="success-icon">
+              ✓
+            </div>
+
+            <div className="badge">
+              SCREENING COMPLETE
+            </div>
+
+            <h1>
+              Your screening is complete.
+            </h1>
+
+            <p>
+              Your responses have been recorded
+              in your anonymous MindSetu session.
+            </p>
+
+            <div className="score-grid">
+
+              <div className="score-box">
+                <span>PHQ-9</span>
+
+                <strong>
+                  {phqResult?.score}
+                </strong>
+
+                <small>
+                  {phqResult?.severity}
+                </small>
               </div>
 
-              <div className="card-footer">
-                <span>Private check-in</span>
-                <span>→</span>
+              <div className="score-box">
+                <span>GAD-7</span>
+
+                <strong>
+                  {gadResult?.score}
+                </strong>
+
+                <small>
+                  {gadResult?.severity}
+                </small>
               </div>
-            </div>
-          </div>
-        </section>
 
-        <section className="features" id="support">
-          <div className="section-heading">
-            <span>SUPPORT WHEN YOU NEED IT</span>
-            <h2>One platform. The right support.</h2>
-          </div>
-
-          <div className="feature-grid">
-            <div className="feature-card">
-              <div className="feature-icon">🧭</div>
-              <h3>Understand yourself</h3>
-              <p>
-                Confidential self-assessments help you understand
-                your current wellbeing.
-              </p>
             </div>
 
-            <div className="feature-card">
-              <div className="feature-icon">💬</div>
-              <h3>AI support companion</h3>
-              <p>
-                Get a supportive first response whenever you need
-                someone to talk to.
-              </p>
-            </div>
+            <p className="disclaimer">
+              These screening results are not
+              a diagnosis.
+            </p>
 
-            <div className="feature-card">
-              <div className="feature-icon">📈</div>
-              <h3>Track your wellbeing</h3>
-              <p>
-                Track your mood and build healthier habits over
-                time.
-              </p>
-            </div>
+            <button
+              className="primary-button"
+              onClick={getRiskResult}
+              disabled={loading}
+            >
+              {loading
+                ? "Preparing support..."
+                : "See my support pathway →"}
+            </button>
 
-            <div className="feature-card">
-              <div className="feature-icon">🤝</div>
-              <h3>Connect with support</h3>
-              <p>
-                Find appropriate support and connect with
-                counsellors when needed.
-              </p>
-            </div>
-          </div>
-        </section>
-
-        <section className="how" id="how">
-          <div className="section-heading">
-            <span>HOW MINDSETU WORKS</span>
-            <h2>Support at every step.</h2>
           </div>
 
-          <div className="steps">
-            <div className="step">
-              <div className="step-number">01</div>
-              <h3>Confidential onboarding</h3>
-              <p>
-                Start anonymously and choose what information you
-                want to share.
-              </p>
+        </main>
+      </div>
+    );
+  }
+
+
+  // ======================================================
+  // SUPPORT
+  // ======================================================
+
+  if (screen === "support") {
+    return (
+      <div className="mindsetu-app">
+
+        <Header
+          darkMode={darkMode}
+          setDarkMode={setDarkMode}
+        />
+
+        <main className="page">
+
+          <div className="page-heading">
+
+            <div className="badge">
+              YOUR SUPPORT PATHWAY
             </div>
 
-            <div className="step">
-              <div className="step-number">02</div>
-              <h3>Self-assessment</h3>
-              <p>
-                Complete validated wellbeing screening tools.
-              </p>
-            </div>
+            <h1>
+              Let's take the
+              <br />
+              next step together.
+            </h1>
 
-            <div className="step">
-              <div className="step-number">03</div>
-              <h3>Risk-aware support</h3>
-              <p>
-                Your results help guide you toward appropriate
-                support.
-              </p>
-            </div>
+            <p>
+              Your screening helps MindSetu suggest
+              an appropriate support pathway.
+            </p>
 
-            <div className="step">
-              <div className="step-number">04</div>
-              <h3>Personalised support</h3>
-              <p>
-                Access the AI companion, activities and counsellor
-                support.
-              </p>
-            </div>
           </div>
-        </section>
-      </main>
 
-      <footer>
-        <div className="logo">
-          <div className="logo-mark">M</div>
-          <span>MindSetu</span>
-        </div>
+          <div className="support-grid">
 
-        <p>
-          Digital mental health support for students.
-        </p>
-      </footer>
+            <div className="support-main-card">
+
+              <span className="label">
+                PROTOTYPE RISK LEVEL
+              </span>
+
+              <div className="risk-level">
+                {riskResult?.risk_level}
+              </div>
+
+              <p>
+                Support pathway:{" "}
+                <strong>
+                  {riskResult?.support_path}
+                </strong>
+              </p>
+
+              <div className="score-row">
+
+                <div>
+                  <span>PHQ-9</span>
+
+                  <strong>
+                    {riskResult?.phq9_score}
+                  </strong>
+                </div>
+
+                <div>
+                  <span>GAD-7</span>
+
+                  <strong>
+                    {riskResult?.gad7_score}
+                  </strong>
+                </div>
+
+              </div>
+
+              <div className="support-buttons">
+
+                <button
+                  className="primary-button"
+                  onClick={() =>
+                    setScreen("chat")
+                  }
+                >
+                  Talk to MindSetu AI →
+                </button>
+
+                <button
+                  className="secondary-button"
+                  onClick={() => {
+                    loadMoodHistory();
+                    setScreen("mood");
+                  }}
+                >
+                  Track my mood
+                </button>
+
+                <button
+                  className="secondary-button"
+                  onClick={openCounsellors}
+                >
+                  Find a counsellor →
+                </button>
+
+              </div>
+
+            </div>
+
+            <div className="support-side-card">
+
+              <h3>
+                What you can do now
+              </h3>
+
+              <div className="support-option">
+
+                <div>💬</div>
+
+                <div>
+                  <strong>
+                    Talk it through
+                  </strong>
+
+                  <p>
+                    Share what's been going on
+                    with the AI companion.
+                  </p>
+                </div>
+
+              </div>
+
+              <div className="support-option">
+
+                <div>🌱</div>
+
+                <div>
+                  <strong>
+                    Track your wellbeing
+                  </strong>
+
+                  <p>
+                    Record your mood over time.
+                  </p>
+                </div>
+
+              </div>
+
+              <div className="support-option">
+
+                <div>👥</div>
+
+                <div>
+                  <strong>
+                    Human support
+                  </strong>
+
+                  <p>
+                    Connect with a counsellor when
+                    additional support is appropriate.
+                  </p>
+                </div>
+
+              </div>
+
+            </div>
+
+          </div>
+
+        </main>
+      </div>
+    );
+  }
+
+
+  // ======================================================
+  // COUNSELLORS
+  // ======================================================
+
+  if (screen === "counsellors") {
+    return (
+      <div className="mindsetu-app">
+
+        <Header
+          darkMode={darkMode}
+          setDarkMode={setDarkMode}
+        />
+
+        <main className="page">
+
+          <div className="page-heading">
+
+            <div className="badge">
+              PROFESSIONAL SUPPORT
+            </div>
+
+            <h1>
+              Find the right
+              <br />
+              support for you.
+            </h1>
+
+            <p>
+              Choose an available counsellor and
+              request an appointment.
+            </p>
+
+          </div>
+
+          {bookingResult && (
+            <div className="booking-success">
+
+              <div className="success-icon">
+                ✓
+              </div>
+
+              <h2>
+                Appointment booked.
+              </h2>
+
+              <p>
+                Your appointment with{" "}
+                <strong>
+                  {bookingResult.counsellor_name}
+                </strong>{" "}
+                has been booked successfully.
+              </p>
+
+              <p>
+                <strong>
+                  {new Date(
+                    bookingResult.appointment_time
+                  ).toLocaleString()}
+                </strong>
+              </p>
+
+            </div>
+          )}
+
+          <div className="counsellor-grid">
+
+            {counsellors.map(
+              (counsellor) => (
+                <button
+                  key={counsellor.id}
+                  className={
+                    selectedCounsellor?.id ===
+                    counsellor.id
+                      ? "counsellor-card active"
+                      : "counsellor-card"
+                  }
+                  onClick={() =>
+                    setSelectedCounsellor(
+                      counsellor
+                    )
+                  }
+                >
+
+                  <div className="counsellor-avatar">
+                    {counsellor.name
+                      .replace("Dr. ", "")
+                      .charAt(0)}
+                  </div>
+
+                  <div className="counsellor-info">
+
+                    <h3>
+                      {counsellor.name}
+                    </h3>
+
+                    <p>
+                      {counsellor.specialization}
+                    </p>
+
+                    <span
+                      className={
+                        counsellor.available
+                          ? "availability available"
+                          : "availability"
+                      }
+                    >
+                      {counsellor.available
+                        ? "● Available"
+                        : "● Unavailable"}
+                    </span>
+
+                  </div>
+
+                </button>
+              )
+            )}
+
+          </div>
+
+          {selectedCounsellor && (
+            <div className="appointment-card">
+
+              <div>
+
+                <span className="label">
+                  SELECTED COUNSELLOR
+                </span>
+
+                <h2>
+                  {selectedCounsellor.name}
+                </h2>
+
+                <p>
+                  {selectedCounsellor.specialization}
+                </p>
+
+              </div>
+
+              <div className="appointment-form">
+
+                <label htmlFor="appointment-time">
+                  Choose date and time
+                </label>
+
+                <input
+                  id="appointment-time"
+                  type="datetime-local"
+                  value={appointmentTime}
+                  min={
+                    new Date()
+                      .toISOString()
+                      .slice(0, 16)
+                  }
+                  onChange={(event) =>
+                    setAppointmentTime(
+                      event.target.value
+                    )
+                  }
+                />
+
+                <button
+                  className="primary-button"
+                  onClick={bookAppointment}
+                  disabled={loading}
+                >
+                  {loading
+                    ? "Booking..."
+                    : "Book appointment →"}
+                </button>
+
+              </div>
+
+            </div>
+          )}
+
+          <div className="appointments-section">
+
+            <div className="history-heading">
+
+              <div>
+
+                <div className="label">
+                  YOUR SUPPORT
+                </div>
+
+                <h2>
+                  Your appointments
+                </h2>
+
+              </div>
+
+              <button
+                className="secondary-button"
+                onClick={loadAppointments}
+              >
+                Refresh
+              </button>
+
+            </div>
+
+            {appointments.length === 0 ? (
+              <p className="muted">
+                You have no appointments yet.
+              </p>
+            ) : (
+              <div className="history-list">
+
+                {appointments.map(
+                  (appointment) => (
+                    <div
+                      className="history-item"
+                      key={
+                        appointment.appointment_id
+                      }
+                    >
+
+                      <div className="history-mood">
+                        📅
+                      </div>
+
+                      <div>
+
+                        <strong>
+                          {
+                            appointment.counsellor_name
+                          }
+                        </strong>
+
+                        <p>
+                          {
+                            appointment.specialization
+                          }
+                        </p>
+
+                        <small>
+                          {new Date(
+                            appointment.appointment_time
+                          ).toLocaleString()}
+                          {" • "}
+                          {appointment.status}
+                        </small>
+
+                      </div>
+
+                    </div>
+                  )
+                )}
+
+              </div>
+            )}
+
+          </div>
+
+          <button
+            className="secondary-button"
+            onClick={() =>
+              setScreen("support")
+            }
+          >
+            ← Back to support
+          </button>
+
+        </main>
+      </div>
+    );
+  }
+
+
+  // ======================================================
+  // MOOD
+  // ======================================================
+
+  if (screen === "mood") {
+    return (
+      <div className="mindsetu-app">
+
+        <Header
+          darkMode={darkMode}
+          setDarkMode={setDarkMode}
+        />
+
+        <main className="page">
+
+          <div className="page-heading">
+
+            <div className="badge">
+              WELLBEING TRACKER
+            </div>
+
+            <h1>
+              How are you
+              <br />
+              feeling today?
+            </h1>
+
+            <p>
+              Recording your mood can help you
+              notice patterns in your wellbeing
+              over time.
+            </p>
+
+          </div>
+
+          <div className="mood-grid">
+
+            {MOODS.map((mood) => (
+              <button
+                key={mood.value}
+                className={
+                  selectedMood ===
+                  mood.value
+                    ? "mood-card active"
+                    : "mood-card"
+                }
+                onClick={() =>
+                  setSelectedMood(
+                    mood.value
+                  )
+                }
+              >
+
+                <span className="mood-emoji">
+                  {mood.emoji}
+                </span>
+
+                <strong>
+                  {mood.label}
+                </strong>
+
+                <span>
+                  {mood.value}/5
+                </span>
+
+              </button>
+            ))}
+
+          </div>
+
+          <div className="mood-note-card">
+
+            <h3>
+              Add a note
+            </h3>
+
+            <textarea
+              value={moodNote}
+              onChange={(event) =>
+                setMoodNote(
+                  event.target.value
+                )
+              }
+              placeholder="What's affecting your mood today?"
+              rows={4}
+            />
+
+            <div className="mood-actions">
+
+              <button
+                className="secondary-button"
+                onClick={() =>
+                  setScreen("support")
+                }
+              >
+                ← Back
+              </button>
+
+              <button
+                className="primary-button"
+                onClick={saveMood}
+                disabled={loading}
+              >
+                {loading
+                  ? "Saving..."
+                  : "Save today's mood"}
+              </button>
+
+            </div>
+
+          </div>
+
+          <div className="history-card">
+
+            <div className="history-heading">
+
+              <div>
+
+                <div className="label">
+                  YOUR HISTORY
+                </div>
+
+                <h2>
+                  Recent mood entries
+                </h2>
+
+              </div>
+
+              <button
+                className="secondary-button"
+                onClick={loadMoodHistory}
+              >
+                Refresh
+              </button>
+
+            </div>
+
+            {moodHistory.length === 0 ? (
+              <p className="muted">
+                No mood entries yet.
+              </p>
+            ) : (
+              <div className="history-list">
+
+                {moodHistory.map(
+                  (entry, index) => {
+
+                    const mood =
+                      MOODS.find(
+                        (item) =>
+                          item.value ===
+                          entry.mood
+                      );
+
+                    return (
+                      <div
+                        className="history-item"
+                        key={index}
+                      >
+
+                        <div className="history-mood">
+                          {mood?.emoji}
+                        </div>
+
+                        <div>
+
+                          <strong>
+                            {mood?.label}
+                          </strong>
+
+                          {entry.note && (
+                            <p>
+                              {entry.note}
+                            </p>
+                          )}
+
+                          <small>
+                            {new Date(
+                              entry.created_at
+                            ).toLocaleString()}
+                          </small>
+
+                        </div>
+
+                      </div>
+                    );
+                  }
+                )}
+
+              </div>
+            )}
+
+          </div>
+
+        </main>
+      </div>
+    );
+  }
+
+
+  // ======================================================
+  // CHAT
+  // ======================================================
+
+  if (screen === "chat") {
+    return (
+      <div className="mindsetu-app">
+
+        <Header
+          darkMode={darkMode}
+          setDarkMode={setDarkMode}
+        />
+
+        <main className="chat-page">
+
+          <div className="chat-header">
+
+            <div>
+
+              <div className="badge">
+                MINDSETU COMPANION
+              </div>
+
+              <h1>
+                What's on your mind?
+              </h1>
+
+            </div>
+
+            <button
+              className="secondary-button"
+              onClick={() =>
+                setScreen("support")
+              }
+            >
+              ← Back
+            </button>
+
+          </div>
+
+          <div className="chat-container">
+
+            {chatMessages.length === 0 && (
+              <div className="welcome-message">
+
+                <div className="ai-icon">
+                  ✦
+                </div>
+
+                <h2>
+                  I'm here to listen.
+                </h2>
+
+                <p>
+                  Tell me about what's been happening,
+                  whether it's college stress, anxiety,
+                  relationships, sleep, or anything else
+                  you'd like to talk about.
+                </p>
+
+              </div>
+            )}
+
+            <div className="messages">
+
+              {chatMessages.map(
+                (message, index) => (
+                  <div
+                    key={index}
+                    className={`message ${
+                      message.sender === "user"
+                        ? "user-message"
+                        : `ai-message${
+                            message.streaming
+                              ? " streaming"
+                              : ""
+                          }`
+                    }`}
+                  >
+                    {message.text}
+                  </div>
+                )
+              )}
+
+            </div>
+
+            <div className="chat-input-area">
+
+              <input
+                value={chatInput}
+                onChange={(event) =>
+                  setChatInput(
+                    event.target.value
+                  )
+                }
+                onKeyDown={(event) => {
+                  if (
+                    event.key === "Enter" &&
+                    !event.shiftKey
+                  ) {
+                    event.preventDefault();
+                    sendMessage();
+                  }
+                }}
+                maxLength={2000}
+                placeholder="Tell me what's been going on..."
+                disabled={loading}
+              />
+
+              <button
+                className="primary-button"
+                onClick={sendMessage}
+                disabled={loading}
+              >
+                {loading
+                  ? "Sending..."
+                  : "Send"}
+              </button>
+
+            </div>
+
+            <p className="chat-disclaimer">
+              MindSetu is a wellbeing-support
+              prototype and not a substitute for
+              professional mental-health care.
+            </p>
+
+          </div>
+
+        </main>
+      </div>
+    );
+  }
+
+
+  // ======================================================
+  // INSTITUTIONAL DASHBOARD
+  // ======================================================
+
+  if (screen === "dashboard") {
+
+    const risk =
+      dashboard?.risk_distribution ||
+      {};
+
+    const totalRisk =
+      (risk.minimal || 0) +
+      (risk.mild || 0) +
+      (risk.moderate || 0) +
+      (risk.moderately_severe || 0) +
+      (risk.severe || 0);
+
+    return (
+      <div className="mindsetu-app">
+
+        <Header
+          darkMode={darkMode}
+          setDarkMode={setDarkMode}
+        />
+
+        <main className="page dashboard-page">
+
+          <div className="dashboard-header">
+
+            <div>
+
+              <div className="badge">
+                INSTITUTIONAL VIEW
+              </div>
+
+              <h1>
+                MindSetu
+                <br />
+                Wellbeing Dashboard
+              </h1>
+
+              <p>
+                Aggregate wellbeing insights for
+                institutional support planning.
+              </p>
+
+            </div>
+
+            <div className="dashboard-actions">
+
+              <button
+                className="secondary-button"
+                onClick={openDashboard}
+                disabled={loading}
+              >
+                {loading
+                  ? "Refreshing..."
+                  : "Refresh"}
+              </button>
+
+              <button
+                className="secondary-button"
+                onClick={() =>
+                  setScreen("home")
+                }
+              >
+                ← Student view
+              </button>
+
+            </div>
+
+          </div>
+
+          <div className="privacy-banner">
+
+            <span>
+              🔒
+            </span>
+
+            <div>
+
+              <strong>
+                Privacy protected
+              </strong>
+
+              <p>
+                This dashboard displays aggregate
+                information only. Student names and
+                individual profiles are not exposed.
+              </p>
+
+            </div>
+
+          </div>
+
+          {!dashboard ? (
+
+            <div className="loading-card">
+              Loading dashboard...
+            </div>
+
+          ) : (
+
+            <>
+
+              <div className="dashboard-stat-grid">
+
+                <DashboardStat
+                  label="Anonymous Sessions"
+                  value={
+                    dashboard.sessions
+                      ?.total_anonymous_sessions ??
+                    0
+                  }
+                  icon="👤"
+                />
+
+                <DashboardStat
+                  label="PHQ-9 Assessments"
+                  value={
+                    dashboard.assessments
+                      ?.phq9 ?? 0
+                  }
+                  icon="🧠"
+                />
+
+                <DashboardStat
+                  label="GAD-7 Assessments"
+                  value={
+                    dashboard.assessments
+                      ?.gad7 ?? 0
+                  }
+                  icon="💭"
+                />
+
+                <DashboardStat
+                  label="Average Mood"
+                  value={
+                    dashboard.mood
+                      ?.average_mood ?? 0
+                  }
+                  icon="🌱"
+                />
+
+                <DashboardStat
+                  label="Appointments"
+                  value={
+                    dashboard.appointments
+                      ?.total ?? 0
+                  }
+                  icon="📅"
+                />
+
+                <DashboardStat
+                  label="Available Counsellors"
+                  value={
+                    dashboard.counsellors
+                      ?.available ?? 0
+                  }
+                  icon="👥"
+                />
+
+              </div>
+
+
+              <div className="dashboard-two-column">
+
+                <div className="dashboard-card">
+
+                  <div className="dashboard-card-heading">
+
+                    <div>
+
+                      <div className="label">
+                        SCREENING INSIGHTS
+                      </div>
+
+                      <h2>
+                        Risk distribution
+                      </h2>
+
+                    </div>
+
+                    <span className="dashboard-total">
+                      {totalRisk} assessments
+                    </span>
+
+                  </div>
+
+                  <RiskBar
+                    label="Minimal"
+                    value={
+                      risk.minimal || 0
+                    }
+                    total={totalRisk}
+                  />
+
+                  <RiskBar
+                    label="Mild"
+                    value={
+                      risk.mild || 0
+                    }
+                    total={totalRisk}
+                  />
+
+                  <RiskBar
+                    label="Moderate"
+                    value={
+                      risk.moderate || 0
+                    }
+                    total={totalRisk}
+                  />
+
+                  <RiskBar
+                    label="Moderately severe"
+                    value={
+                      risk.moderately_severe ||
+                      0
+                    }
+                    total={totalRisk}
+                  />
+
+                  <RiskBar
+                    label="Severe"
+                    value={
+                      risk.severe || 0
+                    }
+                    total={totalRisk}
+                  />
+
+                </div>
+
+
+                <div className="dashboard-card">
+
+                  <div className="dashboard-card-heading">
+
+                    <div>
+
+                      <div className="label">
+                        SUPPORT ACTIVITY
+                      </div>
+
+                      <h2>
+                        Appointments
+                      </h2>
+
+                    </div>
+
+                  </div>
+
+                  <div className="appointment-stat">
+                    <span>
+                      Total appointments
+                    </span>
+
+                    <strong>
+                      {
+                        dashboard
+                          .appointments
+                          ?.total ?? 0
+                      }
+                    </strong>
+                  </div>
+
+                  <div className="appointment-stat">
+                    <span>
+                      Booked
+                    </span>
+
+                    <strong>
+                      {
+                        dashboard
+                          .appointments
+                          ?.booked ?? 0
+                      }
+                    </strong>
+                  </div>
+
+                  <div className="appointment-stat">
+                    <span>
+                      Available counsellors
+                    </span>
+
+                    <strong>
+                      {
+                        dashboard
+                          .counsellors
+                          ?.available ?? 0
+                      }
+                    </strong>
+                  </div>
+
+                </div>
+
+              </div>
+
+
+              <div className="dashboard-card">
+
+                <div className="dashboard-card-heading">
+
+                  <div>
+
+                    <div className="label">
+                      WELLBEING TREND
+                    </div>
+
+                    <h2>
+                      Average mood over time
+                    </h2>
+
+                  </div>
+
+                  <span className="dashboard-total">
+                    1–5 scale
+                  </span>
+
+                </div>
+
+                {moodTrend.length === 0 ? (
+
+                  <div className="empty-dashboard">
+                    No mood data available yet.
+                  </div>
+
+                ) : (
+
+                  <div className="trend-list">
+
+                    {moodTrend.map(
+                      (item) => (
+                        <div
+                          className="trend-row"
+                          key={item.date}
+                        >
+
+                          <span>
+                            {new Date(
+                              item.date
+                            ).toLocaleDateString()}
+                          </span>
+
+                          <div className="trend-bar">
+
+                            <div
+                              style={{
+                                width: `${
+                                  (item.average_mood /
+                                    5) *
+                                  100
+                                }%`,
+                              }}
+                            />
+
+                          </div>
+
+                          <strong>
+                            {item.average_mood}
+                          </strong>
+
+                        </div>
+                      )
+                    )}
+
+                  </div>
+                )}
+
+              </div>
+
+
+              <div className="dashboard-card">
+
+                <div className="dashboard-card-heading">
+
+                  <div>
+
+                    <div className="label">
+                      ASSESSMENT BREAKDOWN
+                    </div>
+
+                    <h2>
+                      Screening severity
+                    </h2>
+
+                  </div>
+
+                </div>
+
+                <div className="assessment-breakdown">
+
+                  <AssessmentBreakdown
+                    title="PHQ-9"
+                    data={
+                      dashboardAssessments?.[
+                        "PHQ-9"
+                      ] || {}
+                    }
+                  />
+
+                  <AssessmentBreakdown
+                    title="GAD-7"
+                    data={
+                      dashboardAssessments?.[
+                        "GAD-7"
+                      ] || {}
+                    }
+                  />
+
+                </div>
+
+              </div>
+
+            </>
+          )}
+
+        </main>
+      </div>
+    );
+  }
+
+  return null;
+}
+
+
+// ========================================================
+// DASHBOARD STAT
+// ========================================================
+
+function DashboardStat({
+  label,
+  value,
+  icon,
+}) {
+  return (
+    <div className="dashboard-stat">
+
+      <div className="dashboard-stat-icon">
+        {icon}
+      </div>
+
+      <div>
+
+        <span>
+          {label}
+        </span>
+
+        <strong>
+          {value}
+        </strong>
+
+      </div>
+
     </div>
   );
 }
+
+
+// ========================================================
+// RISK BAR
+// ========================================================
+
+function RiskBar({
+  label,
+  value,
+  total,
+}) {
+  const percentage =
+    total > 0
+      ? (value / total) * 100
+      : 0;
+
+  return (
+    <div className="risk-bar-row">
+
+      <div className="risk-bar-label">
+
+        <span>
+          {label}
+        </span>
+
+        <strong>
+          {value}
+        </strong>
+
+      </div>
+
+      <div className="risk-bar">
+
+        <div
+          style={{
+            width: `${percentage}%`,
+          }}
+        />
+
+      </div>
+
+    </div>
+  );
+}
+
+
+// ========================================================
+// ASSESSMENT BREAKDOWN
+// ========================================================
+
+function AssessmentBreakdown({
+  title,
+  data,
+}) {
+  const total =
+    Object.values(data).reduce(
+      (sum, value) =>
+        sum + value,
+      0
+    );
+
+  return (
+    <div className="assessment-breakdown-card">
+
+      <h3>
+        {title}
+      </h3>
+
+      <strong className="assessment-total">
+        {total}
+      </strong>
+
+      <div className="assessment-lines">
+
+        {Object.entries(data).map(
+          ([severity, count]) => (
+            <div
+              className="assessment-line"
+              key={severity}
+            >
+
+              <span>
+                {severity}
+              </span>
+
+              <strong>
+                {count}
+              </strong>
+
+            </div>
+          )
+        )}
+
+      </div>
+
+    </div>
+  );
+}
+
+
+// ========================================================
+// ASSESSMENT SCREEN
+// ========================================================
+
+function AssessmentScreen({
+  title,
+  subtitle,
+  questions,
+  answers,
+  setAnswers,
+  onSubmit,
+  loading,
+  step,
+  totalSteps,
+  darkMode,
+  setDarkMode,
+}) {
+
+  function selectAnswer(
+    questionIndex,
+    value
+  ) {
+    const updated = [
+      ...answers,
+    ];
+
+    updated[questionIndex] =
+      value;
+
+    setAnswers(updated);
+  }
+
+  const answered =
+    answers.filter(
+      (answer) =>
+        answer !== null
+    ).length;
+
+  return (
+    <div className="mindsetu-app">
+
+      <Header
+        darkMode={darkMode}
+        setDarkMode={setDarkMode}
+      />
+
+      <main className="assessment-page">
+
+        <div className="assessment-top">
+
+          <div>
+
+            <div className="badge">
+              STEP {step} OF {totalSteps}
+            </div>
+
+            <h1>
+              {title}
+            </h1>
+
+            <p>
+              {subtitle}
+            </p>
+
+          </div>
+
+          <div className="progress-info">
+            {answered}/{questions.length}
+          </div>
+
+        </div>
+
+        <div className="progress-bar">
+
+          <div
+            style={{
+              width: `${
+                (answered /
+                  questions.length) *
+                100
+              }%`,
+            }}
+          />
+
+        </div>
+
+        <div className="question-list">
+
+          {questions.map(
+            (question, index) => (
+
+              <div
+                className="question-card"
+                key={index}
+              >
+
+                <div className="question-number">
+                  {String(
+                    index + 1
+                  ).padStart(2, "0")}
+                </div>
+
+                <div className="question-content">
+
+                  <h3>
+                    {question}
+                  </h3>
+
+                  <div className="answer-options">
+
+                    {OPTIONS.map(
+                      (option, value) => (
+
+                        <button
+                          key={value}
+                          className={
+                            answers[index] ===
+                            value
+                              ? "answer active"
+                              : "answer"
+                          }
+                          onClick={() =>
+                            selectAnswer(
+                              index,
+                              value
+                            )
+                          }
+                        >
+
+                          <span className="answer-number">
+                            {value}
+                          </span>
+
+                          {option}
+
+                        </button>
+
+                      )
+                    )}
+
+                  </div>
+
+                </div>
+
+              </div>
+
+            )
+          )}
+
+        </div>
+
+        <div className="assessment-footer">
+
+          <p>
+            Your responses are stored under
+            your anonymous session.
+          </p>
+
+          <button
+            className="primary-button"
+            onClick={onSubmit}
+            disabled={loading}
+          >
+            {loading
+              ? "Saving..."
+              : "Continue →"}
+          </button>
+
+        </div>
+
+      </main>
+
+    </div>
+  );
+}
+
 
 export default App;
