@@ -1,0 +1,116 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>MindSetu — SIH26186 Welfare Assessment</title>
+  <style>
+    :root{font-family:Inter,system-ui,-apple-system,Segoe UI,sans-serif;color:#e9f5f2;background:#071311}
+    *{box-sizing:border-box} body{margin:0;min-height:100vh;background:linear-gradient(140deg,#071311,#10211e)}
+    .wrap{max-width:980px;margin:auto;padding:42px 20px 80px}.brand{font-size:18px;font-weight:800;letter-spacing:.06em;color:#8fe2cf}
+    .eyebrow{display:inline-block;margin-top:28px;padding:8px 12px;border-radius:999px;background:#163c35;color:#9ee7d5;font-size:12px;font-weight:800;letter-spacing:.1em}
+    h1{font-size:clamp(38px,6vw,64px);line-height:.98;margin:18px 0 14px;max-width:760px}.lead{font-size:18px;color:#b8cbc7;max-width:760px;line-height:1.55}
+    .steps{display:flex;gap:8px;flex-wrap:wrap;margin:28px 0}.step{padding:8px 12px;border:1px solid #23423c;border-radius:999px;color:#88aaa3;font-size:13px}.step.active{color:#d8fff5;border-color:#5bd2b8;background:#12332d}
+    .card{background:rgba(13,31,28,.92);border:1px solid #25453e;border-radius:22px;padding:24px;margin-top:18px;box-shadow:0 18px 50px rgba(0,0,0,.18)}
+    .grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}@media(max-width:700px){.grid{grid-template-columns:1fr}}
+    label{display:block;font-size:13px;font-weight:700;color:#aac6c0;margin-bottom:7px}input,select{width:100%;padding:13px 14px;border-radius:12px;border:1px solid #355b52;background:#0a1d1a;color:#f1fffb;font:inherit}
+    .q{padding:16px 0;border-bottom:1px solid #1c3530}.q:last-child{border-bottom:0}.q p{margin:0 0 10px;font-weight:650}.opts{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}@media(max-width:650px){.opts{grid-template-columns:repeat(2,1fr)}}
+    .opt{padding:11px;border:1px solid #34534d;border-radius:10px;background:#0b1c19;color:#bdd0cc;cursor:pointer;text-align:center}.opt.selected{border-color:#63dfc1;background:#143a32;color:#ecfff9}
+    button{border:0;border-radius:12px;padding:13px 18px;font:inherit;font-weight:800;cursor:pointer}.primary{background:#63dfc1;color:#06201a}.secondary{background:#16332e;color:#dff8f2;border:1px solid #2f564d}.actions{display:flex;gap:10px;justify-content:flex-end;margin-top:18px;flex-wrap:wrap}
+    .result{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}@media(max-width:700px){.result{grid-template-columns:1fr}}
+    .metric{padding:18px;border:1px solid #31534c;border-radius:16px;background:#0a1d1a}.metric span{display:block;color:#8eaaa5;font-size:12px;text-transform:uppercase;letter-spacing:.08em}.metric strong{display:block;font-size:34px;margin-top:6px}
+    .risk{font-size:42px;font-weight:900;margin:8px 0}.risk.low{color:#67e2b1}.risk.moderate{color:#ffd66b}.risk.high{color:#ff8f8f}
+    .recommendation{white-space:pre-wrap;line-height:1.6;color:#d1e4df}.muted{color:#91aaa5}.error{color:#ff9c9c;margin-top:12px}.hidden{display:none}
+  </style>
+</head>
+<body>
+<div class="wrap">
+  <div class="brand">MindSetu • SIH26186</div>
+  <span class="eyebrow">PERSONNEL WELFARE</span>
+  <h1>Wellbeing intelligence for personnel.</h1>
+  <p class="lead">A focused prototype that combines wellness signals with workload and duty information to identify welfare risk and recommend the next support action.</p>
+
+  <div class="steps" id="steps"></div>
+  <div id="error" class="error"></div>
+
+  <section id="step1" class="card">
+    <h2>1. Personnel</h2><p class="muted">Use fictional demo information during presentations.</p>
+    <div class="grid">
+      <div><label for="role">Role / designation</label><input id="role" placeholder="e.g. Field Operations Personnel"></div>
+      <div><label for="unit">Unit / department</label><input id="unit" placeholder="e.g. Operations Unit"></div>
+    </div>
+    <div class="actions"><button class="primary" onclick="startPersonnel()">Continue →</button></div>
+  </section>
+
+  <section id="step2" class="card hidden">
+    <h2>2. Wellness Assessment</h2>
+    <p class="muted">Rate how often each statement has felt true recently.</p>
+    <div id="wellnessQuestions"></div>
+    <div class="actions"><button class="secondary" onclick="show(1)">← Back</button><button class="primary" onclick="submitWellness()">Continue →</button></div>
+  </section>
+
+  <section id="step3" class="card hidden">
+    <h2>3. Workload + Duty Information</h2>
+    <p class="muted">These are welfare-planning signals, not disciplinary metrics.</p>
+    <div class="grid">
+      <div><label>Duty hours per day</label><input id="dutyHours" type="number" min="0" max="24" step="0.5" value="8"></div>
+      <div><label>Night duties in recent period</label><input id="nightDuties" type="number" min="0" max="14" value="1"></div>
+      <div><label>Average rest / recovery hours</label><input id="restHours" type="number" min="0" max="24" step="0.5" value="8"></div>
+      <div><label>Days since last leave</label><input id="daysLeave" type="number" min="0" max="90" value="7"></div>
+      <div><label>Workload intensity</label><select id="workloadLevel"><option value="1">1 — Very manageable</option><option value="2">2 — Manageable</option><option value="3" selected>3 — Moderate</option><option value="4">4 — Heavy</option><option value="5">5 — Very heavy</option></select></div>
+      <div><label>Duty changes per recent period</label><input id="dutyChanges" type="number" min="0" max="7" value="1"></div>
+    </div>
+    <div style="margin-top:16px"><label><input id="highPressure" type="checkbox" style="width:auto;margin-right:8px">Recent high-pressure assignment</label></div>
+    <div class="actions"><button class="secondary" onclick="show(2)">← Back</button><button class="primary" onclick="submitWorkload()">Analyse welfare risk →</button></div>
+  </section>
+
+  <section id="step4" class="card hidden">
+    <h2>4. AI Stress / Risk Analysis</h2>
+    <p class="muted">Combines the wellness and workload signals, then generates a welfare recommendation.</p>
+    <div class="result">
+      <div class="metric"><span>Wellness stress</span><strong id="wellnessScore">—</strong></div>
+      <div class="metric"><span>Workload</span><strong id="workloadScore">—</strong></div>
+      <div class="metric"><span>Combined</span><strong id="combinedScore">—</strong></div>
+    </div>
+    <div class="card" style="margin-top:16px;background:#0a1a18"><span class="muted">WELFARE RISK</span><div id="risk" class="risk">—</div><p id="recommendation" class="recommendation"></p></div>
+    <div class="actions"><button class="secondary" onclick="show(3)">← Revisit inputs</button><button class="primary" onclick="openDashboard()">Open welfare dashboard →</button></div>
+  </section>
+
+  <section id="step5" class="card hidden">
+    <h2>5. Welfare Dashboard</h2>
+    <p class="muted">Session-level view for the demonstration. Production systems would use role-based access and stronger privacy controls.</p>
+    <div class="result">
+      <div class="metric"><span>Risk</span><strong id="dashRisk">—</strong></div>
+      <div class="metric"><span>Combined score</span><strong id="dashScore">—</strong></div>
+      <div class="metric"><span>Model</span><strong style="font-size:20px">Qwen3</strong></div>
+    </div>
+    <div class="card" style="margin-top:16px;background:#0a1a18"><span class="muted">RECOMMENDED WELFARE ACTION</span><p id="dashRecommendation" class="recommendation"></p></div>
+    <div class="actions"><button class="secondary" onclick="location.reload()">Start another assessment</button></div>
+  </section>
+</div>
+<script>
+const API='http://127.0.0.1:8000';
+const wellnessQuestions=[
+  'I feel exhausted even after having time to rest.',
+  'I find it difficult to switch off after duty.',
+  'I feel irritable or emotionally strained.',
+  'Stress makes it harder for me to concentrate.',
+  'My responsibilities feel difficult to manage.',
+  'I continue worrying about duty when I am off duty.'
+];
+const options=['Never','Some days','Often','Nearly every day'];
+let sessionId=null, wellness=[], step=1, analysis=null;
+function renderSteps(){document.getElementById('steps').innerHTML=[1,2,3,4,5].map((n,i)=>`<span class="step ${n===step?'active':''}">${n}. ${['Personnel','Wellness','Workload + Duty','Risk Analysis','Dashboard'][i]}</span>`).join('')}
+function show(n){step=n;for(let i=1;i<=5;i++)document.getElementById('step'+i).classList.toggle('hidden',i!==n);renderSteps();}
+function err(msg){document.getElementById('error').textContent=msg||''}
+function renderQuestions(){document.getElementById('wellnessQuestions').innerHTML=wellnessQuestions.map((q,i)=>`<div class="q"><p>${i+1}. ${q}</p><div class="opts">${options.map((o,v)=>`<button class="opt ${wellness[i]===v?'selected':''}" onclick="setWellness(${i},${v})">${o}</button>`).join('')}</div></div>`).join('')}
+function setWellness(i,v){wellness[i]=v;renderQuestions()}
+async function api(path,opts={}){const r=await fetch(API+path,{headers:{'Content-Type':'application/json'},...opts});const d=await r.json().catch(()=>({detail:'Invalid server response'}));if(!r.ok)throw new Error(d.detail||'Request failed');return d}
+async function startPersonnel(){err('');const role=document.getElementById('role').value.trim();const unit=document.getElementById('unit').value.trim();if(role.length<2){err('Enter a role/designation.');return}window.personnel={role,unit};try{const d=await api('/api/sessions',{method:'POST',body:JSON.stringify({consent_given:true})});sessionId=d.session_id;show(2)}catch(e){err(e.message)}}
+async function submitWellness(){err('');if(wellness.length!==6||wellness.some(v=>v===undefined)){err('Please answer all wellness questions.');return}try{await api('/api/sih26186/wellness',{method:'POST',body:JSON.stringify({session_id:sessionId,answers:wellness})});show(3)}catch(e){err(e.message)}}
+async function submitWorkload(){err('');const payload={session_id:sessionId,role:window.personnel.role,unit:window.personnel.unit,duty_hours:Number(document.getElementById('dutyHours').value),night_duties:Number(document.getElementById('nightDuties').value),rest_hours:Number(document.getElementById('restHours').value),days_since_leave:Number(document.getElementById('daysLeave').value),workload_level:Number(document.getElementById('workloadLevel').value),high_pressure_assignment:document.getElementById('highPressure').checked,duty_change_frequency:Number(document.getElementById('dutyChanges').value)};try{await api('/api/sih26186/workload',{method:'POST',body:JSON.stringify(payload)});const d=await api('/api/sih26186/analyze/'+sessionId,{method:'POST'});analysis=d;document.getElementById('wellnessScore').textContent=d.wellness_score;document.getElementById('workloadScore').textContent=d.workload_score;document.getElementById('combinedScore').textContent=d.combined_score;document.getElementById('risk').textContent=d.risk_level.toUpperCase();document.getElementById('risk').className='risk '+d.risk_level;document.getElementById('recommendation').textContent=d.recommendation;show(4)}catch(e){err(e.message)}}
+async function openDashboard(){err('');try{const d=await api('/api/sih26186/dashboard/'+sessionId);document.getElementById('dashRisk').textContent=d.risk_level.toUpperCase();document.getElementById('dashScore').textContent=d.combined_score;document.getElementById('dashRecommendation').textContent=d.recommendation;show(5)}catch(e){err(e.message)}}
+renderQuestions();renderSteps();
+</script>
+</body>
+</html>
