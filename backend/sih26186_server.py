@@ -173,12 +173,9 @@ def _clean_ai_recommendation(text, fallback):
     text = (text or "").strip()
     if not text:
         return fallback
-
     text = re.sub(r"^```(?:text|markdown)?\s*", "", text, flags=re.IGNORECASE)
     text = re.sub(r"\s*```$", "", text).strip()
     lowered = text.lower()
-
-    # Never expose model task framing, prompt restatement, data recitation, or chain-of-thought.
     blocked_markers = (
         "okay, the user", "ok, the user", "the user is asking", "the user wants",
         "they've provided", "they have provided", "first, i need to", "first i need to",
@@ -193,67 +190,28 @@ def _clean_ai_recommendation(text, fallback):
     )
     if any(marker in lowered for marker in blocked_markers):
         return fallback
-
     if len(text) > 700:
         return fallback
-
     paragraphs = [p.strip() for p in re.split(r"\n\s*\n", text) if p.strip()]
     if len(paragraphs) > 4:
         return fallback
-
-    # Require action-oriented language so the model cannot return an essay or analysis.
     action_markers = (
         "maintain", "continue", "schedule", "review", "consider", "protect",
         "check in", "check-in", "seek", "connect", "monitor", "repeat",
     )
     if not any(marker in lowered for marker in action_markers):
         return fallback
-
     return text
 
 
 def _ai_recommendation(risk_level, wellness_score, workload_score, workload):
-    fallback = _fallback_recommendation(risk_level, workload)
-    prompt = f"""
-You are a welfare-support assistant for SIH26186.
-Do not diagnose, provide medical treatment, or make disciplinary decisions.
-Return ONLY 2-4 concise practical welfare actions.
-Do not explain reasoning or restate any input data.
-Use direct action statements.
-Risk level: {risk_level}
-Wellness stress score: {wellness_score}
-Workload score: {workload_score}
-Duty hours/day: {workload['duty_hours']}
-Night duties: {workload['night_duties']}
-Rest hours/day: {workload['rest_hours']}
-Days since leave: {workload['days_since_leave']}
-Workload intensity: {workload['workload_level']}/5
-High-pressure assignment: {workload['high_pressure_assignment']}
-Duty changes: {workload['duty_change_frequency']}/7
-"""
-    try:
-        response = requests.post(
-            OLLAMA_URL,
-            json={
-                "model": OLLAMA_MODEL,
-                "stream": False,
-                "think": False,
-                "messages": [
-                    {"role": "system", "content": "Return only concise non-clinical welfare actions. Never expose internal reasoning or input restatement."},
-                    {"role": "user", "content": prompt},
-                ],
-                "options": {"temperature": 0.1, "top_p": 0.6, "num_ctx": 1536, "num_predict": 90},
-            },
-            timeout=(5, 45),
-        )
-        if response.status_code == 200:
-            text = ((response.json().get("message") or {}).get("content") or "").strip()
-            return _clean_ai_recommendation(text, fallback)
-    except requests.RequestException:
-        pass
-    except (ValueError, TypeError, KeyError):
-        pass
-    return fallback
+    """Return a deterministic, safe recommendation.
+
+    Risk classification is deterministic and the stored recommendation must never
+    contain raw model reasoning. Qwen remains available elsewhere in MindSetu, but
+    SIH26186 does not trust free-form model output for welfare actions.
+    """
+    return _fallback_recommendation(risk_level, workload)
 
 
 @app.on_event("startup")
