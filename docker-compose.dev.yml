@@ -13,15 +13,5 @@ services:
       - "5432:5432"
     restart: unless-stopped
 
-  ollama:
-    image: ollama/ollama:latest
-    container_name: mindsetu-dev-ollama
-    volumes:
-      - mindsetu_dev_ollama_data:/root/.ollama
-    ports:
-      - "11434:11434"
-    restart: unless-stopped
-
 volumes:
   mindsetu_dev_postgres_data:
-  mindsetu_dev_ollama_data:
