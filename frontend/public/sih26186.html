@@ -16,7 +16,7 @@
     label{display:block;font-size:13px;font-weight:700;color:#aac6c0;margin-bottom:7px}input,select{width:100%;padding:13px 14px;border-radius:12px;border:1px solid #355b52;background:#0a1d1a;color:#f1fffb;font:inherit}
     .q{padding:16px 0;border-bottom:1px solid #1c3530}.q:last-child{border-bottom:0}.q p{margin:0 0 10px;font-weight:650}.opts{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}@media(max-width:650px){.opts{grid-template-columns:repeat(2,1fr)}}
     .opt{padding:11px;border:1px solid #34534d;border-radius:10px;background:#0b1c19;color:#bdd0cc;cursor:pointer;text-align:center}.opt.selected{border-color:#63dfc1;background:#143a32;color:#ecfff9}
-    button{border:0;border-radius:12px;padding:13px 18px;font:inherit;font-weight:800;cursor:pointer}.primary{background:#63dfc1;color:#06201a}.secondary{background:#16332e;color:#dff8f2;border:1px solid #2f564d}.actions{display:flex;gap:10px;justify-content:flex-end;margin-top:18px;flex-wrap:wrap}
+    button{border:0;border-radius:12px;padding:13px 18px;font:inherit;font-weight:800;cursor:pointer}.primary{background:#63dfc1;color:#06201a}.secondary{background:#16332e;color:#dff8f2;border:1px solid #2f564d}.actions{display:flex;gap:10px;justify-content:flex-end;margin-top:18px;flex-wrap:wrap}button:disabled{opacity:.55;cursor:not-allowed}
     .result{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}@media(max-width:700px){.result{grid-template-columns:1fr}}
     .metric{padding:18px;border:1px solid #31534c;border-radius:16px;background:#0a1d1a}.metric span{display:block;color:#8eaaa5;font-size:12px;text-transform:uppercase;letter-spacing:.08em}.metric strong{display:block;font-size:34px;margin-top:6px}
     .risk{font-size:42px;font-weight:900;margin:8px 0}.risk.low{color:#67e2b1}.risk.moderate{color:#ffd66b}.risk.high{color:#ff8f8f}
@@ -39,14 +39,14 @@
       <div><label for="role">Role / designation</label><input id="role" placeholder="e.g. Field Operations Personnel"></div>
       <div><label for="unit">Unit / department</label><input id="unit" placeholder="e.g. Operations Unit"></div>
     </div>
-    <div class="actions"><button class="primary" onclick="startPersonnel()">Continue →</button></div>
+    <div class="actions"><button id="personnelButton" class="primary" onclick="startPersonnel()">Continue →</button></div>
   </section>
 
   <section id="step2" class="card hidden">
     <h2>2. Wellness Assessment</h2>
     <p class="muted">Rate how often each statement has felt true recently.</p>
     <div id="wellnessQuestions"></div>
-    <div class="actions"><button class="secondary" onclick="show(1)">← Back</button><button class="primary" onclick="submitWellness()">Continue →</button></div>
+    <div class="actions"><button class="secondary" onclick="show(1)">← Back</button><button id="wellnessButton" class="primary" onclick="submitWellness()">Continue →</button></div>
   </section>
 
   <section id="step3" class="card hidden">
@@ -61,7 +61,7 @@
       <div><label>Duty changes per recent period</label><input id="dutyChanges" type="number" min="0" max="7" value="1"></div>
     </div>
     <div style="margin-top:16px"><label><input id="highPressure" type="checkbox" style="width:auto;margin-right:8px">Recent high-pressure assignment</label></div>
-    <div class="actions"><button class="secondary" onclick="show(2)">← Back</button><button class="primary" onclick="submitWorkload()">Analyse welfare risk →</button></div>
+    <div class="actions"><button class="secondary" onclick="show(2)">← Back</button><button id="analyseButton" class="primary" onclick="submitWorkload()">Analyse welfare risk →</button></div>
   </section>
 
   <section id="step4" class="card hidden">
@@ -73,7 +73,7 @@
       <div class="metric"><span>Combined</span><strong id="combinedScore">—</strong></div>
     </div>
     <div class="card" style="margin-top:16px;background:#0a1a18"><span class="muted">WELFARE RISK</span><div id="risk" class="risk">—</div><p id="recommendation" class="recommendation"></p></div>
-    <div class="actions"><button class="secondary" onclick="show(3)">← Revisit inputs</button><button class="primary" onclick="openDashboard()">Open welfare dashboard →</button></div>
+    <div class="actions"><button class="secondary" onclick="show(3)">← Revisit inputs</button><button id="dashboardButton" class="primary" onclick="openDashboard()">Open welfare dashboard →</button></div>
   </section>
 
   <section id="step5" class="card hidden">
@@ -99,17 +99,18 @@ const wellnessQuestions=[
   'I continue worrying about duty when I am off duty.'
 ];
 const options=['Never','Some days','Often','Nearly every day'];
-let sessionId=null, wellness=[], step=1, analysis=null;
+let sessionId=null, wellness=[], step=1, analysis=null, analysisRunning=false, dashboardOpening=false;
 function renderSteps(){document.getElementById('steps').innerHTML=[1,2,3,4,5].map((n,i)=>`<span class="step ${n===step?'active':''}">${n}. ${['Personnel','Wellness','Workload + Duty','Risk Analysis','Dashboard'][i]}</span>`).join('')}
 function show(n){step=n;for(let i=1;i<=5;i++)document.getElementById('step'+i).classList.toggle('hidden',i!==n);renderSteps();}
 function err(msg){document.getElementById('error').textContent=msg||''}
 function renderQuestions(){document.getElementById('wellnessQuestions').innerHTML=wellnessQuestions.map((q,i)=>`<div class="q"><p>${i+1}. ${q}</p><div class="opts">${options.map((o,v)=>`<button class="opt ${wellness[i]===v?'selected':''}" onclick="setWellness(${i},${v})">${o}</button>`).join('')}</div></div>`).join('')}
-function setWellness(i,v){wellness[i]=v;renderQuestions()}
+function setWellness(i,v){if(analysisRunning)return;wellness[i]=v;renderQuestions()}
 async function api(path,opts={}){const r=await fetch(API+path,{headers:{'Content-Type':'application/json'},...opts});const d=await r.json().catch(()=>({detail:'Invalid server response'}));if(!r.ok)throw new Error(d.detail||'Request failed');return d}
-async function startPersonnel(){err('');const role=document.getElementById('role').value.trim();const unit=document.getElementById('unit').value.trim();if(role.length<2){err('Enter a role/designation.');return}window.personnel={role,unit};try{const d=await api('/api/sessions',{method:'POST',body:JSON.stringify({consent_given:true})});sessionId=d.session_id;show(2)}catch(e){err(e.message)}}
-async function submitWellness(){err('');if(wellness.length!==6||wellness.some(v=>v===undefined)){err('Please answer all wellness questions.');return}try{await api('/api/sih26186/wellness',{method:'POST',body:JSON.stringify({session_id:sessionId,answers:wellness})});show(3)}catch(e){err(e.message)}}
-async function submitWorkload(){err('');const payload={session_id:sessionId,role:window.personnel.role,unit:window.personnel.unit,duty_hours:Number(document.getElementById('dutyHours').value),night_duties:Number(document.getElementById('nightDuties').value),rest_hours:Number(document.getElementById('restHours').value),days_since_leave:Number(document.getElementById('daysLeave').value),workload_level:Number(document.getElementById('workloadLevel').value),high_pressure_assignment:document.getElementById('highPressure').checked,duty_change_frequency:Number(document.getElementById('dutyChanges').value)};try{await api('/api/sih26186/workload',{method:'POST',body:JSON.stringify(payload)});const d=await api('/api/sih26186/analyze/'+sessionId,{method:'POST'});analysis=d;document.getElementById('wellnessScore').textContent=d.wellness_score;document.getElementById('workloadScore').textContent=d.workload_score;document.getElementById('combinedScore').textContent=d.combined_score;document.getElementById('risk').textContent=d.risk_level.toUpperCase();document.getElementById('risk').className='risk '+d.risk_level;document.getElementById('recommendation').textContent=d.recommendation;show(4)}catch(e){err(e.message)}}
-async function openDashboard(){err('');try{const d=await api('/api/sih26186/dashboard/'+sessionId);document.getElementById('dashRisk').textContent=d.risk_level.toUpperCase();document.getElementById('dashScore').textContent=d.combined_score;document.getElementById('dashRecommendation').textContent=d.recommendation;show(5)}catch(e){err(e.message)}}
+function setButton(buttonId,disabled,text){const button=document.getElementById(buttonId);if(!button)return;button.disabled=disabled;if(text)button.textContent=text}
+async function startPersonnel(){if(analysisRunning)return;err('');const role=document.getElementById('role').value.trim();const unit=document.getElementById('unit').value.trim();if(role.length<2){err('Enter a role/designation.');return}setButton('personnelButton',true,'Starting...');window.personnel={role,unit};try{const d=await api('/api/sessions',{method:'POST',body:JSON.stringify({consent_given:true})});sessionId=d.session_id;show(2)}catch(e){err(e.message)}finally{setButton('personnelButton',false,'Continue →')}}
+async function submitWellness(){if(analysisRunning)return;err('');if(wellness.length!==6||wellness.some(v=>v===undefined)){err('Please answer all wellness questions.');return}setButton('wellnessButton',true,'Saving...');try{await api('/api/sih26186/wellness',{method:'POST',body:JSON.stringify({session_id:sessionId,answers:wellness})});show(3)}catch(e){err(e.message)}finally{setButton('wellnessButton',false,'Continue →')}}
+async function submitWorkload(){if(analysisRunning)return;analysisRunning=true;err('');setButton('analyseButton',true,'Analysing...');setButton('dashboardButton',true,'Open welfare dashboard →');try{const payload={session_id:sessionId,role:window.personnel.role,unit:window.personnel.unit,duty_hours:Number(document.getElementById('dutyHours').value),night_duties:Number(document.getElementById('nightDuties').value),rest_hours:Number(document.getElementById('restHours').value),days_since_leave:Number(document.getElementById('daysLeave').value),workload_level:Number(document.getElementById('workloadLevel').value),high_pressure_assignment:document.getElementById('highPressure').checked,duty_change_frequency:Number(document.getElementById('dutyChanges').value)};await api('/api/sih26186/workload',{method:'POST',body:JSON.stringify(payload)});const d=await api('/api/sih26186/analyze/'+sessionId,{method:'POST'});analysis=d;document.getElementById('wellnessScore').textContent=d.wellness_score;document.getElementById('workloadScore').textContent=d.workload_score;document.getElementById('combinedScore').textContent=d.combined_score;document.getElementById('risk').textContent=d.risk_level.toUpperCase();document.getElementById('risk').className='risk '+d.risk_level;document.getElementById('recommendation').textContent=d.recommendation;show(4)}catch(e){err(e.message)}finally{analysisRunning=false;setButton('analyseButton',false,'Analyse welfare risk →');setButton('dashboardButton',false,'Open welfare dashboard →')}}
+async function openDashboard(){if(dashboardOpening||!analysis||!sessionId)return;dashboardOpening=true;err('');setButton('dashboardButton',true,'Opening dashboard...');try{const d=await api('/api/sih26186/dashboard/'+sessionId);if(!analysis)return;document.getElementById('dashRisk').textContent=analysis.risk_level.toUpperCase();document.getElementById('dashScore').textContent=analysis.combined_score;document.getElementById('dashRecommendation').textContent=analysis.recommendation;show(5)}catch(e){err(e.message)}finally{dashboardOpening=false;setButton('dashboardButton',false,'Open welfare dashboard →')}}
 renderQuestions();renderSteps();
 </script>
 </body>
