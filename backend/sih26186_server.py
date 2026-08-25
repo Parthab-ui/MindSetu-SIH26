@@ -10,10 +10,6 @@ from pydantic import BaseModel, Field
 from main import OLLAMA_MODEL, OLLAMA_URL, app, get_connection, session_exists
 
 
-# =========================================================
-# SIH26186 DATA MODELS
-# =========================================================
-
 class SIH26186WellnessRequest(BaseModel):
     session_id: uuid.UUID
     answers: list[int] = Field(..., min_length=6, max_length=6)
@@ -31,10 +27,6 @@ class SIH26186WorkloadRequest(BaseModel):
     high_pressure_assignment: bool = False
     duty_change_frequency: int = Field(default=0, ge=0, le=7)
 
-
-# =========================================================
-# SIH26186 DATABASE
-# =========================================================
 
 def ensure_sih26186_tables():
     with get_connection() as conn:
@@ -88,13 +80,7 @@ def _latest_wellness(session_id):
     with get_connection() as conn:
         with conn.cursor() as cur:
             cur.execute(
-                """
-                SELECT stress_score
-                FROM sih26186_wellness
-                WHERE session_id = %s
-                ORDER BY created_at DESC
-                LIMIT 1
-                """,
+                "SELECT stress_score FROM sih26186_wellness WHERE session_id = %s ORDER BY created_at DESC LIMIT 1",
                 (session_id,),
             )
             row = cur.fetchone()
@@ -134,16 +120,9 @@ def _latest_workload(session_id):
             }
 
 
-# =========================================================
-# SCORING
-# =========================================================
-
 def _validate_answers(answers):
     if any(answer < 0 or answer > 3 for answer in answers):
-        raise HTTPException(
-            status_code=400,
-            detail="Each wellness answer must be between 0 and 3.",
-        )
+        raise HTTPException(status_code=400, detail="Each wellness answer must be between 0 and 3.")
 
 
 def _calculate_wellness_stress(answers):
@@ -164,13 +143,10 @@ def _calculate_workload_score(request: SIH26186WorkloadRequest):
 
 def _classify(wellness_score, workload_score):
     combined = round((wellness_score * 0.55) + (workload_score * 0.45), 2)
-
     if combined >= 70 or wellness_score >= 80 or workload_score >= 85:
         return combined, "high"
-
     if combined >= 45 or wellness_score >= 50 or workload_score >= 60:
         return combined, "moderate"
-
     return combined, "low"
 
 
@@ -182,13 +158,11 @@ def _fallback_recommendation(risk_level, workload):
             "or qualified professional support channel. This is a welfare triage signal, "
             "not a clinical diagnosis."
         )
-
     if risk_level == "moderate":
         return (
             "Schedule a welfare follow-up, review duty load and recovery time, and consider "
             "temporary workload adjustments or protected rest. Repeat the check-in within a week."
         )
-
     return (
         "Current signals are low concern. Maintain healthy rest and workload practices, "
         "and repeat the welfare check-in periodically or after a major duty change."
@@ -200,57 +174,39 @@ def _clean_ai_recommendation(text, fallback):
     if not text:
         return fallback
 
-    # Remove accidental markdown/code fences without changing normal recommendation text.
     text = re.sub(r"^```(?:text|markdown)?\s*", "", text, flags=re.IGNORECASE)
-    text = re.sub(r"\s*```$", "", text)
-    text = text.strip()
-
-    # Qwen can occasionally expose its internal task framing/reasoning despite think=false.
-    # Never allow that material into the welfare dashboard.
-    blocked_markers = (
-        "okay, the user",
-        "ok, the user",
-        "the user is asking",
-        "the user wants",
-        "they've provided",
-        "they have provided",
-        "first, i need to",
-        "first i need to",
-        "hmm,",
-        "hmm.",
-        "i need to understand",
-        "i need to parse",
-        "the user emphasized",
-        "must avoid",
-        "the assistant",
-        "system prompt",
-        "prompt says",
-        "as an ai",
-    )
+    text = re.sub(r"\s*```$", "", text).strip()
     lowered = text.lower()
+
+    # Never expose model task framing, prompt restatement, data recitation, or chain-of-thought.
+    blocked_markers = (
+        "okay, the user", "ok, the user", "the user is asking", "the user wants",
+        "they've provided", "they have provided", "first, i need to", "first i need to",
+        "hmm,", "hmm.", "i need to understand", "i need to parse", "the user emphasized",
+        "must avoid", "the assistant", "system prompt", "prompt says", "as an ai",
+        "we are given:", "we're given:", "given:", "key data points", "let's analyze",
+        "let me analyze", "thinking through", "step 1:", "first,", "second,",
+        "therefore, i would", "this means that", "risk level:", "wellness stress score:",
+        "workload score:", "duty hours/day:", "night duties:", "rest hours/day:",
+        "days since leave:", "workload intensity:", "high-pressure assignment:",
+        "duty changes:", "role:", "unit:",
+    )
     if any(marker in lowered for marker in blocked_markers):
         return fallback
 
-    # A dashboard recommendation should be concise and action-oriented.
-    if len(text) > 900:
+    if len(text) > 700:
         return fallback
 
     paragraphs = [p.strip() for p in re.split(r"\n\s*\n", text) if p.strip()]
-    if len(paragraphs) > 5:
+    if len(paragraphs) > 4:
         return fallback
 
-    # Reject obvious chain-of-thought style narration.
-    reasoning_markers = (
-        "let's analyze",
-        "let me analyze",
-        "thinking through",
-        "step 1:",
-        "first,",
-        "second,",
-        "therefore, i would",
-        "this means that",
+    # Require action-oriented language so the model cannot return an essay or analysis.
+    action_markers = (
+        "maintain", "continue", "schedule", "review", "consider", "protect",
+        "check in", "check-in", "seek", "connect", "monitor", "repeat",
     )
-    if sum(marker in lowered for marker in reasoning_markers) >= 2:
+    if not any(marker in lowered for marker in action_markers):
         return fallback
 
     return text
@@ -261,10 +217,9 @@ def _ai_recommendation(risk_level, wellness_score, workload_score, workload):
     prompt = f"""
 You are a welfare-support assistant for SIH26186.
 Do not diagnose, provide medical treatment, or make disciplinary decisions.
-Return ONLY 2-4 concise practical welfare actions for a personnel welfare dashboard.
-Do not explain your reasoning. Do not mention the user, this prompt, instructions,
-model behaviour, scores in narrative form, or how you reached the recommendation.
-
+Return ONLY 2-4 concise practical welfare actions.
+Do not explain reasoning or restate any input data.
+Use direct action statements.
 Risk level: {risk_level}
 Wellness stress score: {wellness_score}
 Workload score: {workload_score}
@@ -275,11 +230,7 @@ Days since leave: {workload['days_since_leave']}
 Workload intensity: {workload['workload_level']}/5
 High-pressure assignment: {workload['high_pressure_assignment']}
 Duty changes: {workload['duty_change_frequency']}/7
-
-Prefer direct action statements such as maintaining recovery time, reviewing workload,
-arranging a routine welfare check-in, or seeking qualified professional support when appropriate.
 """
-
     try:
         response = requests.post(
             OLLAMA_URL,
@@ -288,33 +239,20 @@ arranging a routine welfare check-in, or seeking qualified professional support 
                 "stream": False,
                 "think": False,
                 "messages": [
-                    {
-                        "role": "system",
-                        "content": (
-                            "Return only concise non-clinical personnel welfare actions. "
-                            "Never expose internal reasoning or task framing."
-                        ),
-                    },
+                    {"role": "system", "content": "Return only concise non-clinical welfare actions. Never expose internal reasoning or input restatement."},
                     {"role": "user", "content": prompt},
                 ],
-                "options": {
-                    "temperature": 0.2,
-                    "top_p": 0.7,
-                    "num_ctx": 1536,
-                    "num_predict": 120,
-                },
+                "options": {"temperature": 0.1, "top_p": 0.6, "num_ctx": 1536, "num_predict": 90},
             },
             timeout=(5, 45),
         )
         if response.status_code == 200:
-            data = response.json()
-            text = ((data.get("message") or {}).get("content") or "").strip()
+            text = ((response.json().get("message") or {}).get("content") or "").strip()
             return _clean_ai_recommendation(text, fallback)
     except requests.RequestException:
         pass
     except (ValueError, TypeError, KeyError):
         pass
-
     return fallback
 
 
@@ -323,79 +261,42 @@ def startup_sih26186():
     ensure_sih26186_tables()
 
 
-# =========================================================
-# SIH26186 API
-# =========================================================
-
 @app.post("/api/sih26186/wellness")
 def save_sih26186_wellness(request: SIH26186WellnessRequest):
     _require_session(request.session_id)
     stress_score = _calculate_wellness_stress(request.answers)
-
     record_id = uuid.uuid4()
     with get_connection() as conn:
         with conn.cursor() as cur:
             cur.execute(
-                """
-                INSERT INTO sih26186_wellness
-                (id, session_id, answers, stress_score)
-                VALUES (%s, %s, %s::jsonb, %s)
-                """,
-                (
-                    record_id,
-                    request.session_id,
-                    json.dumps(request.answers),
-                    stress_score,
-                ),
+                "INSERT INTO sih26186_wellness (id, session_id, answers, stress_score) VALUES (%s, %s, %s::jsonb, %s)",
+                (record_id, request.session_id, json.dumps(request.answers), stress_score),
             )
-
-    return {
-        "id": str(record_id),
-        "stress_score": stress_score,
-        "message": "Wellness assessment recorded.",
-    }
+    return {"id": str(record_id), "stress_score": stress_score, "message": "Wellness assessment recorded."}
 
 
 @app.post("/api/sih26186/workload")
 def save_sih26186_workload(request: SIH26186WorkloadRequest):
     _require_session(request.session_id)
     workload_score = _calculate_workload_score(request)
-
     record_id = uuid.uuid4()
     with get_connection() as conn:
         with conn.cursor() as cur:
             cur.execute(
                 """
                 INSERT INTO sih26186_workload
-                (
-                    id, session_id, role, unit, duty_hours, night_duties,
-                    rest_hours, days_since_leave, workload_level,
-                    high_pressure_assignment, duty_change_frequency,
-                    workload_score
-                )
+                (id, session_id, role, unit, duty_hours, night_duties, rest_hours,
+                 days_since_leave, workload_level, high_pressure_assignment,
+                 duty_change_frequency, workload_score)
                 VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                 """,
-                (
-                    record_id,
-                    request.session_id,
-                    request.role.strip(),
-                    request.unit.strip(),
-                    request.duty_hours,
-                    request.night_duties,
-                    request.rest_hours,
-                    request.days_since_leave,
-                    request.workload_level,
-                    request.high_pressure_assignment,
-                    request.duty_change_frequency,
-                    workload_score,
-                ),
+                (record_id, request.session_id, request.role.strip(), request.unit.strip(),
+                 request.duty_hours, request.night_duties, request.rest_hours,
+                 request.days_since_leave, request.workload_level,
+                 request.high_pressure_assignment, request.duty_change_frequency,
+                 workload_score),
             )
-
-    return {
-        "id": str(record_id),
-        "workload_score": workload_score,
-        "message": "Workload and duty information recorded.",
-    }
+    return {"id": str(record_id), "workload_score": workload_score, "message": "Workload and duty information recorded."}
 
 
 @app.post("/api/sih26186/analyze/{session_id}")
@@ -403,44 +304,24 @@ def analyze_sih26186(session_id: uuid.UUID):
     _require_session(session_id)
     wellness_score = _latest_wellness(session_id)
     workload = _latest_workload(session_id)
-
     if wellness_score is None:
         raise HTTPException(status_code=400, detail="Complete the wellness assessment first.")
-
     if workload is None:
         raise HTTPException(status_code=400, detail="Complete workload and duty information first.")
 
     combined_score, risk_level = _classify(wellness_score, workload["workload_score"])
-    recommendation = _ai_recommendation(
-        risk_level,
-        wellness_score,
-        workload["workload_score"],
-        workload,
-    )
-
+    recommendation = _ai_recommendation(risk_level, wellness_score, workload["workload_score"], workload)
     analysis_id = uuid.uuid4()
     with get_connection() as conn:
         with conn.cursor() as cur:
             cur.execute(
                 """
                 INSERT INTO sih26186_analysis
-                (
-                    id, session_id, wellness_score, workload_score,
-                    combined_score, risk_level, recommendation
-                )
+                (id, session_id, wellness_score, workload_score, combined_score, risk_level, recommendation)
                 VALUES (%s, %s, %s, %s, %s, %s, %s)
                 """,
-                (
-                    analysis_id,
-                    session_id,
-                    wellness_score,
-                    workload["workload_score"],
-                    combined_score,
-                    risk_level,
-                    recommendation,
-                ),
+                (analysis_id, session_id, wellness_score, workload["workload_score"], combined_score, risk_level, recommendation),
             )
-
     return {
         "analysis_id": str(analysis_id),
         "session_id": str(session_id),
@@ -456,13 +337,11 @@ def analyze_sih26186(session_id: uuid.UUID):
 @app.get("/api/sih26186/dashboard/{session_id}")
 def sih26186_dashboard(session_id: uuid.UUID):
     _require_session(session_id)
-
     with get_connection() as conn:
         with conn.cursor() as cur:
             cur.execute(
                 """
-                SELECT wellness_score, workload_score, combined_score,
-                       risk_level, recommendation, created_at
+                SELECT wellness_score, workload_score, combined_score, risk_level, recommendation, created_at
                 FROM sih26186_analysis
                 WHERE session_id = %s
                 ORDER BY created_at DESC
@@ -471,10 +350,8 @@ def sih26186_dashboard(session_id: uuid.UUID):
                 (session_id,),
             )
             row = cur.fetchone()
-
     if not row:
         raise HTTPException(status_code=404, detail="No SIH26186 analysis found for this session.")
-
     return {
         "wellness_score": float(row[0]),
         "workload_score": float(row[1]),
