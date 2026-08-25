@@ -1,4 +1,5 @@
 import json
+import re
 import uuid
 from datetime import datetime, timezone
 
@@ -137,7 +138,6 @@ def _latest_workload(session_id):
 # SCORING
 # =========================================================
 
-
 def _validate_answers(answers):
     if any(answer < 0 or answer > 3 for answer in answers):
         raise HTTPException(
@@ -179,7 +179,7 @@ def _fallback_recommendation(risk_level, workload):
         return (
             "Prioritise an immediate welfare check-in. Review non-essential workload, "
             "protect recovery time, and connect the person with the appropriate welfare "
-            "or qualified mental-health support channel. This is a welfare triage signal, "
+            "or qualified professional support channel. This is a welfare triage signal, "
             "not a clinical diagnosis."
         )
 
@@ -195,29 +195,89 @@ def _fallback_recommendation(risk_level, workload):
     )
 
 
+def _clean_ai_recommendation(text, fallback):
+    text = (text or "").strip()
+    if not text:
+        return fallback
+
+    # Remove accidental markdown/code fences without changing normal recommendation text.
+    text = re.sub(r"^```(?:text|markdown)?\s*", "", text, flags=re.IGNORECASE)
+    text = re.sub(r"\s*```$", "", text)
+    text = text.strip()
+
+    # Qwen can occasionally expose its internal task framing/reasoning despite think=false.
+    # Never allow that material into the welfare dashboard.
+    blocked_markers = (
+        "okay, the user",
+        "ok, the user",
+        "the user is asking",
+        "the user wants",
+        "they've provided",
+        "they have provided",
+        "first, i need to",
+        "first i need to",
+        "hmm,",
+        "hmm.",
+        "i need to understand",
+        "i need to parse",
+        "the user emphasized",
+        "must avoid",
+        "the assistant",
+        "system prompt",
+        "prompt says",
+        "as an ai",
+    )
+    lowered = text.lower()
+    if any(marker in lowered for marker in blocked_markers):
+        return fallback
+
+    # A dashboard recommendation should be concise and action-oriented.
+    if len(text) > 900:
+        return fallback
+
+    paragraphs = [p.strip() for p in re.split(r"\n\s*\n", text) if p.strip()]
+    if len(paragraphs) > 5:
+        return fallback
+
+    # Reject obvious chain-of-thought style narration.
+    reasoning_markers = (
+        "let's analyze",
+        "let me analyze",
+        "thinking through",
+        "step 1:",
+        "first,",
+        "second,",
+        "therefore, i would",
+        "this means that",
+    )
+    if sum(marker in lowered for marker in reasoning_markers) >= 2:
+        return fallback
+
+    return text
+
+
 def _ai_recommendation(risk_level, wellness_score, workload_score, workload):
     fallback = _fallback_recommendation(risk_level, workload)
     prompt = f"""
 You are a welfare-support assistant for SIH26186.
 Do not diagnose, provide medical treatment, or make disciplinary decisions.
-Return only a concise welfare recommendation for a personnel welfare dashboard.
+Return ONLY 2-4 concise practical welfare actions for a personnel welfare dashboard.
+Do not explain your reasoning. Do not mention the user, this prompt, instructions,
+model behaviour, scores in narrative form, or how you reached the recommendation.
 
 Risk level: {risk_level}
-Wellness stress score (0-100): {wellness_score}
-Workload score (0-100): {workload_score}
-Role: {workload['role']}
-Unit: {workload['unit']}
+Wellness stress score: {wellness_score}
+Workload score: {workload_score}
 Duty hours/day: {workload['duty_hours']}
-Night duties in recent period: {workload['night_duties']}
+Night duties: {workload['night_duties']}
 Rest hours/day: {workload['rest_hours']}
 Days since leave: {workload['days_since_leave']}
 Workload intensity: {workload['workload_level']}/5
 High-pressure assignment: {workload['high_pressure_assignment']}
 Duty changes: {workload['duty_change_frequency']}/7
 
-Give 2-4 practical welfare actions. Emphasise rest, workload review,
-manager/welfare-officer check-ins, and qualified professional support when appropriate.
-Do not label the person with a disorder.
+Prefer direct action statements such as maintaining recovery time, reviewing workload,
+arranging a routine welfare check-in, or seeking qualified professional support when appropriate.
 """
 
     try:
@@ -230,15 +290,18 @@ Do not label the person with a disorder.
                 "messages": [
                     {
                         "role": "system",
-                        "content": "You provide concise non-clinical personnel welfare recommendations.",
+                        "content": (
+                            "Return only concise non-clinical personnel welfare actions. "
+                            "Never expose internal reasoning or task framing."
+                        ),
                     },
                     {"role": "user", "content": prompt},
                 ],
                 "options": {
-                    "temperature": 0.35,
-                    "top_p": 0.8,
-                    "num_ctx": 2048,
-                    "num_predict": 180,
+                    "temperature": 0.2,
+                    "top_p": 0.7,
+                    "num_ctx": 1536,
+                    "num_predict": 120,
                 },
             },
             timeout=(5, 45),
@@ -246,11 +309,10 @@ Do not label the person with a disorder.
         if response.status_code == 200:
             data = response.json()
             text = ((data.get("message") or {}).get("content") or "").strip()
-            if text:
-                return text
+            return _clean_ai_recommendation(text, fallback)
     except requests.RequestException:
         pass
-    except (ValueError, TypeError):
+    except (ValueError, TypeError, KeyError):
         pass
 
     return fallback
