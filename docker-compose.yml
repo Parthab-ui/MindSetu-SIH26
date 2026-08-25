@@ -33,6 +33,7 @@ services:
       DB_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in your environment or .env}
       OLLAMA_URL: http://ollama:11434/api/chat
       OLLAMA_MODEL: ${OLLAMA_MODEL:-qwen3:4b}
+    command: ["uvicorn", "sih26186_server:app", "--host", "0.0.0.0", "--port", "8000"]
     depends_on:
       - postgres
       - ollama
