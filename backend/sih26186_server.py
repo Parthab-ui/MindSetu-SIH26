@@ -3,11 +3,10 @@ import re
 import uuid
 from datetime import datetime, timezone
 
-import requests
 from fastapi import HTTPException
 from pydantic import BaseModel, Field
 
-from main import OLLAMA_MODEL, OLLAMA_URL, app, get_connection, session_exists
+from main import app, get_connection, session_exists
 
 
 class SIH26186WellnessRequest(BaseModel):
