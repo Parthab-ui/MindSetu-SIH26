@@ -59,6 +59,17 @@ scores or risk level unless the student asks about them.
 mindsetu_main.get_screening_context = get_screening_context
 
 
+@app.get("/api/chat/health")
+def chat_health():
+    """Return non-secret Gemini readiness information for the frontend/demo."""
+    return {
+        "status": "ready" if mindsetu_main.GEMINI_API_KEY else "needs_configuration",
+        "provider": "Google Gemini",
+        "model": mindsetu_main.GEMINI_MODEL,
+        "api_key_configured": bool(mindsetu_main.GEMINI_API_KEY),
+    }
+
+
 def ensure_sih26186_tables():
     with get_connection() as conn:
         with conn.cursor() as cur:
