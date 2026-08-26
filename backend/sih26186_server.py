@@ -70,16 +70,6 @@ def ensure_sih26186_tables():
             )
 
 
-@app.get("/api/chat/health")
-def chat_health():
-    return {
-        "status": "ready" if __import__("main").GEMINI_API_KEY else "needs_configuration",
-        "provider": "Google Gemini",
-        "model": __import__("main").GEMINI_MODEL,
-        "api_key_configured": bool(__import__("main").GEMINI_API_KEY),
-    }
-
-
 def _require_session(session_id: uuid.UUID):
     if not session_exists(session_id):
         raise HTTPException(status_code=404, detail="Session not found.")
@@ -116,11 +106,16 @@ def _latest_workload(session_id):
             if not row:
                 return None
             return {
-                "role": row[0], "unit": row[1] or "", "duty_hours": float(row[2]),
-                "night_duties": row[3], "rest_hours": float(row[4]),
-                "days_since_leave": row[5], "workload_level": row[6],
+                "role": row[0],
+                "unit": row[1] or "",
+                "duty_hours": float(row[2]),
+                "night_duties": row[3],
+                "rest_hours": float(row[4]),
+                "days_since_leave": row[5],
+                "workload_level": row[6],
                 "high_pressure_assignment": row[7],
-                "duty_change_frequency": row[8], "workload_score": float(row[9]),
+                "duty_change_frequency": row[8],
+                "workload_score": float(row[9]),
             }
 
 
