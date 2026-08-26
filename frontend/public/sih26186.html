@@ -89,7 +89,10 @@
   </section>
 </div>
 <script>
-const API='/api';
+// The SIH26186 backend runs on FastAPI port 8000 during local development.
+// Use an explicit origin here because Vite serves this static page on port 5173
+// and does not currently proxy /api requests to FastAPI.
+const API='http://127.0.0.1:8000/api';
 const wellnessQuestions=[
   'I feel exhausted even after having time to rest.',
   'I find it difficult to switch off after duty.',
