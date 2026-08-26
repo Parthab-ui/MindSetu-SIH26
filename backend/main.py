@@ -4,7 +4,6 @@ import uuid
 from datetime import datetime, timezone
 
 import psycopg
-import requests
 from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import StreamingResponse
@@ -18,24 +17,12 @@ load_dotenv()
 # CONFIGURATION
 # =========================================================
 
-OLLAMA_URL = os.getenv(
-    "OLLAMA_URL",
-    "http://127.0.0.1:11434/api/chat"
-)
-
-OLLAMA_MODEL = os.getenv(
-    "OLLAMA_MODEL",
-    "qwen3:4b"
-)
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
+GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-2.5-flash")
+GEMINI_TIMEOUT_MS = int(os.getenv("GEMINI_TIMEOUT_MS", "20000"))
 
 MAX_CHAT_LENGTH = 4000
 MAX_MOOD_NOTE_LENGTH = 1000
-
-# Optimized for the Radeon 680M
-OLLAMA_CONTEXT = 2048
-OLLAMA_TEMPERATURE = 0.6
-OLLAMA_NUM_PREDICT = 160
-OLLAMA_TIMEOUT = 180
 
 
 # =========================================================
@@ -370,7 +357,7 @@ def root():
     return {
         "message": "MindSetu API is running",
         "status": "success",
-        "ai_model": OLLAMA_MODEL
+        "ai_model": GEMINI_MODEL
     }
 
 
@@ -380,7 +367,7 @@ def health_check():
     return {
         "status": "healthy",
         "service": "MindSetu Backend",
-        "ai_model": OLLAMA_MODEL
+        "ai_model": GEMINI_MODEL
     }
 
 
@@ -847,248 +834,75 @@ def crisis_response():
 
 
 # =========================================================
-# OLLAMA / QWEN
+# GEMINI
 # =========================================================
 
-def contains_crisis_language(message):
-    text = message.lower()
-    return any(term in text for term in CRISIS_TERMS)
-
-
-def crisis_response():
+def build_gemini_prompt(user_message, screening_context):
     return (
-        "I'm really sorry you're going through something "
-        "this difficult. You don't have to face this alone. "
-        "Please contact your local emergency service or a "
-        "qualified mental-health professional now. If possible, "
-        "stay with someone you trust who can support you in person."
-    )
-
-
-def get_screening_context(session_id):
-
-    phq9_score, gad7_score = get_latest_assessments(session_id)
-
-    risk_level = "unknown"
-
-    if phq9_score is not None and gad7_score is not None:
-        risk = calculate_overall_risk(
-            phq9_score,
-            gad7_score
-        )
-        risk_level = risk["risk_level"]
-
-    context = f"""
-Screening context:
-Risk level: {risk_level}
-PHQ-9: {phq9_score if phq9_score is not None else "not completed"}
-GAD-7: {gad7_score if gad7_score is not None else "not completed"}
-
-These are screening results only. Do not diagnose the student.
-Use this information quietly as context. Do not repeat the
-scores or risk level unless the student asks about them.
-"""
-
-    return context, risk_level
-
-
-def build_ollama_payload(user_message, screening_context):
-
-    combined_system = (
         MINDSETU_SYSTEM_PROMPT
         + "\n\nPRIVATE SCREENING CONTEXT:\n"
         + screening_context
         + "\nUse this context silently. Never expose it unless "
           "the student explicitly asks about their screening results."
+        + "\n\nSTUDENT MESSAGE:\n"
+        + user_message
     )
 
-    return {
-        "model": OLLAMA_MODEL,
-        "stream": False,
-        "think": False,
-        "keep_alive": "10m",
 
-        "messages": [
-            {
-                "role": "system",
-                "content": combined_system,
-            },
-            {
-                "role": "user",
-                "content": user_message,
-            },
-        ],
-
-        # Force the model to return a student-facing response
-        # in a machine-readable field. Any hidden reasoning is
-        # never sent to the frontend.
-        "format": {
-            "type": "object",
-            "properties": {
-                "response": {
-                    "type": "string"
-                }
-            },
-            "required": ["response"]
-        },
-
-        "options": {
-            "temperature": 0.55,
-            "top_p": 0.8,
-            "repeat_penalty": 1.05,
-            "num_ctx": OLLAMA_CONTEXT,
-            "num_predict": 140,
-        },
-    }
-
-
-def stream_ollama_response(payload):
+def generate_gemini_response(user_message, screening_context):
+    if not GEMINI_API_KEY:
+        raise RuntimeError("GEMINI_API_KEY is not configured")
 
     try:
+        from google import genai
 
-        with requests.post(
-            OLLAMA_URL,
-            json=payload,
-            stream=False,
-            timeout=(5, OLLAMA_TIMEOUT),
-        ) as response:
+        client = genai.Client(
+            api_key=GEMINI_API_KEY,
+            http_options={"timeout": GEMINI_TIMEOUT_MS},
+        )
+        response = client.models.generate_content(
+            model=GEMINI_MODEL,
+            contents=build_gemini_prompt(user_message, screening_context),
+            config={
+                "temperature": 0.55,
+                "max_output_tokens": 400,
+            },
+        )
+        text = (getattr(response, "text", None) or "").strip()
+        if not text:
+            raise RuntimeError("Gemini returned an empty response")
+        return text
+    except Exception as error:
+        raise RuntimeError(
+            f"Gemini request failed: {type(error).__name__}"
+        ) from error
 
-            if response.status_code != 200:
 
-                try:
-                    error_data = response.json()
-                    detail = (
-                        error_data.get("error")
-                        or "Ollama returned an error."
-                    )
-                except Exception:
-                    detail = "Ollama returned an HTTP error."
+def stream_gemini_response(user_message, screening_context):
+    try:
+        response_text = generate_gemini_response(
+            user_message,
+            screening_context,
+        )
 
-                yield json.dumps({
-                    "type": "error",
-                    "message": detail,
-                }) + "\n"
-                return
+        yield json.dumps({
+            "type": "token",
+            "content": response_text,
+        }) + "\n"
 
-            try:
-                data = response.json()
-            except Exception:
-                yield json.dumps({
-                    "type": "error",
-                    "message": "Ollama returned invalid JSON.",
-                }) + "\n"
-                return
+        yield json.dumps({
+            "type": "done",
+        }) + "\n"
 
-            message_data = data.get("message", {})
-
-            # Qwen3 can expose reasoning separately.
-            # It is deliberately ignored.
-            response_text = ""
-
-            structured = message_data.get("content", "")
-
-            if isinstance(structured, dict):
-                response_text = structured.get(
-                    "response",
-                    ""
-                )
-            elif isinstance(structured, str):
-                try:
-                    parsed = json.loads(structured)
-                    response_text = parsed.get(
-                        "response",
-                        ""
-                    )
-                except Exception:
-                    # Fallback for an Ollama build that ignores
-                    # the JSON format parameter.
-                    response_text = structured
-
-            response_text = response_text.strip()
-
-            # Never allow known internal-analysis output to reach
-            # the student. If the model ignored the format request,
-            # reject the contaminated generation instead of showing it.
-            leaked_markers = (
-                "We are given a student message:",
-                "We are given the student message:",
-                "As MindSetu, I must:",
-                "As MindSetu, I should:",
-                "My response should:",
-                "Steps for response:",
-                "The student says:",
-                "Key points from the student:",
-                "Brainstorming ",
-                "We are given a ",
-            )
-
-            if response_text.startswith(leaked_markers):
-                print(
-                    "Blocked leaked model reasoning:",
-                    response_text[:250]
-                )
-
-                yield json.dumps({
-                    "type": "error",
-                    "message": (
-                        "The AI generated internal reasoning "
-                        "instead of a final response. Please retry."
-                    ),
-                }) + "\n"
-                return
-
-            if not response_text:
-
-                yield json.dumps({
-                    "type": "error",
-                    "message": "AI returned an empty response.",
-                }) + "\n"
-                return
-
-            # Backend emits the clean final answer as a stream.
-            # The frontend then renders it progressively.
-            yield json.dumps({
-                "type": "token",
-                "content": response_text,
-            }) + "\n"
-
-            yield json.dumps({
-                "type": "done",
-            }) + "\n"
-
-    except requests.exceptions.ConnectionError:
+    except Exception as error:
+        print("GEMINI ERROR:", error)
 
         yield json.dumps({
             "type": "error",
             "message": (
-                "MindSetu cannot connect to Ollama. "
-                "Make sure Ollama is running."
+                "The AI service is temporarily unavailable. "
+                "Please try again shortly."
             ),
-        }) + "\n"
-
-    except requests.exceptions.Timeout:
-
-        yield json.dumps({
-            "type": "error",
-            "message": "Qwen took too long to respond.",
-        }) + "\n"
-
-    except requests.exceptions.RequestException as error:
-
-        print("OLLAMA ERROR:", error)
-
-        yield json.dumps({
-            "type": "error",
-            "message": "The AI service is temporarily unavailable.",
-        }) + "\n"
-
-    except Exception as error:
-
-        print("OLLAMA UNEXPECTED ERROR:", error)
-
-        yield json.dumps({
-            "type": "error",
-            "message": str(error),
         }) + "\n"
 
 
@@ -1122,7 +936,7 @@ def chat(request: ChatRequest):
 
             yield json.dumps({
                 "type": "start",
-                "model": OLLAMA_MODEL,
+                "model": "safety_response",
                 "risk_level": "safety_priority",
             }) + "\n"
 
@@ -1148,21 +962,18 @@ def chat(request: ChatRequest):
         request.session_id
     )
 
-    payload = build_ollama_payload(
-        message,
-        screening_context
-    )
-
     def response_generator():
 
-        # Lets the frontend create the AI bubble immediately.
         yield json.dumps({
             "type": "start",
-            "model": OLLAMA_MODEL,
+            "model": GEMINI_MODEL,
             "risk_level": risk_level,
         }) + "\n"
 
-        yield from stream_ollama_response(payload)
+        yield from stream_gemini_response(
+            message,
+            screening_context,
+        )
 
     return StreamingResponse(
         response_generator(),
