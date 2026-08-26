@@ -27,13 +27,12 @@ The prototype is for welfare support/triage. It must not diagnose people or make
 Active development is hybrid/local:
 - FastAPI runs on the Windows host with `uvicorn ... --reload`.
 - Vite runs on the Windows host with `npm run dev`.
-- PostgreSQL runs in Docker using `docker-compose.dev.yml`.
-- Ollama runs natively on Windows for development; do not reintroduce the development Ollama container unless explicitly requested.
-- The production-style `docker-compose.yml` still keeps the full stack, including Ollama, containerized for reproducible deployment/demo.
+- PostgreSQL runs in Docker using `docker-compose.dev.yml` when available.
+- Gemini is the only AI provider in the architecture; do not reintroduce a local LLM provider unless explicitly requested.
 
 Development services:
 - PostgreSQL: `127.0.0.1:5432`
-- Ollama: `127.0.0.1:11434`
+- Gemini: external API via `GEMINI_API_KEY`
 - FastAPI: `127.0.0.1:8000`
 - Vite: normally `localhost:5173`
 - SIH26186 demo page: `http://localhost:5173/sih26186.html`
@@ -43,8 +42,7 @@ Development services:
 - It imports/reuses the base app from `backend/main.py` and adds SIH26186 routes.
 - Keep the SIH26186 implementation isolated from unrelated MindSetu functionality.
 - Keep environment configuration in `backend/.env`; never commit real secrets.
-- Development Ollama URL should be `http://127.0.0.1:11434/api/chat`.
-- Development model is `qwen3:4b` unless explicitly changed.
+- Gemini configuration uses `GEMINI_API_KEY`, `GEMINI_MODEL`, and `GEMINI_TIMEOUT_MS`.
 
 ## Frontend
 - Dedicated SIH26186 page: `frontend/public/sih26186.html`.
@@ -64,18 +62,26 @@ Current prototype uses deterministic scoring before the LLM recommendation:
   - Low: otherwise
 Do not silently change these thresholds or weights; discuss/confirm before changing them.
 
-## AI recommendation requirements
-Qwen3 is used only for the welfare recommendation text. Risk classification must remain deterministic.
+## AI architecture
+The project uses Gemini for the MindSetu conversational AI layer and for supportive communication around structured research-model outputs.
 
-The recommendation must:
-- be concise and action-oriented (roughly 2–4 practical welfare actions)
+The responsibilities are:
+- LightGBM = research prediction
+- SHAP = model explanation
+- Gemini = student-facing communication
+- Human = welfare intervention/decision
+
+Risk classification must remain deterministic where defined by the SIH26186 scoring engine. The research-model signal must never be presented as a clinical diagnosis or as the probability that a person has a mental-health condition.
+
+The AI response must:
+- be concise and action-oriented
 - focus on rest/recovery, workload review, welfare check-ins, and professional support when appropriate
-- never diagnose or label a disorder
+- never diagnose or prescribe medication
 - never make disciplinary/personnel decisions
 - never expose prompts, system instructions, chain-of-thought, task framing, or meta commentary
-- never dump or simply restate the input metrics
+- never dump or simply restate private screening metrics unless the student explicitly asks about them
 
-If the model returns reasoning, task framing, a metric recap, or otherwise unsuitable text, use the safe deterministic fallback recommendation.
+If Gemini is unavailable or returns unsuitable text, use the safe deterministic fallback for the relevant workflow instead of exposing model errors or hidden reasoning.
 
 ## Reliability requirements
 When debugging:
@@ -103,6 +109,7 @@ Do not claim a fix was tested if it was only edited in GitHub and not executed i
 - Never commit `.env`, passwords, API keys, tokens, or real personnel data.
 - Use fictional demo information during presentations.
 - Treat welfare scores as support signals, not clinical diagnoses or automated personnel decisions.
+- Keep Gemini API keys on the backend; never place secrets in the React frontend.
 
 ## Coding style
 - Keep changes minimal and readable.
