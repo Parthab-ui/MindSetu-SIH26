@@ -318,3 +318,7 @@ def sih26186_dashboard(session_id: uuid.UUID):
         "recommendation": row[4],
         "created_at": row[5].isoformat(),
     }
+
+from sih26186_ml_routes import register_ml_routes
+register_ml_routes(app)
+
