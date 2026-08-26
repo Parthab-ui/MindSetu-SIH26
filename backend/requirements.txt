@@ -1,7 +1,6 @@
 fastapi
 uvicorn[standard]
 psycopg[binary]
-requests
 python-dotenv
 pydantic
 pandas
