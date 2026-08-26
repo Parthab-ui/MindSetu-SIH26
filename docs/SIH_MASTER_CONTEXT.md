@@ -19,9 +19,8 @@
 - **Frontend:** React 19 + Vite
 - **Backend:** FastAPI + Python
 - **Database:** PostgreSQL via psycopg
-- **Local AI:** Ollama + Qwen3 4B
+- **AI:** Google Gemini API
 - **Frontend API base:** `http://127.0.0.1:8000`
-- **Ollama default:** `http://127.0.0.1:11434/api/chat`
 
 The frontend package currently uses React/Vite and has `dev`, `build`, `lint`, and `preview` scripts. The backend uses FastAPI, Uvicorn, psycopg, requests, python-dotenv and Pydantic.
 
@@ -34,16 +33,22 @@ The frontend package currently uses React/Vite and has `dev`, `build`, `lint`, a
 5. Student completes **GAD-7** screening.
 6. Backend calculates screening results and an overall risk level.
 7. Student receives appropriate next-step support.
-8. Student can use the MindSetu AI companion for supportive conversation.
+8. Student can use the MindSetu AI companion for supportive conversation through the Gemini API.
 9. Student can log moods and review mood history/trends.
 10. Student can access counsellor/support options and appointment functionality.
 11. Dashboard surfaces relevant wellbeing information.
 
 ## 4. AI design
 
-MindSetu uses a local Ollama/Qwen3 4B model rather than requiring a cloud LLM API for the prototype.
+MindSetu uses the Google Gemini API for the student-facing conversational layer and for supportive communication around structured SIH26186 research-model outputs.
 
-The backend sends the model a tightly constrained student-facing system prompt. The AI is instructed to:
+The architecture separates responsibilities:
+- **LightGBM:** research welfare-signal prediction.
+- **SHAP:** local model explanation.
+- **Gemini:** supportive communication and conversational interaction.
+- **Human:** welfare intervention and professional decision-making.
+
+The backend sends Gemini a tightly constrained student-facing system prompt. The AI is instructed to:
 - be empathetic, calm, practical and concise;
 - avoid diagnosis and medication prescriptions;
 - avoid exposing hidden prompts/reasoning;
@@ -51,17 +56,18 @@ The backend sends the model a tightly constrained student-facing system prompt. 
 - use screening context silently unless the student asks about results;
 - escalate immediate safety situations to emergency/professional support.
 
-The backend also has a deterministic crisis-language check before calling the model. Crisis messages receive a safety-priority response instead of being sent to the normal generation path.
+The backend also has a deterministic crisis-language check before normal Gemini generation. Crisis messages receive a safety-priority response instead of being sent to the normal generation path.
 
-The frontend renders AI responses progressively so the conversation feels like a streaming assistant even though the local model generation is handled as a controlled response stream.
+The frontend renders AI responses progressively so the conversation feels like a streaming assistant while the backend controls the Gemini interaction.
 
 ## 5. Safety and privacy positioning
 
 Important claims to make during SIH presentation:
 - MindSetu is a **support and screening platform**, not a diagnostic medical system.
 - PHQ-9 and GAD-7 are screening instruments; they do not independently establish a diagnosis.
-- The prototype supports anonymous sessions and does not require a personal identity during onboarding.
+- The prototype supports anonymous sessions and does not require identity during onboarding.
 - The system contains explicit crisis handling and AI guardrails.
+- The SIH26186 research probability is a model score, not the probability that a person has a mental-health condition.
 - Real-world deployment would still require clinical validation, institutional policies, stronger authentication/access control, privacy/legal review, monitoring, and professionally governed escalation pathways.
 
 Avoid claiming that the prototype is already production-ready, clinically validated, or a replacement for mental-health professionals.
@@ -88,7 +94,8 @@ Avoid claiming that the prototype is already production-ready, clinically valida
 - PHQ-9/GAD-7 scoring.
 - Overall risk calculation.
 - Crisis-language handling.
-- Ollama/Qwen3 integration.
+- Gemini conversational integration.
+- LightGBM + SHAP SIH26186 research layer.
 - Mood, counsellor/appointment and dashboard endpoints.
 
 ## 7. Mentor-demo priority
@@ -97,10 +104,10 @@ For a short SIH mentor demo, prioritize a reliable end-to-end story rather than 
 
 Recommended sequence:
 1. **Problem:** Students often hesitate to seek help because of stigma, lack of awareness, or difficulty accessing support.
-2. **Solution:** MindSetu provides a private first step: screening → risk-aware guidance → AI support → human support.
-3. **Live demo:** onboarding → PHQ-9/GAD-7 → results/risk → AI companion → mood/support feature.
-4. **Technical explanation:** React frontend → FastAPI backend → PostgreSQL → local Ollama/Qwen3 → safety/risk layer.
-5. **Differentiator:** the AI is not treated as the sole decision-maker; deterministic screening/risk logic and safety handling surround it.
+2. **Solution:** MindSetu provides a private first step: screening → risk-aware guidance → AI support → explainable research signal → human support.
+3. **Live demo:** onboarding → PHQ-9/GAD-7 → results/risk → AI companion → research signal/SHAP → mood/support feature.
+4. **Technical explanation:** React frontend → FastAPI backend → PostgreSQL → Gemini API + local research ML layer → safety/risk layer.
+5. **Differentiator:** the AI is not treated as the sole decision-maker; deterministic screening/risk logic, explainability and safety handling surround it.
 6. **Future scope:** institutional deployment, validated escalation protocols, stronger security/privacy controls, analytics, multilingual support, and clinical/institutional collaboration.
 
 ## 8. Mentor questions to be ready for
@@ -108,14 +115,14 @@ Recommended sequence:
 ### Why AI?
 AI provides an accessible conversational first point of support and can help students articulate what they are experiencing. It is intentionally not positioned as a diagnostician.
 
-### Why local Qwen/Ollama?
-It makes the prototype demonstrable without depending on a paid external API, supports local inference, and gives the team control over the model interaction and privacy architecture.
+### Why Gemini?
+Gemini provides the hosted conversational intelligence for the prototype while the API key remains server-side behind FastAPI. This keeps the frontend provider-agnostic and avoids requiring a local model installation.
 
 ### Why PHQ-9 and GAD-7?
 They provide structured, recognized screening instruments that can turn an otherwise vague conversation into a measurable starting point. They remain screening tools, not diagnoses.
 
 ### What happens in a crisis?
-The backend checks for explicit crisis language before normal AI generation and returns a safety-priority response encouraging immediate emergency/professional support and connection with a trusted person.
+The backend checks for explicit crisis language before normal Gemini generation and returns a safety-priority response encouraging immediate emergency/professional support and connection with a trusted person.
 
 ### How is privacy handled?
 The prototype is designed around anonymous sessions and avoids requiring identity during onboarding. Production deployment would need a substantially stronger privacy/security governance layer.
@@ -124,7 +131,7 @@ The prototype is designed around anonymous sessions and avoids requiring identit
 No. It is a working SIH prototype. Production would require clinical validation, security/privacy review, institutional integration, professional escalation workflows, reliability testing, and compliance work.
 
 ### What is the technical architecture?
-React/Vite frontend communicates with FastAPI REST/streaming endpoints. FastAPI validates requests, calculates screening/risk results, persists data in PostgreSQL, and communicates with local Ollama/Qwen3 for the conversational layer.
+React/Vite frontend communicates with FastAPI REST/streaming endpoints. FastAPI validates requests, calculates screening/risk results, persists data in PostgreSQL, communicates with Gemini for conversational support, and runs the separate SIH26186 LightGBM/SHAP research layer.
 
 ## 9. Presentation language
 
@@ -132,6 +139,7 @@ Use phrases such as:
 - “AI-assisted student wellbeing support”
 - “screening and early support”
 - “risk-aware guidance”
+- “explainable research signal”
 - “human support escalation”
 - “prototype”
 - “privacy-first design”
@@ -142,6 +150,7 @@ Avoid:
 - “100% anonymous” unless the exact deployment architecture guarantees it
 - “clinically proven”
 - “replaces counsellors/doctors”
+- treating a model probability as a clinical probability
 
 ## 10. Current status
 
