@@ -6,7 +6,6 @@ from datetime import datetime, timezone
 from fastapi import HTTPException
 from pydantic import BaseModel, Field
 
-import main as mindsetu_main
 from main import app, get_connection, session_exists
 
 
@@ -26,48 +25,6 @@ class SIH26186WorkloadRequest(BaseModel):
     workload_level: int = Field(..., ge=1, le=5)
     high_pressure_assignment: bool = False
     duty_change_frequency: int = Field(default=0, ge=0, le=7)
-
-
-def get_screening_context(session_id):
-    """Provide private screening context to the Gemini chatbot.
-
-    The scores are used only as hidden context for supportive conversation and
-    are never automatically surfaced to the student by the chat endpoint.
-    """
-    phq9_score, gad7_score = mindsetu_main.get_latest_assessments(session_id)
-    risk_level = "unknown"
-
-    if phq9_score is not None and gad7_score is not None:
-        risk = mindsetu_main.calculate_overall_risk(phq9_score, gad7_score)
-        risk_level = risk["risk_level"]
-
-    context = f"""
-Screening context:
-Risk level: {risk_level}
-PHQ-9: {phq9_score if phq9_score is not None else "not completed"}
-GAD-7: {gad7_score if gad7_score is not None else "not completed"}
-
-These are screening results only. Do not diagnose the student.
-Use this information quietly as context. Do not repeat the
-scores or risk level unless the student asks about them.
-"""
-    return context, risk_level
-
-
-# main.chat resolves get_screening_context in main's module globals at request time.
-# Register the SIH-aware helper there without duplicating the base chat endpoint.
-mindsetu_main.get_screening_context = get_screening_context
-
-
-@app.get("/api/chat/health")
-def chat_health():
-    """Return non-secret Gemini readiness information for the frontend/demo."""
-    return {
-        "status": "ready" if mindsetu_main.GEMINI_API_KEY else "needs_configuration",
-        "provider": "Google Gemini",
-        "model": mindsetu_main.GEMINI_MODEL,
-        "api_key_configured": bool(mindsetu_main.GEMINI_API_KEY),
-    }
 
 
 def ensure_sih26186_tables():
@@ -113,6 +70,16 @@ def ensure_sih26186_tables():
             )
 
 
+@app.get("/api/chat/health")
+def chat_health():
+    return {
+        "status": "ready" if __import__("main").GEMINI_API_KEY else "needs_configuration",
+        "provider": "Google Gemini",
+        "model": __import__("main").GEMINI_MODEL,
+        "api_key_configured": bool(__import__("main").GEMINI_API_KEY),
+    }
+
+
 def _require_session(session_id: uuid.UUID):
     if not session_exists(session_id):
         raise HTTPException(status_code=404, detail="Session not found.")
@@ -149,22 +116,17 @@ def _latest_workload(session_id):
             if not row:
                 return None
             return {
-                "role": row[0],
-                "unit": row[1] or "",
-                "duty_hours": float(row[2]),
-                "night_duties": row[3],
-                "rest_hours": float(row[4]),
-                "days_since_leave": row[5],
-                "workload_level": row[6],
+                "role": row[0], "unit": row[1] or "", "duty_hours": float(row[2]),
+                "night_duties": row[3], "rest_hours": float(row[4]),
+                "days_since_leave": row[5], "workload_level": row[6],
                 "high_pressure_assignment": row[7],
-                "duty_change_frequency": row[8],
-                "workload_score": float(row[9]),
+                "duty_change_frequency": row[8], "workload_score": float(row[9]),
             }
 
 
 def _validate_answers(answers):
     if any(answer < 0 or answer > 3 for answer in answers):
-        raise HTTPException(status_code=400, detail="Each wellness answer must be between 0 and 3.")
+        raise HTTPException(status_code=400, detail="Each wellbeing answer must be between 0 and 3.")
 
 
 def _calculate_wellness_stress(answers):
@@ -192,7 +154,7 @@ def _classify(wellness_score, workload_score):
     return combined, "low"
 
 
-def _fallback_recommendation(risk_level, workload):
+def _fallback_recommendation(risk_level):
     if risk_level == "high":
         return (
             "Prioritise an immediate welfare check-in. Review non-essential workload, "
@@ -219,36 +181,21 @@ def _clean_ai_recommendation(text, fallback):
     text = re.sub(r"\s*```$", "", text).strip()
     lowered = text.lower()
     blocked_markers = (
-        "okay, the user", "ok, the user", "the user is asking", "the user wants",
-        "they've provided", "they have provided", "first, i need to", "first i need to",
-        "hmm,", "hmm.", "i need to understand", "i need to parse", "the user emphasized",
-        "must avoid", "the assistant", "system prompt", "prompt says", "as an ai",
-        "we are given:", "we're given:", "given:", "key data points", "let's analyze",
-        "let me analyze", "thinking through", "step 1:", "first,", "second,",
-        "therefore, i would", "this means that", "risk level:", "wellness stress score:",
+        "system prompt", "prompt says", "as an ai", "we are given:",
+        "key data points", "let's analyze", "let me analyze", "thinking through",
+        "step 1:", "step 2:", "risk level:", "wellness stress score:",
         "workload score:", "duty hours/day:", "night duties:", "rest hours/day:",
-        "days since leave:", "workload intensity:", "high-pressure assignment:",
-        "duty changes:", "role:", "unit:",
     )
-    if any(marker in lowered for marker in blocked_markers):
+    if any(marker in lowered for marker in blocked_markers) or len(text) > 700:
         return fallback
-    if len(text) > 700:
-        return fallback
-    paragraphs = [p.strip() for p in re.split(r"\n\s*\n", text) if p.strip()]
-    if len(paragraphs) > 4:
-        return fallback
-    action_markers = (
-        "maintain", "continue", "schedule", "review", "consider", "protect",
-        "check in", "check-in", "seek", "connect", "monitor", "repeat",
-    )
+    action_markers = ("maintain", "continue", "schedule", "review", "consider", "protect", "check in", "check-in", "seek", "connect", "monitor", "repeat")
     if not any(marker in lowered for marker in action_markers):
         return fallback
     return text
 
 
 def _ai_recommendation(risk_level, wellness_score, workload_score, workload):
-    """Return a deterministic, safe recommendation for the welfare workflow."""
-    return _fallback_recommendation(risk_level, workload)
+    return _fallback_recommendation(risk_level)
 
 
 @app.on_event("startup")
@@ -267,7 +214,7 @@ def save_sih26186_wellness(request: SIH26186WellnessRequest):
                 "INSERT INTO sih26186_wellness (id, session_id, answers, stress_score) VALUES (%s, %s, %s::jsonb, %s)",
                 (record_id, request.session_id, json.dumps(request.answers), stress_score),
             )
-    return {"id": str(record_id), "stress_score": stress_score, "message": "Wellness assessment recorded."}
+    return {"id": str(record_id), "stress_score": stress_score, "message": "Wellbeing assessment recorded."}
 
 
 @app.post("/api/sih26186/workload")
@@ -300,10 +247,9 @@ def analyze_sih26186(session_id: uuid.UUID):
     wellness_score = _latest_wellness(session_id)
     workload = _latest_workload(session_id)
     if wellness_score is None:
-        raise HTTPException(status_code=400, detail="Complete the wellness assessment first.")
+        raise HTTPException(status_code=400, detail="Complete the wellbeing assessment first.")
     if workload is None:
         raise HTTPException(status_code=400, detail="Complete workload and duty information first.")
-
     combined_score, risk_level = _classify(wellness_score, workload["workload_score"])
     recommendation = _ai_recommendation(risk_level, wellness_score, workload["workload_score"], workload)
     analysis_id = uuid.uuid4()
@@ -318,14 +264,10 @@ def analyze_sih26186(session_id: uuid.UUID):
                 (analysis_id, session_id, wellness_score, workload["workload_score"], combined_score, risk_level, recommendation),
             )
     return {
-        "analysis_id": str(analysis_id),
-        "session_id": str(session_id),
-        "wellness_score": wellness_score,
-        "workload_score": workload["workload_score"],
-        "combined_score": combined_score,
-        "risk_level": risk_level,
-        "recommendation": recommendation,
-        "generated_at": datetime.now(timezone.utc).isoformat(),
+        "analysis_id": str(analysis_id), "session_id": str(session_id),
+        "wellness_score": wellness_score, "workload_score": workload["workload_score"],
+        "combined_score": combined_score, "risk_level": risk_level,
+        "recommendation": recommendation, "generated_at": datetime.now(timezone.utc).isoformat(),
     }
 
 
@@ -337,10 +279,7 @@ def sih26186_dashboard(session_id: uuid.UUID):
             cur.execute(
                 """
                 SELECT wellness_score, workload_score, combined_score, risk_level, recommendation, created_at
-                FROM sih26186_analysis
-                WHERE session_id = %s
-                ORDER BY created_at DESC
-                LIMIT 1
+                FROM sih26186_analysis WHERE session_id = %s ORDER BY created_at DESC LIMIT 1
                 """,
                 (session_id,),
             )
@@ -348,12 +287,9 @@ def sih26186_dashboard(session_id: uuid.UUID):
     if not row:
         raise HTTPException(status_code=404, detail="No SIH26186 analysis found for this session.")
     return {
-        "wellness_score": float(row[0]),
-        "workload_score": float(row[1]),
-        "combined_score": float(row[2]),
-        "risk_level": row[3],
-        "recommendation": row[4],
-        "created_at": row[5].isoformat(),
+        "wellness_score": float(row[0]), "workload_score": float(row[1]),
+        "combined_score": float(row[2]), "risk_level": row[3],
+        "recommendation": row[4], "created_at": row[5].isoformat(),
     }
 
 from sih26186_ml_routes import register_ml_routes
