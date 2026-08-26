@@ -28,12 +28,13 @@ The SIH26186 prototype is designed for welfare support and triage, not diagnosis
 - `frontend/` — React 19 + Vite student/product interface
 - `backend/` — FastAPI REST API
 - PostgreSQL — session and assessment data
-- Ollama + Qwen — local AI recommendations
+- Google Gemini API — conversational AI and supportive communication
+- LightGBM + SHAP — research-only welfare signal and explainability for SIH26186
 - `frontend/public/sih26186.html` — dedicated SIH26186 demonstration page
 
 ## Development workflow
 
-For **active development**, run the application code directly on the host for fast reloads. Use Docker only for PostgreSQL and Ollama.
+For **active development**, run the application code directly on the host for fast reloads. Use Docker only for PostgreSQL during local development.
 
 ### 1. Start development infrastructure
 
@@ -46,19 +47,22 @@ docker compose -f docker-compose.dev.yml up -d
 The development services expose:
 
 - PostgreSQL → `127.0.0.1:5432`
-- Ollama → `127.0.0.1:11434`
 
 The development PostgreSQL container bootstraps the baseline MindSetu schema from `backend/dev_init.sql` on first creation.
 
-Pull the configured model once:
+### 2. Configure Gemini
 
-```bash
-docker exec -it mindsetu-dev-ollama ollama pull qwen3:4b
+Create `backend/.env` from the example file and set:
+
+```text
+GEMINI_API_KEY=your_real_gemini_api_key
+GEMINI_MODEL=gemini-2.5-flash
+GEMINI_TIMEOUT_MS=20000
 ```
 
-### 2. Run the FastAPI backend locally
+Never commit a real API key.
 
-Create `backend/.env` from `backend/dev.env.example`, set a local PostgreSQL password, then:
+### 3. Run the FastAPI backend locally
 
 ```bash
 cd backend
@@ -83,7 +87,7 @@ Run the SIH26186 API with reload:
 uvicorn sih26186_server:app --reload --host 127.0.0.1 --port 8000
 ```
 
-### 3. Run the frontend locally
+### 4. Run the frontend locally
 
 In a second terminal:
 
@@ -101,23 +105,34 @@ The dedicated SIH26186 page is served as:
 http://localhost:5173/sih26186.html
 ```
 
-### 4. Stop development infrastructure
+### 5. Stop development infrastructure
 
 ```bash
 docker compose -f docker-compose.dev.yml down
 ```
 
-The development volumes are separate from the production-style Compose volumes, so local development does not change the deployment stack.
-
 ## Full Docker deployment
 
-For a reproducible all-in-one environment, keep using the normal Compose file:
+For a reproducible all-in-one environment:
 
 ```bash
 docker compose up -d --build
 ```
 
-That runs the frontend, backend, PostgreSQL and Ollama in containers.
+That runs the frontend, backend and PostgreSQL in containers. Gemini is accessed as an external API and therefore does not require a local model container.
+
+## AI architecture
+
+MindSetu uses Gemini for student-facing conversational support. The SIH26186 research layer remains separate:
+
+```text
+LightGBM = prediction
+SHAP     = explanation
+Gemini   = communication
+Human    = intervention
+```
+
+The ML score is a research welfare signal and must not be represented as a diagnosis or as a probability of having a mental-health condition.
 
 ## Safety and privacy
 
