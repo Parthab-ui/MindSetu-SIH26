@@ -4,3 +4,7 @@ psycopg[binary]
 requests
 python-dotenv
 pydantic
+pandas
+openpyxl
+scikit-learn
+joblib
