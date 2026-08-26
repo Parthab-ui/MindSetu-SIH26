@@ -6,6 +6,7 @@ from datetime import datetime, timezone
 from fastapi import HTTPException
 from pydantic import BaseModel, Field
 
+import main as mindsetu_main
 from main import app, get_connection, session_exists
 
 
@@ -25,6 +26,37 @@ class SIH26186WorkloadRequest(BaseModel):
     workload_level: int = Field(..., ge=1, le=5)
     high_pressure_assignment: bool = False
     duty_change_frequency: int = Field(default=0, ge=0, le=7)
+
+
+def get_screening_context(session_id):
+    """Provide private screening context to the Gemini chatbot.
+
+    The scores are used only as hidden context for supportive conversation and
+    are never automatically surfaced to the student by the chat endpoint.
+    """
+    phq9_score, gad7_score = mindsetu_main.get_latest_assessments(session_id)
+    risk_level = "unknown"
+
+    if phq9_score is not None and gad7_score is not None:
+        risk = mindsetu_main.calculate_overall_risk(phq9_score, gad7_score)
+        risk_level = risk["risk_level"]
+
+    context = f"""
+Screening context:
+Risk level: {risk_level}
+PHQ-9: {phq9_score if phq9_score is not None else "not completed"}
+GAD-7: {gad7_score if gad7_score is not None else "not completed"}
+
+These are screening results only. Do not diagnose the student.
+Use this information quietly as context. Do not repeat the
+scores or risk level unless the student asks about them.
+"""
+    return context, risk_level
+
+
+# main.chat resolves get_screening_context in main's module globals at request time.
+# Register the SIH-aware helper there without duplicating the base chat endpoint.
+mindsetu_main.get_screening_context = get_screening_context
 
 
 def ensure_sih26186_tables():
@@ -204,12 +236,7 @@ def _clean_ai_recommendation(text, fallback):
 
 
 def _ai_recommendation(risk_level, wellness_score, workload_score, workload):
-    """Return a deterministic, safe recommendation.
-
-    Risk classification is deterministic and the stored recommendation must never
-    contain raw model reasoning. Qwen remains available elsewhere in MindSetu, but
-    SIH26186 does not trust free-form model output for welfare actions.
-    """
+    """Return a deterministic, safe recommendation for the welfare workflow."""
     return _fallback_recommendation(risk_level, workload)
 
 
@@ -320,4 +347,3 @@ def sih26186_dashboard(session_id: uuid.UUID):
 
 from sih26186_ml_routes import register_ml_routes
 register_ml_routes(app)
-
