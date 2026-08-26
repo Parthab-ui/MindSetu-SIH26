@@ -13,15 +13,6 @@ services:
       - "5432:5432"
     restart: unless-stopped
 
-  ollama:
-    image: ollama/ollama:latest
-    container_name: mindsetu-ollama
-    volumes:
-      - ollama_data:/root/.ollama
-    ports:
-      - "11434:11434"
-    restart: unless-stopped
-
   backend:
     build:
       context: ./backend
@@ -32,12 +23,12 @@ services:
       DB_NAME: ${POSTGRES_DB:-mindsetu_db}
       DB_USER: ${POSTGRES_USER:-postgres}
       DB_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in your environment or .env}
-      OLLAMA_URL: http://ollama:11434/api/chat
-      OLLAMA_MODEL: ${OLLAMA_MODEL:-qwen3:4b}
+      GEMINI_API_KEY: ${GEMINI_API_KEY:?Set GEMINI_API_KEY in your environment or .env}
+      GEMINI_MODEL: ${GEMINI_MODEL:-gemini-2.5-flash}
+      GEMINI_TIMEOUT_MS: ${GEMINI_TIMEOUT_MS:-20000}
     command: ["uvicorn", "sih26186_server:app", "--host", "0.0.0.0", "--port", "8000"]
     depends_on:
       - postgres
-      - ollama
     ports:
       - "8000:8000"
     restart: unless-stopped
@@ -54,4 +45,3 @@ services:
 
 volumes:
   postgres_data:
-  ollama_data:
