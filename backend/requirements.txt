@@ -3,8 +3,6 @@ uvicorn[standard]
 psycopg[binary]
 python-dotenv
 pydantic
-pandas
-openpyxl
 scikit-learn
 joblib
 google-genai
