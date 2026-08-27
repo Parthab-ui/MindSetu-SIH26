@@ -25,18 +25,17 @@ The prototype is for welfare support/triage. It must not diagnose people or make
 - Never force-push or rewrite history unless explicitly requested.
 
 ## Development environment
-Active development is hybrid/local:
-- FastAPI runs on the Windows host with `uvicorn ... --reload`.
-- Vite runs on the Windows host with `npm run dev`.
-- PostgreSQL runs in Docker when available.
+Active development is local:
+- FastAPI runs with `uvicorn ... --reload`.
+- Vite runs with `npm run dev`.
+- PostgreSQL is the configured persistence layer.
 - Gemini is the only AI provider in the architecture.
 
 Development services:
-- PostgreSQL: `127.0.0.1:5432`
+- PostgreSQL: configured through backend environment variables
 - Gemini: external API via `GEMINI_API_KEY`
-- FastAPI: `127.0.0.1:8000`
+- FastAPI: normally `127.0.0.1:8000`
 - Vite: normally `localhost:5173`
-- SIH26186 demo page: `http://localhost:5173/sih26186.html`
 
 ## Backend
 - FastAPI entrypoint for SIH26186 development: `backend/sih26186_server.py` with `sih26186_server:app`.
@@ -45,7 +44,6 @@ Development services:
 - Gemini configuration uses `GEMINI_API_KEY`, `GEMINI_MODEL`, and `GEMINI_TIMEOUT_MS`.
 
 ## Frontend
-- Dedicated SIH26186 page: `frontend/public/sih26186.html`.
 - The primary React UI is focused on the SIH26186 welfare workflow and the MindSetu Gemini companion.
 - Keep the workflow focused; avoid unnecessary feature expansion.
 - Prevent duplicate analysis requests and preserve a single completed analysis object through the dashboard transition.
@@ -94,7 +92,7 @@ Do not claim a fix was tested if it was only edited in GitHub and not executed i
 
 ## Database
 - PostgreSQL is persistent development infrastructure.
-- SIH26186 tables are created by the backend startup logic.
+- The backend initializes required SIH26186 tables when needed.
 - Do not delete or reset development data unless explicitly requested.
 
 ## Security and privacy
