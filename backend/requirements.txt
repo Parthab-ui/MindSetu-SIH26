@@ -6,3 +6,5 @@ pydantic
 scikit-learn
 joblib
 google-genai
+lightgbm
+shap
