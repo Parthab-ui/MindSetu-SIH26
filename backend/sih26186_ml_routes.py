@@ -1,9 +1,14 @@
 """Optional SIH26186 ML + Gemini routes registered by sih26186_server."""
+from concurrent.futures import ThreadPoolExecutor, TimeoutError as FuturesTimeout
+
 from fastapi import HTTPException
 from pydantic import BaseModel, Field
 
 from ml.inference import FEATURES, predict
 from ml.gemini_service import generate_supportive_response
+
+
+GEMINI_RESPONSE_BUDGET_SECONDS = 8
 
 
 class SIH26186MLRequest(BaseModel):
@@ -17,33 +22,82 @@ class SIH26186MLRequest(BaseModel):
     generate_response: bool = True
 
 
+def _fallback_supportive_response(result: dict) -> str:
+    if result.get("signal") == "elevated":
+        return (
+            "Your responses produced an elevated research welfare-risk signal. "
+            "This is not a clinical diagnosis. Consider a timely check-in with an "
+            "appropriate welfare officer or qualified support professional, and "
+            "where possible prioritise rest, recovery and practical workload support."
+        )
+    return (
+        "Your responses produced a lower research welfare-risk signal. This is not "
+        "a clinical diagnosis. Continue healthy recovery practices and seek human "
+        "support whenever your wellbeing or workload feels difficult to manage."
+    )
+
+
+def _generate_response_with_budget(result: dict):
+    executor = ThreadPoolExecutor(max_workers=1)
+    future = executor.submit(generate_supportive_response, result)
+    try:
+        return future.result(timeout=GEMINI_RESPONSE_BUDGET_SECONDS), "gemini", None
+    except FuturesTimeout:
+        future.cancel()
+        return _fallback_supportive_response(result), "deterministic_timeout_fallback", (
+            f"Gemini did not respond within {GEMINI_RESPONSE_BUDGET_SECONDS} seconds"
+        )
+    except Exception as exc:
+        return _fallback_supportive_response(result), "deterministic_fallback", str(exc)
+    finally:
+        executor.shutdown(wait=False, cancel_futures=True)
+
+
 def register_ml_routes(app):
     @app.get("/api/sih26186/ml/health")
     def ml_health():
-        return {"status":"ready","model":"LightGBM","threshold":0.45,"features":FEATURES,"research_only":True}
+        return {
+            "status": "ready",
+            "model": "LightGBM",
+            "threshold": 0.45,
+            "features": FEATURES,
+            "research_only": True,
+        }
 
     @app.post("/api/sih26186/ml/predict")
     def ml_predict(request: SIH26186MLRequest):
         try:
-            result = predict(request.model_dump(exclude={"generate_response"}), include_explanation=True)
-            return result
+            return predict(
+                request.model_dump(exclude={"generate_response"}),
+                include_explanation=True,
+            )
         except FileNotFoundError as exc:
             raise HTTPException(status_code=503, detail=str(exc))
         except ValueError as exc:
             raise HTTPException(status_code=400, detail=str(exc))
+        except Exception as exc:
+            raise HTTPException(status_code=500, detail=f"ML inference failed: {type(exc).__name__}")
 
     @app.post("/api/sih26186/ml/analyze")
     def ml_analyze(request: SIH26186MLRequest):
         try:
-            result = predict(request.model_dump(exclude={"generate_response"}), include_explanation=True)
+            result = predict(
+                request.model_dump(exclude={"generate_response"}),
+                include_explanation=True,
+            )
             if request.generate_response:
-                try:
-                    result["supportive_response"] = generate_supportive_response(result)
-                except Exception as exc:
-                    result["supportive_response"] = None
-                    result["llm_error"] = str(exc)
+                response, source, error = _generate_response_with_budget(result)
+                result["supportive_response"] = response
+                result["response_source"] = source
+                if error:
+                    result["llm_error"] = error
+            else:
+                result["supportive_response"] = None
+                result["response_source"] = "disabled"
             return result
         except FileNotFoundError as exc:
             raise HTTPException(status_code=503, detail=str(exc))
         except ValueError as exc:
             raise HTTPException(status_code=400, detail=str(exc))
+        except Exception as exc:
+            raise HTTPException(status_code=500, detail=f"ML analysis failed: {type(exc).__name__}")
