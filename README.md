@@ -19,7 +19,7 @@ The prototype does **not** provide clinical diagnoses or automated disciplinary 
 
 - `frontend/` — React + Vite MindSetu application
 - `backend/` — FastAPI API and PostgreSQL integration
-- `backend/ml/` — LightGBM inference, SHAP explanation, model artefact, and reproducible research scripts
+- `backend/ml/` — LightGBM inference, SHAP explanation, model artefact, and supporting research utilities
 - `docs/` — SIH architecture and demo documentation
 
 ## Run locally
@@ -74,3 +74,7 @@ Use fictional data for demonstrations. Never commit API keys, passwords, real pe
 ## Production note
 
 This repository is an SIH MVP, not a certified clinical or military production system. Real deployment requires formal security, privacy, governance, validation, and role-based access controls appropriate to the operating environment.
+
+## Research utilities
+
+The `backend/ml/` directory includes supporting training, evaluation, threshold, ablation, and dataset-inspection scripts used to reproduce or study the research model. They are not required for the normal MVP runtime path.
