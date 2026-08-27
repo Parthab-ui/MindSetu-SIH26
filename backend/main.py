@@ -3,6 +3,7 @@ import os
 import re
 import uuid
 from datetime import datetime, timezone
+from pathlib import Path
 
 import psycopg
 from dotenv import load_dotenv
@@ -11,9 +12,10 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 
-load_dotenv()
+ENV_PATH = Path(__file__).resolve().parent / ".env"
+load_dotenv(dotenv_path=ENV_PATH)
 
-GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
+GEMINI_API_KEY = (os.getenv("GEMINI_API_KEY") or "").strip()
 GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-2.5-flash")
 GEMINI_TIMEOUT_MS = int(os.getenv("GEMINI_TIMEOUT_MS", "20000"))
 MAX_CHAT_LENGTH = 4000
@@ -157,14 +159,39 @@ def health_check():
     return {"status": "healthy", "service": "MindSetu Backend", "ai_model": GEMINI_MODEL}
 
 
-@app.get("/api/chat/health")
-def chat_health():
+def gemini_runtime_status():
+    try:
+        from google import genai  # noqa: F401
+        sdk_available = True
+    except Exception:
+        sdk_available = False
+
+    configured = bool(GEMINI_API_KEY)
+    if configured and sdk_available:
+        status = "ready"
+    elif not configured:
+        status = "needs_configuration"
+    else:
+        status = "sdk_unavailable"
+
     return {
-        "status": "ready" if GEMINI_API_KEY else "needs_configuration",
+        "status": status,
         "provider": "Google Gemini",
         "model": GEMINI_MODEL,
-        "api_key_configured": bool(GEMINI_API_KEY),
+        "api_key_configured": configured,
+        "sdk_available": sdk_available,
+        "env_file_detected": ENV_PATH.exists(),
     }
+
+
+@app.get("/api/chat/health")
+def chat_health():
+    return gemini_runtime_status()
+
+
+@app.get("/api/gemini/health")
+def gemini_health():
+    return gemini_runtime_status()
 
 
 @app.get("/api/database")
