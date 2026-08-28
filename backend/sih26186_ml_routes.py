@@ -4,7 +4,7 @@ from concurrent.futures import ThreadPoolExecutor, TimeoutError as FuturesTimeou
 from fastapi import HTTPException
 from pydantic import BaseModel, Field
 
-from ml.inference import FEATURES, predict
+from ml.inference import FEATURES, MODEL_PATH, THRESHOLD, predict
 from ml.gemini_service import generate_supportive_response
 
 
@@ -56,12 +56,15 @@ def _generate_response_with_budget(result: dict):
 def register_ml_routes(app):
     @app.get("/api/sih26186/ml/health")
     def ml_health():
+        model_present = MODEL_PATH.is_file()
         return {
-            "status": "ready",
+            "status": "ready" if model_present else "unavailable",
             "model": "LightGBM",
-            "threshold": 0.45,
+            "threshold": THRESHOLD,
             "features": FEATURES,
             "research_only": True,
+            "model_present": model_present,
+            "model_path": str(MODEL_PATH),
         }
 
     @app.post("/api/sih26186/ml/predict")
