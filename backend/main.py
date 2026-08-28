@@ -86,6 +86,11 @@ def ensure_core_tables():
             )
 
 
+
+@app.on_event("startup")
+def startup_core_tables():
+    ensure_core_tables()
+
 def session_exists(session_id: uuid.UUID) -> bool:
     with get_connection() as conn:
         with conn.cursor() as cur:
