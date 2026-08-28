@@ -61,9 +61,22 @@ npm run dev
 
 Open the Vite URL, normally `http://localhost:5173`.
 
+## Pre-demo verification
+
+Before presenting, complete one full end-to-end dry run using fictional data:
+
+1. Start PostgreSQL and verify the database credentials in `backend/.env`.
+2. Start the backend and open `/api/health`.
+3. Check `/api/database` and `/api/sih26186/ml/health`.
+4. Confirm the ML health response reports `model_present: true` before claiming the research model is available.
+5. Test the Gemini path and then test the deterministic fallback path with the key temporarily unavailable.
+6. Complete the full wellbeing → duty → analysis journey without using browser back-navigation.
+7. Verify the frontend production build with `npm run build`.
+
 ## Health checks
 
 - Backend: `/api/health`
+- Database: `/api/database`
 - Gemini configuration: `/api/gemini/health`
 - Research ML: `/api/sih26186/ml/health`
 
