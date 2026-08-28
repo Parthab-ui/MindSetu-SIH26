@@ -59,6 +59,33 @@ def get_connection():
     )
 
 
+
+def ensure_core_tables():
+    with get_connection() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                CREATE TABLE IF NOT EXISTS sessions (
+                    id UUID PRIMARY KEY,
+                    anonymous BOOLEAN NOT NULL DEFAULT TRUE,
+                    consent_given BOOLEAN NOT NULL DEFAULT FALSE,
+                    created_at TIMESTAMP DEFAULT NOW()
+                )
+                """
+            )
+            cur.execute(
+                """
+                CREATE TABLE IF NOT EXISTS mood_entries (
+                    id UUID PRIMARY KEY,
+                    session_id UUID REFERENCES sessions(id),
+                    mood INT,
+                    note TEXT,
+                    created_at TIMESTAMP DEFAULT NOW()
+                )
+                """
+            )
+
+
 def session_exists(session_id: uuid.UUID) -> bool:
     with get_connection() as conn:
         with conn.cursor() as cur:
