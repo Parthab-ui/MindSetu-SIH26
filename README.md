@@ -4,13 +4,13 @@ MindSetu is an AI-assisted **personnel welfare support prototype** for Smart Ind
 
 ## Core workflow
 
-Personnel context → wellbeing pulse → duty & recovery context → deterministic welfare triage → LightGBM research signal → SHAP explanation → Gemini communication → human intervention.
+Personnel context → wellbeing pulse → duty & recovery context → deterministic welfare triage → optional research-model demonstration → SHAP explanation → Gemini communication → human intervention.
 
 The prototype does **not** provide clinical diagnoses or automated disciplinary decisions.
 
 ## AI responsibilities
 
-- **LightGBM** — research prediction
+- **LightGBM** — research-model demonstration only; not an operational or clinical decision engine
 - **SHAP** — model explanation
 - **Gemini** — supportive communication
 - **Human** — welfare intervention and decision-making
