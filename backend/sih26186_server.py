@@ -6,7 +6,7 @@ from datetime import datetime, timezone
 from fastapi import HTTPException
 from pydantic import BaseModel, Field
 
-from main import app, get_connection, session_exists
+from main import app, ensure_core_tables, get_connection, session_exists
 
 
 class SIH26186WellnessRequest(BaseModel):
@@ -195,6 +195,7 @@ def _ai_recommendation(risk_level, wellness_score, workload_score, workload):
 
 @app.on_event("startup")
 def startup_sih26186():
+    ensure_core_tables()
     ensure_sih26186_tables()
 
 
