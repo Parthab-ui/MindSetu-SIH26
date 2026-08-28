@@ -143,6 +143,21 @@ def contains_crisis_language(message: str) -> bool:
     return any(term in text for term in CRISIS_TERMS)
 
 
+def supportive_fallback_response(message: str) -> str:
+    text = message.lower()
+    if any(term in text for term in ("overwhelmed", "exhausted", "burnout", "burned out", "stress", "stressed")):
+        return (
+            "That sounds like a heavy amount to carry. Try to identify one immediate step that reduces pressure today, "
+            "such as a short recovery break, speaking with someone you trust, or asking for practical workload support. "
+            "If this feeling continues or worsens, consider reaching out to a qualified support professional."
+        )
+    return (
+        "Thank you for sharing that. Take things one step at a time, and consider what practical support or recovery "
+        "would help most right now. If your wellbeing becomes difficult to manage, reaching out to someone you trust "
+        "or a qualified support professional can be a useful next step."
+    )
+
+
 def crisis_response() -> str:
     return (
         "I'm really sorry you're going through something this difficult. "
@@ -270,10 +285,9 @@ def chat(request: ChatRequest):
             yield json.dumps({"type": "done"}) + "\n"
         except Exception as exc:
             print("GEMINI ERROR:", exc)
-            yield json.dumps({
-                "type": "error",
-                "message": "MindSetu AI is temporarily unavailable. Please try again shortly.",
-            }) + "\n"
+            yield json.dumps({"type": "token", "content": supportive_fallback_response(message)}) + "\n"
+            yield json.dumps({"type": "fallback", "source": "deterministic"}) + "\n"
+            yield json.dumps({"type": "done"}) + "\n"
 
     return StreamingResponse(
         response_generator(),
