@@ -160,11 +160,11 @@ function App() {
     setLoading(true);
     try {
       const controller = new AbortController();
-      const timeout = window.setTimeout(() => controller.abort(), 40000);
+      const timeout = window.setTimeout(() => controller.abort(), 70000);
       let response;
       let text = "";
       try {
-        response = await fetch(`${API}/api/chat`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ session_id: sessionId, message }), signal: controller.signal });
+        response = await fetch(`${API}/api/chat`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ session_id: sessionId, message, history: chatMessages.slice(-12).map((item) => ({ sender: item.sender, text: item.text })) }), signal: controller.signal });
         text = await response.text();
       } finally { window.clearTimeout(timeout); }
       if (!response.ok) throw new Error((() => { try { const data = JSON.parse(text); return data.detail || `AI server returned ${response.status}.`; } catch { return `AI server returned ${response.status}.`; } })());
