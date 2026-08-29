@@ -18,10 +18,16 @@ load_dotenv(dotenv_path=ENV_PATH)
 
 GEMINI_API_KEY = (os.getenv("GEMINI_API_KEY") or "").strip()
 GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-2.5-flash")
-# Keep retries within the frontend timeout while allowing normal Gemini latency.
-GEMINI_TIMEOUT_MS = min(max(int(os.getenv("GEMINI_TIMEOUT_MS", "30000")), 5000), 60000)
-GEMINI_RETRIES = 2
-_gemini_client = None
+
+# Gemini always gets one total response window before deterministic fallback is allowed.
+# Retries share this same deadline, so three attempts cannot accidentally turn into
+# 45+ seconds of waiting.
+GEMINI_TOTAL_TIMEOUT_SECONDS = min(
+    max(float(os.getenv("GEMINI_TOTAL_TIMEOUT_SECONDS", "15")), 5.0),
+    30.0,
+)
+GEMINI_MAX_ATTEMPTS = 3
+GEMINI_RETRY_DELAY_SECONDS = 0.6
 MAX_CHAT_LENGTH = 4000
 MAX_MOOD_NOTE_LENGTH = 1000
 
@@ -205,34 +211,31 @@ def _extract_gemini_text(response) -> str:
     return ""
 
 
-def _get_gemini_client():
-    global _gemini_client
+def _create_gemini_client(timeout_ms: int):
     if not GEMINI_API_KEY:
         raise RuntimeError("GEMINI_API_KEY is not configured")
-    if _gemini_client is None:
-        from google import genai
-        _gemini_client = genai.Client(
-            api_key=GEMINI_API_KEY,
-            http_options={"timeout": GEMINI_TIMEOUT_MS},
-        )
-    return _gemini_client
 
+    from google import genai
 
-def _build_gemini_contents(message: str, history: list[ChatHistoryItem]):
-    contents = []
-    for item in history[-12:]:
-        role = "user" if item.sender == "user" else "model"
-        contents.append({"role": role, "parts": [{"text": item.text}]})
-    contents.append({"role": "user", "parts": [{"text": message}]})
-    return contents
-
-
+    return genai.Client(
+        api_key=GEMINI_API_KEY,
+        http_options={"timeout": timeout_ms},
+    )
 def generate_gemini_response(message: str, history: list[ChatHistoryItem] | None = None) -> str:
+    """Give Gemini the full shared response window before deterministic fallback."""
     last_error = None
     contents = _build_gemini_contents(message, history or [])
-    for attempt in range(GEMINI_RETRIES + 1):
+    deadline = time.monotonic() + GEMINI_TOTAL_TIMEOUT_SECONDS
+
+    for attempt in range(1, GEMINI_MAX_ATTEMPTS + 1):
+        remaining = deadline - time.monotonic()
+        if remaining <= 0:
+            break
+
         try:
-            client = _get_gemini_client()
+            # Each retry receives only the time remaining from the same 15-second budget.
+            timeout_ms = max(1000, int(remaining * 1000))
+            client = _create_gemini_client(timeout_ms)
             response = client.models.generate_content(
                 model=GEMINI_MODEL,
                 contents=contents,
@@ -245,172 +248,32 @@ def generate_gemini_response(message: str, history: list[ChatHistoryItem] | None
             text = _extract_gemini_text(response)
             if text:
                 return text
+
             candidates = getattr(response, "candidates", None) or []
             finish = [str(getattr(item, "finish_reason", "unknown")) for item in candidates]
             raise RuntimeError(f"Gemini returned no usable text (finish_reasons={finish})")
         except Exception as exc:
             last_error = exc
-            print(f"GEMINI ATTEMPT {attempt + 1} FAILED: {type(exc).__name__}: {exc}")
-            if attempt < GEMINI_RETRIES:
-                time.sleep(1.0 * (attempt + 1))
+            remaining = max(0.0, deadline - time.monotonic())
+            print(
+                f"GEMINI ATTEMPT {attempt}/{GEMINI_MAX_ATTEMPTS} FAILED "
+                f"with {remaining:.1f}s remaining: {type(exc).__name__}: {exc}"
+            )
+
+            if attempt >= GEMINI_MAX_ATTEMPTS or remaining <= 0:
+                break
+
+            retry_delay = min(
+                GEMINI_RETRY_DELAY_SECONDS * attempt,
+                max(0.0, deadline - time.monotonic()),
+            )
+            if retry_delay > 0:
+                time.sleep(retry_delay)
+
+    elapsed = GEMINI_TOTAL_TIMEOUT_SECONDS - max(0.0, deadline - time.monotonic())
+    error_name = type(last_error).__name__ if last_error else "TimeoutError"
     raise RuntimeError(
-        f"Gemini request failed after retries: {type(last_error).__name__}: {last_error}"
+        f"Gemini did not produce a usable response within the "
+        f"{GEMINI_TOTAL_TIMEOUT_SECONDS:.0f}-second response window "
+        f"(elapsed={elapsed:.1f}s, last_error={error_name})."
     ) from last_error
-
-
-@app.get("/")
-def root():
-    return {"message": "MindSetu API is running", "status": "success", "ai_model": GEMINI_MODEL}
-
-
-@app.get("/api/health")
-def health_check():
-    return {"status": "healthy", "service": "MindSetu Backend", "ai_model": GEMINI_MODEL}
-
-
-def gemini_runtime_status():
-    try:
-        from google import genai  # noqa: F401
-        sdk_available = True
-    except Exception:
-        sdk_available = False
-
-    configured = bool(GEMINI_API_KEY)
-    if configured and sdk_available:
-        status = "ready"
-    elif not configured:
-        status = "needs_configuration"
-    else:
-        status = "sdk_unavailable"
-
-    return {
-        "status": status,
-        "provider": "Google Gemini",
-        "model": GEMINI_MODEL,
-        "api_key_configured": configured,
-        "sdk_available": sdk_available,
-        "env_file_detected": ENV_PATH.exists(),
-    }
-
-
-@app.get("/api/chat/health")
-def chat_health():
-    return gemini_runtime_status()
-
-
-@app.get("/api/gemini/health")
-def gemini_health():
-    return gemini_runtime_status()
-
-
-@app.get("/api/database")
-def database_check():
-    try:
-        with get_connection() as conn:
-            with conn.cursor() as cur:
-                cur.execute("SELECT current_database()")
-                database = cur.fetchone()[0]
-        return {"status": "connected", "database": database}
-    except Exception as exc:
-        raise HTTPException(status_code=503, detail="Database connection unavailable.") from exc
-
-
-@app.post("/api/sessions")
-def create_session(request: SessionRequest):
-    if not request.consent_given:
-        raise HTTPException(status_code=400, detail="Consent is required before starting.")
-    session_id = uuid.uuid4()
-    try:
-        with get_connection() as conn:
-            with conn.cursor() as cur:
-                cur.execute(
-                    "INSERT INTO sessions (id, anonymous, consent_given) VALUES (%s, %s, %s)",
-                    (session_id, True, True),
-                )
-    except Exception as exc:
-        raise HTTPException(status_code=503, detail="Unable to create session.") from exc
-    return {"session_id": str(session_id), "anonymous": True, "consent_given": True}
-
-
-@app.post("/api/chat")
-def chat(request: ChatRequest):
-    require_session(request.session_id)
-    message = request.message.strip()
-
-    if contains_crisis_language(message):
-        def crisis_stream():
-            yield json.dumps({"type": "start", "model": "safety_response", "risk_level": "safety_priority"}) + "\n"
-            yield json.dumps({"type": "token", "content": crisis_response()}) + "\n"
-            yield json.dumps({"type": "done"}) + "\n"
-        return StreamingResponse(crisis_stream(), media_type="application/x-ndjson")
-
-    def response_generator():
-        yield json.dumps({"type": "start", "model": GEMINI_MODEL, "risk_level": "supportive"}) + "\n"
-        try:
-            text = generate_gemini_response(message, request.history)
-            yield json.dumps({"type": "token", "content": text}) + "\n"
-            yield json.dumps({"type": "done"}) + "\n"
-        except Exception as exc:
-            print("GEMINI ERROR:", exc)
-            yield json.dumps({"type": "token", "content": supportive_fallback_response(message)}) + "\n"
-            yield json.dumps({"type": "fallback", "source": "deterministic"}) + "\n"
-            yield json.dumps({"type": "done"}) + "\n"
-
-    return StreamingResponse(
-        response_generator(),
-        media_type="application/x-ndjson",
-        headers={"Cache-Control": "no-cache, no-transform", "X-Accel-Buffering": "no"},
-    )
-
-
-@app.post("/api/mood")
-def add_mood(request: MoodRequest):
-    require_session(request.session_id)
-    try:
-        with get_connection() as conn:
-            with conn.cursor() as cur:
-                cur.execute(
-                    "INSERT INTO mood_entries (id, session_id, mood, note) VALUES (%s, %s, %s, %s)",
-                    (uuid.uuid4(), request.session_id, request.mood, request.note),
-                )
-    except Exception as exc:
-        raise HTTPException(status_code=503, detail="Unable to save mood check-in.") from exc
-    return {"message": "Mood check-in recorded.", "mood": request.mood}
-
-
-@app.get("/api/mood/{session_id}")
-def get_mood_history(session_id: uuid.UUID):
-    require_session(session_id)
-    try:
-        with get_connection() as conn:
-            with conn.cursor() as cur:
-                cur.execute(
-                    "SELECT mood, note, created_at FROM mood_entries WHERE session_id = %s ORDER BY created_at DESC LIMIT 30",
-                    (session_id,),
-                )
-                rows = cur.fetchall()
-    except Exception as exc:
-        raise HTTPException(status_code=503, detail="Mood history is temporarily unavailable.") from exc
-    return {"history": [{"mood": row[0], "note": row[1], "created_at": row[2].isoformat()} for row in rows]}
-
-
-@app.get("/api/dashboard/mood-trend")
-def dashboard_mood_trend():
-    try:
-        with get_connection() as conn:
-            with conn.cursor() as cur:
-                cur.execute(
-                    """
-                    SELECT DATE(created_at), ROUND(AVG(mood)::numeric, 2), COUNT(*)
-                    FROM mood_entries GROUP BY DATE(created_at)
-                    ORDER BY DATE(created_at) DESC LIMIT 30
-                    """
-                )
-                rows = cur.fetchall()
-    except Exception as exc:
-        raise HTTPException(status_code=503, detail="Mood trend is temporarily unavailable.") from exc
-    return {"trend": [{"date": row[0].isoformat(), "average_mood": float(row[1]), "entries": row[2]} for row in reversed(rows)]}
-
-
-# Register SIH26186 workflow and research ML routes after the core FastAPI app is defined.
-import sih26186_server  # noqa: E402,F401
