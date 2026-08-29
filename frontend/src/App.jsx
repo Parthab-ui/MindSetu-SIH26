@@ -157,26 +157,31 @@ function App() {
     setChatInput("");
     setLoading(true);
     try {
-      const response = await fetch(`${API}/api/chat`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ session_id: sessionId, message }) });
-      const text = await response.text();
+      const controller = new AbortController();
+      const timeout = window.setTimeout(() => controller.abort(), 30000);
+      let response;
+      let text = "";
+      try {
+        response = await fetch(`${API}/api/chat`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ session_id: sessionId, message }), signal: controller.signal });
+        text = await response.text();
+      } finally { window.clearTimeout(timeout); }
       if (!response.ok) throw new Error((() => { try { const data = JSON.parse(text); return data.detail || `AI server returned ${response.status}.`; } catch { return `AI server returned ${response.status}.`; } })());
       const lines = text.split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
       let combined = "";
       for (const line of lines) {
         try {
           const chunk = JSON.parse(line);
-          if (chunk.type === "token" && chunk.content) combined += chunk.content;
+          if (chunk.type === "token" && typeof chunk.content === "string" && chunk.content.trim()) combined += chunk.content;
         } catch {
-          // Some proxies can collapse an NDJSON response into plain text.
-          combined += line;
+          // Ignore non-NDJSON noise rather than displaying protocol metadata.
         }
       }
-      const responseText = combined.trim() || text.trim();
+      const responseText = combined.trim();
       const safeFallback =
         "Thank you for sharing that. Take things one step at a time and consider one practical form of support or recovery that could help right now. If things become difficult to manage, reach out to someone you trust or a qualified support professional.";
       setChatMessages((previous) => [...previous, { sender: "ai", text: responseText || safeFallback }]);
     } catch (err) {
-      setChatMessages((previous) => [...previous, { sender: "ai", text: `MindSetu AI is unavailable right now: ${err.message}` }]);
+      setChatMessages((previous) => [...previous, { sender: "ai", text: err.name === "AbortError" ? "MindSetu AI took too long to respond. Take a short pause, identify one immediate source of pressure, and consider contacting someone you trust for support." : `MindSetu AI is unavailable right now: ${err.message}` }]);
     } finally { setLoading(false); }
   }
 
