@@ -1,6 +1,7 @@
 import json
 import os
 import re
+import time
 import uuid
 from datetime import datetime, timezone
 from pathlib import Path
@@ -17,7 +18,7 @@ load_dotenv(dotenv_path=ENV_PATH)
 
 GEMINI_API_KEY = (os.getenv("GEMINI_API_KEY") or "").strip()
 GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-2.5-flash")
-GEMINI_TIMEOUT_MS = int(os.getenv("GEMINI_TIMEOUT_MS", "20000"))
+GEMINI_TOTAL_TIMEOUT_SECONDS = min(max(float(os.getenv("GEMINI_TOTAL_TIMEOUT_SECONDS", "15")), 5.0), 30.0)
 MAX_CHAT_LENGTH = 4000
 MAX_MOOD_NOTE_LENGTH = 1000
 
@@ -107,9 +108,15 @@ class SessionRequest(BaseModel):
     consent_given: bool = True
 
 
+class ChatHistoryItem(BaseModel):
+    sender: str = Field(..., pattern="^(user|ai)$")
+    text: str = Field(..., min_length=1, max_length=MAX_CHAT_LENGTH)
+
+
 class ChatRequest(BaseModel):
     session_id: uuid.UUID
     message: str = Field(..., min_length=1, max_length=MAX_CHAT_LENGTH)
+    history: list[ChatHistoryItem] = Field(default_factory=list, max_length=12)
 
 
 class MoodRequest(BaseModel):
@@ -171,30 +178,65 @@ def crisis_response() -> str:
     )
 
 
-def generate_gemini_response(message: str) -> str:
+def _extract_gemini_text(response) -> str:
+    text = getattr(response, "text", None)
+    if isinstance(text, str) and text.strip():
+        return text.strip()
+
+    candidates = getattr(response, "candidates", None) or []
+    for candidate in candidates:
+        content = getattr(candidate, "content", None)
+        parts = getattr(content, "parts", None) or []
+        collected = []
+        for part in parts:
+            value = getattr(part, "text", None)
+            if isinstance(value, str) and value.strip():
+                collected.append(value.strip())
+        if collected:
+            return "\n".join(collected)
+    return ""
+
+
+def generate_gemini_response(message: str, history=None) -> str:
+    """Give Gemini up to one shared 15-second window before fallback."""
     if not GEMINI_API_KEY:
         raise RuntimeError("GEMINI_API_KEY is not configured")
-    try:
-        from google import genai
-        client = genai.Client(
-            api_key=GEMINI_API_KEY,
-            http_options={"timeout": GEMINI_TIMEOUT_MS},
-        )
-        response = client.models.generate_content(
-            model=GEMINI_MODEL,
-            contents=f"{MINDSETU_SYSTEM_PROMPT}\n\nPERSON MESSAGE:\n{message}",
-            config={
-                "temperature": 0.55,
-                "max_output_tokens": 400,
-            },
-        )
-        text = (getattr(response, "text", None) or "").strip()
-        if not text:
-            raise RuntimeError("Gemini returned an empty response")
-        return text
-    except Exception as exc:
-        raise RuntimeError(f"Gemini request failed: {type(exc).__name__}") from exc
 
+    from google import genai
+
+    deadline = time.monotonic() + GEMINI_TOTAL_TIMEOUT_SECONDS
+    last_error = None
+    # Preserve context when the frontend supplies it.
+    contents = []
+    for item in (history or [])[-12:]:
+        sender = item.get("sender") if isinstance(item, dict) else getattr(item, "sender", "")
+        text = item.get("text") if isinstance(item, dict) else getattr(item, "text", "")
+        if text:
+            contents.append({"role": "user" if sender == "user" else "model", "parts": [{"text": text}]})
+    contents.append({"role": "user", "parts": [{"text": message}]})
+
+    for attempt in range(3):
+        remaining = deadline - time.monotonic()
+        if remaining <= 0:
+            break
+        try:
+            client = genai.Client(api_key=GEMINI_API_KEY, http_options={"timeout": max(1000, int(remaining * 1000))})
+            response = client.models.generate_content(
+                model=GEMINI_MODEL,
+                contents=contents,
+                config={"system_instruction": MINDSETU_SYSTEM_PROMPT, "temperature": 0.55, "max_output_tokens": 500},
+            )
+            text = _extract_gemini_text(response)
+            if text:
+                return text
+            raise RuntimeError("Gemini returned no usable text")
+        except Exception as exc:
+            last_error = exc
+            if attempt < 2:
+                delay = min(0.6 * (attempt + 1), max(0, deadline - time.monotonic()))
+                if delay:
+                    time.sleep(delay)
+    raise RuntimeError(f"Gemini did not produce a usable response within {GEMINI_TOTAL_TIMEOUT_SECONDS:.0f} seconds: {last_error}") from last_error
 
 @app.get("/")
 def root():
@@ -285,7 +327,7 @@ def chat(request: ChatRequest):
     def response_generator():
         yield json.dumps({"type": "start", "model": GEMINI_MODEL, "risk_level": "supportive"}) + "\n"
         try:
-            text = generate_gemini_response(message)
+            text = generate_gemini_response(message, request.history)
             yield json.dumps({"type": "token", "content": text}) + "\n"
             yield json.dumps({"type": "done"}) + "\n"
         except Exception as exc:
@@ -348,3 +390,7 @@ def dashboard_mood_trend():
     except Exception as exc:
         raise HTTPException(status_code=503, detail="Mood trend is temporarily unavailable.") from exc
     return {"trend": [{"date": row[0].isoformat(), "average_mood": float(row[1]), "entries": row[2]} for row in reversed(rows)]}
+
+
+# Register SIH26186 workflow routes after the core app and database helpers are defined.
+import sih26186_server  # noqa: E402,F401
