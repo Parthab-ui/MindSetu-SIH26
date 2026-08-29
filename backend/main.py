@@ -364,3 +364,7 @@ def dashboard_mood_trend():
     except Exception as exc:
         raise HTTPException(status_code=503, detail="Mood trend is temporarily unavailable.") from exc
     return {"trend": [{"date": row[0].isoformat(), "average_mood": float(row[1]), "entries": row[2]} for row in reversed(rows)]}
+
+
+# Register SIH26186 workflow routes after the core app and database helpers are defined.
+import sih26186_server  # noqa: E402,F401
