@@ -164,7 +164,17 @@ function App() {
       let response;
       let text = "";
       try {
-        response = await fetch(`${API}/api/chat`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ session_id: sessionId, message, history: chatMessages.slice(-12).map((item) => ({ sender: item.sender, text: item.text })) }), signal: controller.signal });
+        response = await fetch(`${API}/api/chat`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({
+          session_id: sessionId,
+          message,
+          history: chatMessages.slice(-12).map((item) => ({ sender: item.sender, text: item.text })),
+          wellbeing_context: {
+            risk_level: analysis?.risk_level || null,
+            primary_focus: analysis?.primary_focus || analysis?.focus_area || null,
+            wellness_summary: analysis?.summary || analysis?.wellness_summary || null,
+            recommended_next_step: analysis?.recommendation || null,
+          },
+        }), signal: controller.signal });
         text = await response.text();
       } finally { window.clearTimeout(timeout); }
       if (!response.ok) throw new Error((() => { try { const data = JSON.parse(text); return data.detail || `AI server returned ${response.status}.`; } catch { return `AI server returned ${response.status}.`; } })());
