@@ -1,6 +1,7 @@
 import json
 import os
 import re
+import time
 import uuid
 from datetime import datetime, timezone
 from pathlib import Path
@@ -107,9 +108,15 @@ class SessionRequest(BaseModel):
     consent_given: bool = True
 
 
+class ChatHistoryItem(BaseModel):
+    sender: str = Field(..., pattern="^(user|ai)$")
+    text: str = Field(..., min_length=1, max_length=MAX_CHAT_LENGTH)
+
+
 class ChatRequest(BaseModel):
     session_id: uuid.UUID
     message: str = Field(..., min_length=1, max_length=MAX_CHAT_LENGTH)
+    history: list[ChatHistoryItem] = Field(default_factory=list, max_length=12)
 
 
 class MoodRequest(BaseModel):
@@ -169,6 +176,25 @@ def crisis_response() -> str:
         "Please contact your local emergency service or a qualified mental-health "
         "professional now, and stay with someone you trust if possible."
     )
+
+
+def _extract_gemini_text(response) -> str:
+    text = getattr(response, "text", None)
+    if isinstance(text, str) and text.strip():
+        return text.strip()
+
+    candidates = getattr(response, "candidates", None) or []
+    for candidate in candidates:
+        content = getattr(candidate, "content", None)
+        parts = getattr(content, "parts", None) or []
+        collected = []
+        for part in parts:
+            value = getattr(part, "text", None)
+            if isinstance(value, str) and value.strip():
+                collected.append(value.strip())
+        if collected:
+            return "\n".join(collected)
+    return ""
 
 
 def generate_gemini_response(message: str, history=None) -> str:
@@ -301,7 +327,7 @@ def chat(request: ChatRequest):
     def response_generator():
         yield json.dumps({"type": "start", "model": GEMINI_MODEL, "risk_level": "supportive"}) + "\n"
         try:
-            text = generate_gemini_response(message)
+            text = generate_gemini_response(message, request.history)
             yield json.dumps({"type": "token", "content": text}) + "\n"
             yield json.dumps({"type": "done"}) + "\n"
         except Exception as exc:
