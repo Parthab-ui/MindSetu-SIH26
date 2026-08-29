@@ -8,6 +8,25 @@ It helps demonstrate a structured wellbeing-support journey while keeping import
 
 ---
 
+## Quick start
+
+```powershell
+# Terminal 1
+cd backend
+.\.venv\Scripts\Activate.ps1
+uvicorn main:app --host 127.0.0.1 --port 8000 --reload
+
+# Terminal 2
+cd frontend
+npm run dev
+```
+
+Then open the frontend URL shown by Vite, normally `http://localhost:5173`.
+
+**Verify the runtime:** `/api/health` → backend, `/api/database` → database, `/api/gemini/health` → Gemini configuration, `/api/ai/self-audit` → internal AI regression checks.
+
+---
+
 ## 1. What MindSetu does
 
 The core journey is:
@@ -125,7 +144,37 @@ The backend:
 
 ---
 
-## 5. Local setup
+## 5. API overview
+
+### Core runtime
+
+| Method | Endpoint | Purpose |
+|---|---|---|
+| `GET` | `/api/health` | Backend status |
+| `GET` | `/api/database` | Database connectivity |
+| `POST` | `/api/sessions` | Create an anonymous consented session |
+| `POST` | `/api/chat` | Supportive streaming chat |
+| `POST` | `/api/mood` | Save a mood check-in |
+| `GET` | `/api/mood/{session_id}` | Retrieve recent mood history |
+| `GET` | `/api/dashboard/mood-trend` | Retrieve aggregated mood trend |
+
+### AI runtime
+
+| Endpoint | Meaning |
+|---|---|
+| `/api/chat/health` | Chat configuration status |
+| `/api/gemini/health` | Gemini SDK and key configuration status |
+| `/api/ai/self-audit` | Internal deterministic AI checks |
+
+> A configuration health check confirms local configuration, not live provider availability.
+
+### Chat request contract
+
+`POST /api/chat` expects a session ID, user message, optional recent history, and structured wellbeing context. The response is NDJSON streaming events: `start`, `token`, optionally `fallback`, then `done`.
+
+---
+
+## 6. Local setup
 
 ### Prerequisites
 
@@ -190,7 +239,7 @@ http://localhost:5173
 
 ---
 
-## 6. Health checks
+## 7. Health checks
 
 Once the backend is running:
 
@@ -213,7 +262,7 @@ Invoke-WebRequest -UseBasicParsing http://127.0.0.1:8000/api/sih26186/ml/health
 
 ---
 
-## 7. Chatbot behavior and fallback policy
+## 8. Chatbot behavior and fallback policy
 
 MindSetu prioritizes Gemini when it is available.
 
@@ -242,7 +291,7 @@ A health endpoint confirming that the API key and SDK are configured does **not 
 
 ---
 
-## 8. Safety boundaries
+## 9. Safety boundaries
 
 MindSetu:
 
@@ -257,7 +306,7 @@ For demonstrations, use **fictional or approved test data only**.
 
 ---
 
-## 9. Pre-demo checklist
+## 10. Automated quality checks
 
 Before presenting:
 
@@ -275,7 +324,18 @@ Before presenting:
 - [ ] `/api/gemini/health` reports the expected configuration.
 - [ ] `/api/sih26186/ml/health` reports the expected research-model state.
 
-### End-to-end flow
+### Automated checks
+
+The repository includes deterministic AI regression checks and a GitHub Actions workflow intended to run them on pushes and pull requests to `main`.
+
+```powershell
+cd backend
+pytest -q tests/test_ai_self_audit.py
+```
+
+The checks cover context construction, response validation, repeat rejection, crisis routing, and fallback availability. They do not prove that a live external Gemini request will succeed.
+
+### Demo validation
 
 - [ ] Start a new session.
 - [ ] Complete the wellbeing pulse.
@@ -296,7 +356,7 @@ npm run build
 
 ---
 
-## 10. Suggested demo narrative
+## 11. Suggested demo narrative
 
 A concise demonstration sequence:
 
@@ -310,7 +370,7 @@ A concise demonstration sequence:
 
 ---
 
-## 11. Research utilities
+## 12. Research utilities
 
 The `backend/ml/` directory contains supporting scripts for training, evaluation, threshold analysis, ablation, and dataset inspection.
 
@@ -318,7 +378,7 @@ These utilities support research reproducibility and experimentation and are **n
 
 ---
 
-## 12. Production considerations
+## 13. Production considerations
 
 A real deployment would require additional work, including:
 
