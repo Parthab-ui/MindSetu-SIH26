@@ -221,6 +221,17 @@ def _create_gemini_client(timeout_ms: int):
         api_key=GEMINI_API_KEY,
         http_options={"timeout": timeout_ms},
     )
+
+
+def _build_gemini_contents(message: str, history: list[ChatHistoryItem]):
+    contents = []
+    for item in history[-12:]:
+        role = "user" if item.sender == "user" else "model"
+        contents.append({"role": role, "parts": [{"text": item.text}]})
+    contents.append({"role": "user", "parts": [{"text": message}]})
+    return contents
+
+
 def generate_gemini_response(message: str, history: list[ChatHistoryItem] | None = None) -> str:
     """Give Gemini the full shared response window before deterministic fallback."""
     last_error = None
