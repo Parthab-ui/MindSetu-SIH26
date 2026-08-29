@@ -71,6 +71,8 @@ function App() {
   const [moodHistory, setMoodHistory] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [showWhy, setShowWhy] = useState(false);
+  const [showResearch, setShowResearch] = useState(false);
   const [workload, setWorkload] = useState({ duty_hours: 8, night_duties: 1, rest_hours: 8, days_since_leave: 7, workload_level: 3, high_pressure_assignment: false, duty_change_frequency: 1 });
 
   useEffect(() => {
@@ -220,9 +222,95 @@ function App() {
     <div className="app-shell"><Header darkMode={darkMode} setDarkMode={setDarkMode} />{nav}<main className="page narrow"><span className="eyebrow">03 · DUTY & RECOVERY</span><h1>Add the operational context.</h1><p className="lead">These inputs support welfare planning and do not make personnel decisions.</p><div className="progress"><span style={{ width: `${progress}%` }} /></div><div className="card form-grid">{[['duty_hours','Duty hours / day',0,24,8],['night_duties','Night duties / recent period',0,14,1],['rest_hours','Rest / recovery hours',0,24,8],['days_since_leave','Days since last leave',0,90,7],['duty_change_frequency','Duty changes / recent period',0,7,1]].map(([key,label,min,max,defaultValue]) => <div className="field" key={key}><label>{label}</label><input type="number" min={min} max={max} value={workload[key] ?? defaultValue} onChange={(event) => setWorkload((current) => ({ ...current, [key]: Number(event.target.value) }))} /></div>)}<div className="field"><label>WORKLOAD INTENSITY</label><select value={workload.workload_level} onChange={(event) => setWorkload((current) => ({ ...current, workload_level: Number(event.target.value) }))}><option value={1}>1 · Very manageable</option><option value={2}>2 · Manageable</option><option value={3}>3 · Moderate</option><option value={4}>4 · Heavy</option><option value={5}>5 · Very heavy</option></select></div><label className="check-row"><input type="checkbox" checked={workload.high_pressure_assignment} onChange={(event) => setWorkload((current) => ({ ...current, high_pressure_assignment: event.target.checked }))} /> Recent high-pressure assignment</label></div>{error && <div className="error">{error}</div>}<div className="action-row"><button className="secondary-button" onClick={() => setScreen("wellness")}>← Back</button><button className="primary-button" disabled={loading} onClick={runAnalysis}>{loading ? "Analysing…" : "Generate welfare signal →"}</button></div></main></div>
   );
 
-  if (screen === "analysis") return (
-    <div className="app-shell"><Header darkMode={darkMode} setDarkMode={setDarkMode} />{nav}<main className="page"><div className="page-heading"><span className="eyebrow">04 · WELFARE ANALYSIS</span><h1>Explain the signal, not the person.</h1><p>Deterministic welfare triage is shown separately from the research ML layer.</p></div><div className="metric-grid"><div className="metric-card"><span>Wellness stress</span><strong>{analysis?.wellness_score ?? "—"}</strong></div><div className="metric-card"><span>Duty load</span><strong>{analysis?.workload_score ?? "—"}</strong></div><div className="metric-card"><span>Combined</span><strong>{analysis?.combined_score ?? "—"}</strong></div></div><div className="split-grid"><section className={`card risk-card ${analysis?.risk_level || "low"}`}><span className="eyebrow">WELFARE SIGNAL</span><div className="risk-value">{analysis?.risk_level || "unknown"}</div><p>{analysis?.recommendation || "Complete the workflow to generate a signal."}</p></section><section className="card architecture-card"><span className="eyebrow">SYSTEM CONTRACT</span><h2>Four clear responsibilities</h2><div className="contract"><div><b>LightGBM</b><span>prediction</span></div><div><b>SHAP</b><span>explanation</span></div><div><b>Gemini</b><span>communication</span></div><div><b>Human</b><span>intervention</span></div></div></section><section className="card human-next-step"><span className="eyebrow">HUMAN NEXT STEP</span><h2>Support decisions stay with people.</h2><p>Use this welfare signal to guide an appropriate human check-in, practical recovery support, or referral to qualified support when needed. MindSetu does not diagnose, discipline, or make employment decisions.</p></section></div><div className="card research-card"><div className="card-header"><div><span className="eyebrow">RESEARCH ONLY</span><h2>LightGBM + SHAP</h2><p>Run the validated research model separately so its output is never confused with the operational welfare triage score. These inputs are a fictional research demo profile, not values inferred from the operational welfare questionnaire.</p></div><button className="secondary-button" onClick={checkModel} disabled={loading}>Check model</button></div>{mlResult?.health && <div className={`status-line ${mlResult.health.status === "ready" ? "" : "error"}`}>{mlResult.health.model} · {mlResult.health.status} · threshold {mlResult.health.threshold} · artifact present {String(mlResult.health.model_present)}</div>}{mlResult?.error && <div className="error">{mlResult.error}</div>}<div className="ml-grid">{[['Q29_Total','Overall research wellbeing score'],['Q12_weapon','Research exposure indicator'],['Q13_feltdie','Research life-threat indicator'],['Q23a_cutdowntime','Reduced work time'],['Q23b_Accomplished_less','Accomplished less work'],['Q23c_limited_work','Limited work capacity'],['Q23d_difficulty_performing','Difficulty performing duties']].map(([key,label]) => <div className="field" key={key}><label>{label}</label><input type="number" value={mlInputs[key]} onChange={(event) => setMlInputs((current) => ({ ...current, [key]: Number(event.target.value) }))} /></div>)}</div><button className="primary-button" disabled={loading} onClick={runResearchModel}>Run explainable model →</button>{mlResult?.probability !== undefined && <div className="ml-output"><div className={`signal ${mlResult.signal}`}>{mlResult.signal} · {mlResult.probability.toFixed(3)}</div><p>This research output is not a clinical diagnosis and does not determine employment or disciplinary action.</p><div className="contributors">{(mlResult.contributors || []).slice(0, 5).map((item) => <div className="contributor" key={item.feature}><span>{item.label}</span><b>{item.direction} · {Math.abs(item.shap_value ?? 0).toFixed(3)}</b></div>)}</div>{mlResult.supportive_response && <div className="gemini-box"><span className="eyebrow">GEMINI COMMUNICATION</span><p>{mlResult.supportive_response}</p><small>Response source: {mlResult.response_source || "not available"}</small></div>}</div>}</div></main></div>
-  );
+  if (screen === "analysis") {
+    const level = String(analysis?.risk_level || "unknown").toLowerCase();
+    const meaning = level === "high"
+      ? "Your answers suggest that additional support should be considered soon."
+      : level === "moderate"
+        ? "Some signs of strain are present. A timely check-in and practical recovery support may help."
+        : level === "low"
+          ? "No strong support signal was identified from this check-in. Continue to notice changes over time."
+          : "Complete the workflow to generate your wellbeing summary.";
+    const nextStep = analysis?.recommendation || "Use this check-in as a starting point for a practical conversation about support and recovery.";
+    return (
+      <div className="app-shell"><Header darkMode={darkMode} setDarkMode={setDarkMode} />{nav}
+        <main className="page analysis-page">
+          <div className="page-heading analysis-heading">
+            <span className="eyebrow">YOUR WELLBEING SUMMARY</span>
+            <h1>Here is what to know right now.</h1>
+            <p>This is a support signal from your check-in, not a judgement about you.</p>
+          </div>
+
+          <section className={`card takeaway-card ${level}`}>
+            <div className="takeaway-top">
+              <div>
+                <span className="eyebrow">CURRENT SUPPORT SIGNAL</span>
+                <div className="risk-value">{level === "unknown" ? "Not available" : level}</div>
+              </div>
+              <div className="signal-badge">Support, not diagnosis</div>
+            </div>
+            <p className="takeaway-meaning">{meaning}</p>
+            <div className="next-step-box">
+              <span>WHAT MAY HELP NEXT</span>
+              <p>{nextStep}</p>
+            </div>
+            <div className="takeaway-actions">
+              <button className="primary-button" onClick={() => setScreen("chat")}>Talk to AI companion →</button>
+              <button className="secondary-button" onClick={() => setScreen("mood")}>Record how I feel</button>
+            </div>
+          </section>
+
+          <section className="understand-grid">
+            <article className="card understand-card">
+              <span className="eyebrow">WHAT THIS LOOKED AT</span>
+              <h2>Your recent experience</h2>
+              <p>MindSetu considered two broad areas from this session: your wellbeing check-in and your duty and recovery context.</p>
+              <div className="domain-list">
+                <div><b>Wellbeing check-in</b><span>How the recent period has felt</span></div>
+                <div><b>Duty & recovery</b><span>Workload, rest and operational context</span></div>
+              </div>
+            </article>
+            <article className="card understand-card">
+              <span className="eyebrow">IMPORTANT TO REMEMBER</span>
+              <h2>You are more than a score.</h2>
+              <p>MindSetu cannot diagnose a condition, decide fitness for duty, discipline anyone or make employment decisions.</p>
+              <p>Human judgement remains responsible for any follow-up or intervention.</p>
+            </article>
+          </section>
+
+          <section className="card why-card">
+            <button className="disclosure-button" onClick={() => setShowWhy((value) => !value)} aria-expanded={showWhy}>
+              <span><b>Why did I receive this result?</b><small>See the simple explanation and session details</small></span>
+              <span>{showWhy ? "−" : "+"}</span>
+            </button>
+            {showWhy && <div className="disclosure-content">
+              <p>The result is based on the information provided in this session. The numbers below are supporting system details, not a measure of your value or a medical diagnosis.</p>
+              <div className="metric-grid compact-metrics">
+                <div className="metric-card"><span>Wellbeing check-in</span><strong>{analysis?.wellness_score ?? "—"}</strong></div>
+                <div className="metric-card"><span>Duty & recovery context</span><strong>{analysis?.workload_score ?? "—"}</strong></div>
+                <div className="metric-card"><span>Combined support signal</span><strong>{analysis?.combined_score ?? "—"}</strong></div>
+              </div>
+            </div>}
+          </section>
+
+          <section className="card research-disclosure">
+            <button className="disclosure-button" onClick={() => setShowResearch((value) => !value)} aria-expanded={showResearch}>
+              <span><span className="eyebrow">FOR JUDGES & RESEARCH DEMO</span><b>Inspect the separate ML + SHAP layer</b><small>This research model is intentionally separate from your wellbeing summary.</small></span>
+              <span>{showResearch ? "−" : "+"}</span>
+            </button>
+            {showResearch && <div className="research-content">
+              <div className="research-intro"><h2>Explainable research model</h2><p>These fictional demo inputs are used only for the LightGBM + SHAP research demonstration. They are not inferred from the wellbeing questionnaire and do not control the operational support signal above.</p><button className="secondary-button" onClick={checkModel} disabled={loading}>Check model</button></div>
+              {mlResult?.health && <div className={`status-line ${mlResult.health.status === "ready" ? "" : "error"}`}>{mlResult.health.model} · {mlResult.health.status} · threshold {mlResult.health.threshold}</div>}
+              {mlResult?.error && <div className="error">{mlResult.error}</div>}
+              <div className="ml-grid">{[['Q29_Total','Overall research wellbeing score'],['Q12_weapon','Research exposure indicator'],['Q13_feltdie','Research life-threat indicator'],['Q23a_cutdowntime','Reduced work time'],['Q23b_Accomplished_less','Accomplished less work'],['Q23c_limited_work','Limited work capacity'],['Q23d_difficulty_performing','Difficulty performing duties']].map(([key,label]) => <div className="field" key={key}><label>{label}</label><input type="number" value={mlInputs[key]} onChange={(event) => setMlInputs((current) => ({ ...current, [key]: Number(event.target.value) }))} /></div>)}</div>
+              <button className="primary-button" disabled={loading} onClick={runResearchModel}>Run explainable model →</button>
+              {mlResult?.probability !== undefined && <div className="ml-output"><div className={`signal ${mlResult.signal}`}>{mlResult.signal} · {mlResult.probability.toFixed(3)}</div><p>This research output is not a clinical diagnosis and does not determine employment or disciplinary action.</p><div className="contributors">{(mlResult.contributors || []).slice(0, 5).map((item) => <div className="contributor" key={item.feature}><span>{item.label}</span><b>{item.direction} · {Math.abs(item.shap_value ?? 0).toFixed(3)}</b></div>)}</div>{mlResult.supportive_response && <div className="gemini-box"><span className="eyebrow">GEMINI COMMUNICATION</span><p>{mlResult.supportive_response}</p><small>Response source: {mlResult.response_source || "not available"}</small></div>}</div>}
+            </div>}
+          </section>
+        </main>
+      </div>
+    );
+  }
 
   if (screen === "chat") return (
     <div className="app-shell"><Header darkMode={darkMode} setDarkMode={setDarkMode} />{nav}<main className="page chat-page"><div className="page-heading"><span className="eyebrow">MINDSETU AI COMPANION</span><h1>A private place to talk.</h1><p>Gemini provides supportive communication. It does not diagnose or replace qualified human care.</p></div><div className="chat-window">{chatMessages.length === 0 && <div className="empty-chat"><div className="hero-icon">✦</div><h2>What is on your mind?</h2><p>MindSetu AI offers supportive conversation and practical next steps.</p><div className="chat-starters"><button onClick={() => setChatInput("I feel overwhelmed by my workload and I can't switch off after duty.")}>I feel overwhelmed</button><button onClick={() => setChatInput("Help me think about recovery after a difficult period.")}>Think about recovery</button><button onClick={() => setChatInput("I need help organizing one practical next step.")}>Choose a next step</button></div></div>}{chatMessages.map((message, index) => <div className={`message-row ${message.sender}`} key={`${message.sender}-${index}`}><div className="message-bubble">{message.text}</div></div>)}{loading && <div className="message-row ai"><div className="message-bubble typing">Gemini is thinking…</div></div>}</div><div className="chat-compose"><textarea value={chatInput} onChange={(event) => setChatInput(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter" && !event.shiftKey) { event.preventDefault(); sendMessage(); } }} placeholder="Share what's happening…" /><button className="primary-button" onClick={sendMessage} disabled={loading || !chatInput.trim()}>Send</button></div></main></div>
