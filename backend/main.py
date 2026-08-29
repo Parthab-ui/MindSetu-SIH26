@@ -19,8 +19,9 @@ load_dotenv(dotenv_path=ENV_PATH)
 GEMINI_API_KEY = (os.getenv("GEMINI_API_KEY") or "").strip()
 GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-2.5-flash")
 # Keep retries within the frontend timeout while allowing normal Gemini latency.
-GEMINI_TIMEOUT_MS = min(max(int(os.getenv("GEMINI_TIMEOUT_MS", "20000")), 5000), 30000)
-GEMINI_RETRIES = 1
+GEMINI_TIMEOUT_MS = min(max(int(os.getenv("GEMINI_TIMEOUT_MS", "30000")), 5000), 60000)
+GEMINI_RETRIES = 2
+_gemini_client = None
 MAX_CHAT_LENGTH = 4000
 MAX_MOOD_NOTE_LENGTH = 1000
 
@@ -110,9 +111,15 @@ class SessionRequest(BaseModel):
     consent_given: bool = True
 
 
+class ChatHistoryItem(BaseModel):
+    sender: str = Field(..., pattern="^(user|ai)$")
+    text: str = Field(..., min_length=1, max_length=MAX_CHAT_LENGTH)
+
+
 class ChatRequest(BaseModel):
     session_id: uuid.UUID
     message: str = Field(..., min_length=1, max_length=MAX_CHAT_LENGTH)
+    history: list[ChatHistoryItem] = Field(default_factory=list, max_length=20)
 
 
 class MoodRequest(BaseModel):
@@ -198,39 +205,56 @@ def _extract_gemini_text(response) -> str:
     return ""
 
 
-def generate_gemini_response(message: str) -> str:
+def _get_gemini_client():
+    global _gemini_client
     if not GEMINI_API_KEY:
         raise RuntimeError("GEMINI_API_KEY is not configured")
+    if _gemini_client is None:
+        from google import genai
+        _gemini_client = genai.Client(
+            api_key=GEMINI_API_KEY,
+            http_options={"timeout": GEMINI_TIMEOUT_MS},
+        )
+    return _gemini_client
 
+
+def _build_gemini_contents(message: str, history: list[ChatHistoryItem]):
+    contents = []
+    for item in history[-12:]:
+        role = "user" if item.sender == "user" else "model"
+        contents.append({"role": role, "parts": [{"text": item.text}]})
+    contents.append({"role": "user", "parts": [{"text": message}]})
+    return contents
+
+
+def generate_gemini_response(message: str, history: list[ChatHistoryItem] | None = None) -> str:
     last_error = None
+    contents = _build_gemini_contents(message, history or [])
     for attempt in range(GEMINI_RETRIES + 1):
         try:
-            from google import genai
-            client = genai.Client(
-                api_key=GEMINI_API_KEY,
-                http_options={"timeout": GEMINI_TIMEOUT_MS},
-            )
+            client = _get_gemini_client()
             response = client.models.generate_content(
                 model=GEMINI_MODEL,
-                contents=message,
+                contents=contents,
                 config={
                     "system_instruction": MINDSETU_SYSTEM_PROMPT,
                     "temperature": 0.55,
-                    "max_output_tokens": 400,
+                    "max_output_tokens": 500,
                 },
             )
             text = _extract_gemini_text(response)
             if text:
                 return text
-            raise RuntimeError("Gemini returned no usable text")
+            candidates = getattr(response, "candidates", None) or []
+            finish = [str(getattr(item, "finish_reason", "unknown")) for item in candidates]
+            raise RuntimeError(f"Gemini returned no usable text (finish_reasons={finish})")
         except Exception as exc:
             last_error = exc
             print(f"GEMINI ATTEMPT {attempt + 1} FAILED: {type(exc).__name__}: {exc}")
             if attempt < GEMINI_RETRIES:
-                time.sleep(0.8)
-
+                time.sleep(1.0 * (attempt + 1))
     raise RuntimeError(
-        f"Gemini request failed after retry: {type(last_error).__name__}: {last_error}"
+        f"Gemini request failed after retries: {type(last_error).__name__}: {last_error}"
     ) from last_error
 
 
@@ -323,7 +347,7 @@ def chat(request: ChatRequest):
     def response_generator():
         yield json.dumps({"type": "start", "model": GEMINI_MODEL, "risk_level": "supportive"}) + "\n"
         try:
-            text = generate_gemini_response(message)
+            text = generate_gemini_response(message, request.history)
             yield json.dumps({"type": "token", "content": text}) + "\n"
             yield json.dumps({"type": "done"}) + "\n"
         except Exception as exc:
