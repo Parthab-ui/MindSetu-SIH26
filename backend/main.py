@@ -143,6 +143,10 @@ If the user describes immediate danger, suicide, self-harm, or intent to serious
 """
 
 
+def _ai_context_to_dict(value):
+    return value.model_dump(exclude_none=True) if hasattr(value, "model_dump") else (value or {})
+
+
 def build_ai_context(history, wellbeing_context=None) -> str:
     recent = []
     for item in (history or [])[-12:]:
@@ -150,7 +154,7 @@ def build_ai_context(history, wellbeing_context=None) -> str:
         text = item.get("text") if isinstance(item, dict) else getattr(item, "text", "")
         if text:
             recent.append(f"{sender}: {text.strip()[:500]}")
-    context = wellbeing_context.model_dump(exclude_none=True) if hasattr(wellbeing_context, "model_dump") else (wellbeing_context or {})
+    context = _ai_context_to_dict(wellbeing_context)
     lines = ["MINDSETU CONTEXT (use only when relevant):"]
     for key in ("risk_level", "primary_focus", "wellness_summary", "recommended_next_step"):
         value = context.get(key) if isinstance(context, dict) else None
@@ -201,6 +205,25 @@ def supportive_fallback_response(message: str) -> str:
     )
 
 
+
+def run_ai_self_audit() -> dict:
+    cases = [
+        ("context", build_ai_context([ChatHistoryItem(sender="user", text="I feel exhausted")], WellbeingContext(primary_focus="Recovery")).find("Recovery") >= 0),
+        ("empty_response_rejected", validate_ai_response("", "hello", []) == ""),
+        ("short_response_rejected", validate_ai_response("ok", "hello", []) == ""),
+        ("repeat_rejected", validate_ai_response("Same answer.", "again", [ChatHistoryItem(sender="ai", text="Same answer.")]) == ""),
+        ("crisis_detection", contains_crisis_language("I want to die")),
+        ("non_crisis_detection", not contains_crisis_language("I am stressed about work")),
+        ("fallback_available", len(supportive_fallback_response("I am stressed")) >= 20),
+    ]
+    failed = [name for name, passed in cases if not passed]
+    return {"status": "passed" if not failed else "failed", "passed": len(cases) - len(failed), "total": len(cases), "failed": failed}
+
+
+@app.get("/api/ai/self-audit")
+def ai_self_audit():
+    return run_ai_self_audit()
+
 def crisis_response() -> str:
     return (
         "I'm really sorry you're going through something this difficult. "
@@ -244,7 +267,7 @@ def generate_gemini_response(message: str, history=None, wellbeing_context=None)
         if remaining <= 0: break
         try:
             started = time.monotonic()
-            client = genai.Client(api_key=GEMINI_API_KEY, http_options={"timeout": max(1000, int(remaining * 1000))})
+            client = genai.Client(api_key=GEMINI_API_KEY, http_options=types.HttpOptions(timeout=max(1000, int(remaining * 1000))))
             response = client.models.generate_content(model=GEMINI_MODEL, contents=contents,
                 config={"system_instruction": MINDSETU_SYSTEM_PROMPT, "temperature": 0.55, "max_output_tokens": 500})
             text = validate_ai_response(_extract_gemini_text(response), message, history)
