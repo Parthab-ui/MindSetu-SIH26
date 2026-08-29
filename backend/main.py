@@ -18,9 +18,11 @@ load_dotenv(dotenv_path=ENV_PATH)
 
 GEMINI_API_KEY = (os.getenv("GEMINI_API_KEY") or "").strip()
 GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-2.5-flash")
-GEMINI_TIMEOUT_MS = int(os.getenv("GEMINI_TIMEOUT_MS", "30000"))
+# Keep the per-attempt timeout short enough that all retries finish before the
+# frontend's 30-second chat timeout, while still allowing normal API latency.
+GEMINI_TIMEOUT_MS = min(max(int(os.getenv("GEMINI_TIMEOUT_MS", "8000")), 3000), 12000)
 GEMINI_RUNTIME_TIMEOUT_SECONDS = max(1.0, GEMINI_TIMEOUT_MS / 1000)
-GEMINI_RETRIES = 2
+GEMINI_RETRIES = 1
 MAX_CHAT_LENGTH = 4000
 MAX_MOOD_NOTE_LENGTH = 1000
 
@@ -62,7 +64,6 @@ def get_connection():
     )
 
 
-
 def ensure_core_tables():
     with get_connection() as conn:
         with conn.cursor() as cur:
@@ -89,10 +90,10 @@ def ensure_core_tables():
             )
 
 
-
 @app.on_event("startup")
 def startup_core_tables():
     ensure_core_tables()
+
 
 def session_exists(session_id: uuid.UUID) -> bool:
     with get_connection() as conn:
@@ -198,17 +199,15 @@ def generate_gemini_response(message: str) -> str:
             if time.monotonic() - started_at > GEMINI_RUNTIME_TIMEOUT_SECONDS:
                 raise RuntimeError("Gemini request exceeded configured timeout")
             text = (getattr(response, "text", None) or "").strip()
-            if not text:
-                raise RuntimeError("Gemini returned an empty response")
-            return text
+            if text:
+                return text
+            raise RuntimeError("Gemini returned an empty response")
         except Exception as exc:
             last_error = exc
             if attempt < GEMINI_RETRIES:
-                time.sleep(0.8 * (2 ** attempt))
+                time.sleep(0.8)
 
-    if isinstance(last_error, RuntimeError) and str(last_error) == "Gemini returned an empty response":
-        raise last_error
-    raise RuntimeError(f"Gemini request failed after retries: {type(last_error).__name__}") from last_error
+    raise RuntimeError(f"Gemini request failed after retry: {type(last_error).__name__}") from last_error
 
 
 @app.get("/")
@@ -302,10 +301,7 @@ def chat(request: ChatRequest):
         yield json.dumps({"type": "start", "model": GEMINI_MODEL, "risk_level": "supportive"}) + "\n"
         try:
             text = generate_gemini_response(message)
-            clean_text = text.strip()
-            if not clean_text:
-                raise RuntimeError("Gemini returned no usable content")
-            yield json.dumps({"type": "token", "content": clean_text}) + "\n"
+            yield json.dumps({"type": "token", "content": text}) + "\n"
             yield json.dumps({"type": "done"}) + "\n"
         except Exception as exc:
             print("GEMINI ERROR:", exc)
@@ -341,7 +337,10 @@ def get_mood_history(session_id: uuid.UUID):
     try:
         with get_connection() as conn:
             with conn.cursor() as cur:
-                cur.execute("SELECT mood, note, created_at FROM mood_entries WHERE session_id = %s ORDER BY created_at DESC LIMIT 30", (session_id,))
+                cur.execute(
+                    "SELECT mood, note, created_at FROM mood_entries WHERE session_id = %s ORDER BY created_at DESC LIMIT 30",
+                    (session_id,),
+                )
                 rows = cur.fetchall()
     except Exception as exc:
         raise HTTPException(status_code=503, detail="Mood history is temporarily unavailable.") from exc
@@ -364,3 +363,6 @@ def dashboard_mood_trend():
     except Exception as exc:
         raise HTTPException(status_code=503, detail="Mood trend is temporarily unavailable.") from exc
     return {"trend": [{"date": row[0].isoformat(), "average_mood": float(row[1]), "entries": row[2]} for row in reversed(rows)]}
+
+# Register SIH26186 routes only when the base app is loaded.
+import sih26186_server  # noqa: E402,F401
