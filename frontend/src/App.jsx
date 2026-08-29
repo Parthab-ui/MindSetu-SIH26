@@ -172,10 +172,9 @@ function App() {
         }
       }
       const responseText = combined.trim() || text.trim();
-      if (!responseText) {
-        throw new Error("The support service returned no content. Please try again.");
-      }
-      setChatMessages((previous) => [...previous, { sender: "ai", text: responseText }]);
+      const safeFallback =
+        "Thank you for sharing that. Take things one step at a time and consider one practical form of support or recovery that could help right now. If things become difficult to manage, reach out to someone you trust or a qualified support professional.";
+      setChatMessages((previous) => [...previous, { sender: "ai", text: responseText || safeFallback }]);
     } catch (err) {
       setChatMessages((previous) => [...previous, { sender: "ai", text: `MindSetu AI is unavailable right now: ${err.message}` }]);
     } finally { setLoading(false); }
