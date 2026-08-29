@@ -113,11 +113,18 @@ class ChatHistoryItem(BaseModel):
     text: str = Field(..., min_length=1, max_length=MAX_CHAT_LENGTH)
 
 
+class WellbeingContext(BaseModel):
+    risk_level: str | None = Field(default=None, max_length=80)
+    primary_focus: str | None = Field(default=None, max_length=300)
+    wellness_summary: str | None = Field(default=None, max_length=1000)
+    recommended_next_step: str | None = Field(default=None, max_length=1000)
+
+
 class ChatRequest(BaseModel):
     session_id: uuid.UUID
     message: str = Field(..., min_length=1, max_length=MAX_CHAT_LENGTH)
     history: list[ChatHistoryItem] = Field(default_factory=list, max_length=12)
-    wellbeing_context: dict = Field(default_factory=dict)
+    wellbeing_context: WellbeingContext = Field(default_factory=WellbeingContext)
 
 
 class MoodRequest(BaseModel):
@@ -129,7 +136,7 @@ class MoodRequest(BaseModel):
 MINDSETU_SYSTEM_PROMPT = """
 You are MindSetu, a supportive personnel wellbeing companion.
 Output only the final response. Be calm, empathetic, practical, concise and non-judgmental.
-Use the supplied MINSETU CONTEXT when relevant, but never invent missing facts.
+Use the supplied MINDSETU CONTEXT when relevant, but never invent missing facts.
 Keep normal responses between 2 and 5 short sentences and ask at most one gentle follow-up question.
 You are not a doctor or emergency service: never diagnose, prescribe medication, or make employment/disciplinary decisions.
 If the user describes immediate danger, suicide, self-harm, or intent to seriously hurt themselves or another person, prioritise immediate emergency/professional support and a trusted person nearby.
@@ -143,7 +150,7 @@ def build_ai_context(history, wellbeing_context=None) -> str:
         text = item.get("text") if isinstance(item, dict) else getattr(item, "text", "")
         if text:
             recent.append(f"{sender}: {text.strip()[:500]}")
-    context = wellbeing_context or {}
+    context = wellbeing_context.model_dump(exclude_none=True) if hasattr(wellbeing_context, "model_dump") else (wellbeing_context or {})
     lines = ["MINDSETU CONTEXT (use only when relevant):"]
     for key in ("risk_level", "primary_focus", "wellness_summary", "recommended_next_step"):
         value = context.get(key) if isinstance(context, dict) else None
@@ -226,6 +233,7 @@ def generate_gemini_response(message: str, history=None, wellbeing_context=None)
     if not GEMINI_API_KEY:
         raise RuntimeError("GEMINI_API_KEY is not configured")
     from google import genai
+    from google.genai import types
     deadline = time.monotonic() + GEMINI_TOTAL_TIMEOUT_SECONDS
     last_error = None
     context = build_ai_context(history, wellbeing_context)
