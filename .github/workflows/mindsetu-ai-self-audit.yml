@@ -1,4 +1,4 @@
-name: MindSetu AI Self Audit
+name: MindSetu Quality Checks
 
 on:
   push:
@@ -7,7 +7,7 @@ on:
     branches: [main]
 
 jobs:
-  ai-self-audit:
+  backend-tests:
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -18,6 +18,25 @@ jobs:
         with:
           python-version: "3.12"
       - name: Install dependencies
-        run: pip install -r requirements.txt pytest
-      - name: Run AI regression audit
-        run: pytest -q tests/test_ai_self_audit.py
+        run: pip install -r requirements.txt
+      - name: Run automated backend checks
+        run: pytest -q tests
+
+  frontend-build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - name: Install dependencies
+        run: npm ci
+      - name: Lint
+        run: npm run lint
+      - name: Build
+        run: npm run build
