@@ -1,5 +1,6 @@
 import json
 import os
+import time
 import re
 import uuid
 from datetime import datetime, timezone
@@ -18,6 +19,7 @@ load_dotenv(dotenv_path=ENV_PATH)
 GEMINI_API_KEY = (os.getenv("GEMINI_API_KEY") or "").strip()
 GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-2.5-flash")
 GEMINI_TIMEOUT_MS = int(os.getenv("GEMINI_TIMEOUT_MS", "20000"))
+GEMINI_RUNTIME_TIMEOUT_SECONDS = max(1.0, GEMINI_TIMEOUT_MS / 1000)
 MAX_CHAT_LENGTH = 4000
 MAX_MOOD_NOTE_LENGTH = 1000
 
@@ -175,6 +177,7 @@ def generate_gemini_response(message: str) -> str:
     if not GEMINI_API_KEY:
         raise RuntimeError("GEMINI_API_KEY is not configured")
     try:
+        started_at = time.monotonic()
         from google import genai
         client = genai.Client(
             api_key=GEMINI_API_KEY,
@@ -188,6 +191,8 @@ def generate_gemini_response(message: str) -> str:
                 "max_output_tokens": 400,
             },
         )
+        if time.monotonic() - started_at > GEMINI_RUNTIME_TIMEOUT_SECONDS:
+            raise RuntimeError("Gemini request exceeded configured timeout")
         text = (getattr(response, "text", None) or "").strip()
         if not text:
             raise RuntimeError("Gemini returned an empty response")
@@ -223,6 +228,7 @@ def gemini_runtime_status():
 
     return {
         "status": status,
+        "chat_fallback_available": True,
         "provider": "Google Gemini",
         "model": GEMINI_MODEL,
         "api_key_configured": configured,
