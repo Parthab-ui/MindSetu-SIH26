@@ -20,8 +20,10 @@ GEMINI_API_KEY = (os.getenv("GEMINI_API_KEY") or "").strip()
 GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-2.5-flash")
 # Keep the per-attempt timeout short enough that all retries finish before the
 # frontend's 30-second chat timeout, while still allowing normal API latency.
-GEMINI_TIMEOUT_MS = min(max(int(os.getenv("GEMINI_TIMEOUT_MS", "8000")), 3000), 12000)
-GEMINI_RUNTIME_TIMEOUT_SECONDS = max(1.0, GEMINI_TIMEOUT_MS / 1000)
+# Gemini can legitimately take longer than a few seconds to generate a complete
+# answer. The previous 8-second post-response guard caused valid responses to be
+# discarded and replaced by the deterministic fallback.
+GEMINI_TIMEOUT_MS = min(max(int(os.getenv("GEMINI_TIMEOUT_MS", "20000")), 5000), 30000)
 GEMINI_RETRIES = 1
 MAX_CHAT_LENGTH = 4000
 MAX_MOOD_NOTE_LENGTH = 1000
@@ -175,194 +177,61 @@ def crisis_response() -> str:
     )
 
 
+def _extract_gemini_text(response) -> str:
+    """Return text robustly across normal and SDK edge-case response shapes."""
+    try:
+        text = (getattr(response, "text", None) or "").strip()
+        if text:
+            return text
+    except Exception:
+        pass
+
+    candidates = getattr(response, "candidates", None) or []
+    for candidate in candidates:
+        content = getattr(candidate, "content", None)
+        parts = getattr(content, "parts", None) or []
+        text_parts = []
+        for part in parts:
+            value = getattr(part, "text", None)
+            if value:
+                text_parts.append(str(value))
+        combined = "".join(text_parts).strip()
+        if combined:
+            return combined
+
+    return ""
+
+
 def generate_gemini_response(message: str) -> str:
     if not GEMINI_API_KEY:
         raise RuntimeError("GEMINI_API_KEY is not configured")
 
     last_error = None
     for attempt in range(GEMINI_RETRIES + 1):
-        started_at = time.monotonic()
         try:
             from google import genai
+
             client = genai.Client(
                 api_key=GEMINI_API_KEY,
                 http_options={"timeout": GEMINI_TIMEOUT_MS},
             )
             response = client.models.generate_content(
                 model=GEMINI_MODEL,
-                contents=f"{MINDSETU_SYSTEM_PROMPT}\n\nPERSON MESSAGE:\n{message}",
+                contents=message,
                 config={
+                    "system_instruction": MINDSETU_SYSTEM_PROMPT,
                     "temperature": 0.55,
                     "max_output_tokens": 400,
                 },
             )
-            if time.monotonic() - started_at > GEMINI_RUNTIME_TIMEOUT_SECONDS:
-                raise RuntimeError("Gemini request exceeded configured timeout")
-            text = (getattr(response, "text", None) or "").strip()
+            text = _extract_gemini_text(response)
             if text:
                 return text
-            raise RuntimeError("Gemini returned an empty response")
+            raise RuntimeError("Gemini returned no usable text")
         except Exception as exc:
             last_error = exc
+            print(f"GEMINI ATTEMPT {attempt + 1} FAILED: {type(exc).__name__}: {exc}")
             if attempt < GEMINI_RETRIES:
                 time.sleep(0.8)
 
-    raise RuntimeError(f"Gemini request failed after retry: {type(last_error).__name__}") from last_error
-
-
-@app.get("/")
-def root():
-    return {"message": "MindSetu API is running", "status": "success", "ai_model": GEMINI_MODEL}
-
-
-@app.get("/api/health")
-def health_check():
-    return {"status": "healthy", "service": "MindSetu Backend", "ai_model": GEMINI_MODEL}
-
-
-def gemini_runtime_status():
-    try:
-        from google import genai  # noqa: F401
-        sdk_available = True
-    except Exception:
-        sdk_available = False
-
-    configured = bool(GEMINI_API_KEY)
-    if configured and sdk_available:
-        status = "ready"
-    elif not configured:
-        status = "needs_configuration"
-    else:
-        status = "sdk_unavailable"
-
-    return {
-        "status": status,
-        "chat_fallback_available": True,
-        "provider": "Google Gemini",
-        "model": GEMINI_MODEL,
-        "api_key_configured": configured,
-        "sdk_available": sdk_available,
-        "env_file_detected": ENV_PATH.exists(),
-    }
-
-
-@app.get("/api/chat/health")
-def chat_health():
-    return gemini_runtime_status()
-
-
-@app.get("/api/gemini/health")
-def gemini_health():
-    return gemini_runtime_status()
-
-
-@app.get("/api/database")
-def database_check():
-    try:
-        with get_connection() as conn:
-            with conn.cursor() as cur:
-                cur.execute("SELECT current_database()")
-                database = cur.fetchone()[0]
-        return {"status": "connected", "database": database}
-    except Exception as exc:
-        raise HTTPException(status_code=503, detail="Database connection unavailable.") from exc
-
-
-@app.post("/api/sessions")
-def create_session(request: SessionRequest):
-    if not request.consent_given:
-        raise HTTPException(status_code=400, detail="Consent is required before starting.")
-    session_id = uuid.uuid4()
-    try:
-        with get_connection() as conn:
-            with conn.cursor() as cur:
-                cur.execute(
-                    "INSERT INTO sessions (id, anonymous, consent_given) VALUES (%s, %s, %s)",
-                    (session_id, True, True),
-                )
-    except Exception as exc:
-        raise HTTPException(status_code=503, detail="Unable to create session.") from exc
-    return {"session_id": str(session_id), "anonymous": True, "consent_given": True}
-
-
-@app.post("/api/chat")
-def chat(request: ChatRequest):
-    require_session(request.session_id)
-    message = request.message.strip()
-
-    if contains_crisis_language(message):
-        def crisis_stream():
-            yield json.dumps({"type": "start", "model": "safety_response", "risk_level": "safety_priority"}) + "\n"
-            yield json.dumps({"type": "token", "content": crisis_response()}) + "\n"
-            yield json.dumps({"type": "done"}) + "\n"
-        return StreamingResponse(crisis_stream(), media_type="application/x-ndjson")
-
-    def response_generator():
-        yield json.dumps({"type": "start", "model": GEMINI_MODEL, "risk_level": "supportive"}) + "\n"
-        try:
-            text = generate_gemini_response(message)
-            yield json.dumps({"type": "token", "content": text}) + "\n"
-            yield json.dumps({"type": "done"}) + "\n"
-        except Exception as exc:
-            print("GEMINI ERROR:", exc)
-            yield json.dumps({"type": "token", "content": supportive_fallback_response(message)}) + "\n"
-            yield json.dumps({"type": "fallback", "source": "deterministic"}) + "\n"
-            yield json.dumps({"type": "done"}) + "\n"
-
-    return StreamingResponse(
-        response_generator(),
-        media_type="application/x-ndjson",
-        headers={"Cache-Control": "no-cache, no-transform", "X-Accel-Buffering": "no"},
-    )
-
-
-@app.post("/api/mood")
-def add_mood(request: MoodRequest):
-    require_session(request.session_id)
-    try:
-        with get_connection() as conn:
-            with conn.cursor() as cur:
-                cur.execute(
-                    "INSERT INTO mood_entries (id, session_id, mood, note) VALUES (%s, %s, %s, %s)",
-                    (uuid.uuid4(), request.session_id, request.mood, request.note),
-                )
-    except Exception as exc:
-        raise HTTPException(status_code=503, detail="Unable to save mood check-in.") from exc
-    return {"message": "Mood check-in recorded.", "mood": request.mood}
-
-
-@app.get("/api/mood/{session_id}")
-def get_mood_history(session_id: uuid.UUID):
-    require_session(session_id)
-    try:
-        with get_connection() as conn:
-            with conn.cursor() as cur:
-                cur.execute(
-                    "SELECT mood, note, created_at FROM mood_entries WHERE session_id = %s ORDER BY created_at DESC LIMIT 30",
-                    (session_id,),
-                )
-                rows = cur.fetchall()
-    except Exception as exc:
-        raise HTTPException(status_code=503, detail="Mood history is temporarily unavailable.") from exc
-    return {"history": [{"mood": row[0], "note": row[1], "created_at": row[2].isoformat()} for row in rows]}
-
-
-@app.get("/api/dashboard/mood-trend")
-def dashboard_mood_trend():
-    try:
-        with get_connection() as conn:
-            with conn.cursor() as cur:
-                cur.execute(
-                    """
-                    SELECT DATE(created_at), ROUND(AVG(mood)::numeric, 2), COUNT(*)
-                    FROM mood_entries GROUP BY DATE(created_at)
-                    ORDER BY DATE(created_at) DESC LIMIT 30
-                    """
-                )
-                rows = cur.fetchall()
-    except Exception as exc:
-        raise HTTPException(status_code=503, detail="Mood trend is temporarily unavailable.") from exc
-    return {"trend": [{"date": row[0].isoformat(), "average_mood": float(row[1]), "entries": row[2]} for row in reversed(rows)]}
-
-# Register SIH26186 routes only when the base app is loaded.
-import sih26186_server  # noqa: E402,F401
+    raise RuntimeError(f"Gemini request failed after retry: {type(last_error).__name__}: {last_error}") from last_error
