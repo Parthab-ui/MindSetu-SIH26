@@ -18,8 +18,9 @@ load_dotenv(dotenv_path=ENV_PATH)
 
 GEMINI_API_KEY = (os.getenv("GEMINI_API_KEY") or "").strip()
 GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-2.5-flash")
-GEMINI_TIMEOUT_MS = int(os.getenv("GEMINI_TIMEOUT_MS", "20000"))
+GEMINI_TIMEOUT_MS = int(os.getenv("GEMINI_TIMEOUT_MS", "30000"))
 GEMINI_RUNTIME_TIMEOUT_SECONDS = max(1.0, GEMINI_TIMEOUT_MS / 1000)
+GEMINI_RETRIES = 2
 MAX_CHAT_LENGTH = 4000
 MAX_MOOD_NOTE_LENGTH = 1000
 
@@ -176,29 +177,38 @@ def crisis_response() -> str:
 def generate_gemini_response(message: str) -> str:
     if not GEMINI_API_KEY:
         raise RuntimeError("GEMINI_API_KEY is not configured")
-    try:
+
+    last_error = None
+    for attempt in range(GEMINI_RETRIES + 1):
         started_at = time.monotonic()
-        from google import genai
-        client = genai.Client(
-            api_key=GEMINI_API_KEY,
-            http_options={"timeout": GEMINI_TIMEOUT_MS},
-        )
-        response = client.models.generate_content(
-            model=GEMINI_MODEL,
-            contents=f"{MINDSETU_SYSTEM_PROMPT}\n\nPERSON MESSAGE:\n{message}",
-            config={
-                "temperature": 0.55,
-                "max_output_tokens": 400,
-            },
-        )
-        if time.monotonic() - started_at > GEMINI_RUNTIME_TIMEOUT_SECONDS:
-            raise RuntimeError("Gemini request exceeded configured timeout")
-        text = (getattr(response, "text", None) or "").strip()
-        if not text:
-            raise RuntimeError("Gemini returned an empty response")
-        return text
-    except Exception as exc:
-        raise RuntimeError(f"Gemini request failed: {type(exc).__name__}") from exc
+        try:
+            from google import genai
+            client = genai.Client(
+                api_key=GEMINI_API_KEY,
+                http_options={"timeout": GEMINI_TIMEOUT_MS},
+            )
+            response = client.models.generate_content(
+                model=GEMINI_MODEL,
+                contents=f"{MINDSETU_SYSTEM_PROMPT}\n\nPERSON MESSAGE:\n{message}",
+                config={
+                    "temperature": 0.55,
+                    "max_output_tokens": 400,
+                },
+            )
+            if time.monotonic() - started_at > GEMINI_RUNTIME_TIMEOUT_SECONDS:
+                raise RuntimeError("Gemini request exceeded configured timeout")
+            text = (getattr(response, "text", None) or "").strip()
+            if not text:
+                raise RuntimeError("Gemini returned an empty response")
+            return text
+        except Exception as exc:
+            last_error = exc
+            if attempt < GEMINI_RETRIES:
+                time.sleep(0.8 * (2 ** attempt))
+
+    if isinstance(last_error, RuntimeError) and str(last_error) == "Gemini returned an empty response":
+        raise last_error
+    raise RuntimeError(f"Gemini request failed after retries: {type(last_error).__name__}") from last_error
 
 
 @app.get("/")
@@ -292,7 +302,10 @@ def chat(request: ChatRequest):
         yield json.dumps({"type": "start", "model": GEMINI_MODEL, "risk_level": "supportive"}) + "\n"
         try:
             text = generate_gemini_response(message)
-            yield json.dumps({"type": "token", "content": text}) + "\n"
+            clean_text = text.strip()
+            if not clean_text:
+                raise RuntimeError("Gemini returned no usable content")
+            yield json.dumps({"type": "token", "content": clean_text}) + "\n"
             yield json.dumps({"type": "done"}) + "\n"
         except Exception as exc:
             print("GEMINI ERROR:", exc)
@@ -328,10 +341,7 @@ def get_mood_history(session_id: uuid.UUID):
     try:
         with get_connection() as conn:
             with conn.cursor() as cur:
-                cur.execute(
-                    "SELECT mood, note, created_at FROM mood_entries WHERE session_id = %s ORDER BY created_at DESC LIMIT 30",
-                    (session_id,),
-                )
+                cur.execute("SELECT mood, note, created_at FROM mood_entries WHERE session_id = %s ORDER BY created_at DESC LIMIT 30", (session_id,))
                 rows = cur.fetchall()
     except Exception as exc:
         raise HTTPException(status_code=503, detail="Mood history is temporarily unavailable.") from exc
