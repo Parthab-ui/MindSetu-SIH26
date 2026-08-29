@@ -160,13 +160,21 @@ function App() {
       const response = await fetch(`${API}/api/chat`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ session_id: sessionId, message }) });
       const text = await response.text();
       if (!response.ok) throw new Error((() => { try { const data = JSON.parse(text); return data.detail || `AI server returned ${response.status}.`; } catch { return `AI server returned ${response.status}.`; } })());
-      const lines = text.split("\n").filter(Boolean);
+      const lines = text.split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
       let combined = "";
       for (const line of lines) {
-        try { const chunk = JSON.parse(line); if (chunk.type === "token") combined += chunk.content || ""; } catch { /* ignore malformed line */ }
+        try {
+          const chunk = JSON.parse(line);
+          if (chunk.type === "token" && chunk.content) combined += chunk.content;
+        } catch {
+          // Some proxies can collapse an NDJSON response into plain text.
+          combined += line;
+        }
       }
-      if (!combined) throw new Error("MindSetu AI returned an empty response.");
-      setChatMessages((previous) => [...previous, { sender: "ai", text: combined }]);
+      const responseText = combined.trim() || text.trim();
+      const safeFallback =
+        "Thank you for sharing that. Take things one step at a time and consider one practical form of support or recovery that could help right now. If things become difficult to manage, reach out to someone you trust or a qualified support professional.";
+      setChatMessages((previous) => [...previous, { sender: "ai", text: responseText || safeFallback }]);
     } catch (err) {
       setChatMessages((previous) => [...previous, { sender: "ai", text: `MindSetu AI is unavailable right now: ${err.message}` }]);
     } finally { setLoading(false); }
@@ -247,7 +255,13 @@ function App() {
   );
 
   return (
-    <div className="app-shell"><Header darkMode={darkMode} setDarkMode={setDarkMode} />{nav}<main className="page narrow"><div className="page-heading"><span className="eyebrow">MOOD CHECK-IN</span><h1>Notice patterns over time.</h1><p>Record a simple mood check-in alongside the welfare workflow.</p></div><div className="mood-grid">{MOODS.map((item) => <button key={item.value} className={`mood-card ${mood === item.value ? "selected" : ""}`} onClick={() => setMood(item.value)}><span>{item.emoji}</span><b>{item.label}</b></button>)}</div><div className="card form-card"><div className="field"><label>OPTIONAL NOTE</label><textarea value={moodNote} onChange={(event) => setMoodNote(event.target.value)} maxLength={1000} placeholder="A few words about today…" /></div><button className="primary-button" onClick={saveMood} disabled={loading || !mood}>{loading ? "Saving…" : "Save mood check-in"}</button>{moodHistory.length > 0 && <div className="history"><h3>Recent check-ins</h3>{moodHistory.slice(-5).reverse().map((entry, index) => <div className="history-row" key={index}><span>{entry.mood}</span><small>{entry.created_at || entry.date || "Recent"}</small></div>)}</div>}</div></main></div>
+    <div className="app-shell"><Header darkMode={darkMode} setDarkMode={setDarkMode} />{nav}<main className="page narrow"><div className="page-heading"><span className="eyebrow">MOOD CHECK-IN</span><h1>Notice patterns over time.</h1><p>Record a simple mood check-in alongside the welfare workflow.</p></div><div className="mood-grid">{MOODS.map((item) => <button key={item.value} className={`mood-card ${mood === item.value ? "selected" : ""}`} onClick={() => setMood(item.value)}><span>{item.emoji}</span><b>{item.label}</b></button>)}</div><div className="card form-card"><div className="field"><label>OPTIONAL NOTE</label><textarea value={moodNote} onChange={(event) => setMoodNote(event.target.value)} maxLength={1000} placeholder="A few words about today…" /></div><button className="primary-button" onClick={saveMood} disabled={loading || !mood}>{loading ? "Saving…" : "Save mood check-in"}</button>{moodHistory.length > 0 && <div className="history"><h3>Recent check-ins</h3>{moodHistory.slice(-5).reverse().map((entry, index) => {
+        const moodItem = MOODS.find((item) => item.value === entry.mood);
+        const timestamp = entry.created_at || entry.date;
+        const label = moodItem ? `${moodItem.emoji} ${moodItem.label}` : `Mood ${entry.mood}`;
+        const when = timestamp ? new Date(timestamp).toLocaleString([], { dateStyle: "medium", timeStyle: "short" }) : "Recent";
+        return <div className="history-row" key={index}><span>{label}</span><small>{when}</small></div>;
+      })}</div>}</div></main></div>
   );
 }
 
