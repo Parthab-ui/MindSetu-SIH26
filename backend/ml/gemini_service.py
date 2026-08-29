@@ -1,9 +1,12 @@
 import os
+import time
 
 from google import genai
 
 MODEL = os.getenv("GEMINI_MODEL", "gemini-2.5-flash")
 TIMEOUT_MS = int(os.getenv("GEMINI_TIMEOUT_MS", "20000"))
+MAX_ATTEMPTS = 3
+RETRY_DELAY_SECONDS = 0.8
 SYSTEM_PROMPT = """You are the supportive communication layer for MindSetu.
 The supplied risk signal and contributing factors come from a local supervised ML model.
 Never diagnose a person, never change the supplied signal, and do not invent personal facts.
@@ -13,7 +16,7 @@ Do not describe SHAP values as causal effects.
 
 
 def generate_supportive_response(ml_result: dict) -> str:
-    api_key = os.getenv("GEMINI_API_KEY")
+    api_key = (os.getenv("GEMINI_API_KEY") or "").strip()
     if not api_key:
         raise RuntimeError("GEMINI_API_KEY is not configured")
 
@@ -35,19 +38,26 @@ def generate_supportive_response(ml_result: dict) -> str:
         + "\n\nRespond in 2-4 short paragraphs with practical, supportive guidance."
     )
 
-    try:
-        response = client.models.generate_content(
-            model=MODEL,
-            contents=prompt,
-            config={
-                "temperature": 0.35,
-                "max_output_tokens": 350,
-            },
-        )
-    except Exception as exc:
-        raise RuntimeError(f"Gemini request failed: {type(exc).__name__}") from exc
+    last_error = None
+    for attempt in range(1, MAX_ATTEMPTS + 1):
+        try:
+            response = client.models.generate_content(
+                model=MODEL,
+                contents=prompt,
+                config={
+                    "temperature": 0.35,
+                    "max_output_tokens": 350,
+                },
+            )
+            text = (getattr(response, "text", None) or "").strip()
+            if text:
+                return text
+            last_error = RuntimeError("Gemini returned no text output")
+        except Exception as exc:
+            last_error = exc
+        if attempt < MAX_ATTEMPTS:
+            time.sleep(RETRY_DELAY_SECONDS * attempt)
 
-    text = getattr(response, "text", None)
-    if not text:
-        raise RuntimeError("Gemini returned no text output")
-    return text.strip()
+    if isinstance(last_error, RuntimeError) and str(last_error) == "Gemini returned no text output":
+        raise last_error
+    raise RuntimeError(f"Gemini request failed after {MAX_ATTEMPTS} attempts: {type(last_error).__name__}")
