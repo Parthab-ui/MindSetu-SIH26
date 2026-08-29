@@ -77,6 +77,15 @@ MindSetu-SIH26/
 
 ---
 
+## Documentation
+
+- [Architecture](docs/ARCHITECTURE.md)
+- [API reference](docs/API.md)
+- [Research ML model](docs/ML_MODEL.md)
+- [Safety and responsible use](docs/SAFETY.md)
+
+---
+
 ## 3. Main capabilities
 
 ### Guided wellbeing workflow
@@ -330,10 +339,10 @@ The repository includes deterministic AI regression checks and a GitHub Actions 
 
 ```powershell
 cd backend
-pytest -q tests/test_ai_self_audit.py
+pytest -q tests
 ```
 
-The checks cover context construction, response validation, repeat rejection, crisis routing, and fallback availability. They do not prove that a live external Gemini request will succeed.
+The automated suite covers AI response safeguards, wellbeing scoring boundaries and API route registration. CI also runs frontend linting and a production build. These checks do not prove that a live external Gemini request or a live PostgreSQL deployment will succeed.
 
 ### Demo validation
 
