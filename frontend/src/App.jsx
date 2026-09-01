@@ -144,7 +144,11 @@ export default function App() {
     const text = chatInput.trim();
     if (!text || !sessionId || chatLoading) return;
 
-    setChatMessages((prev) => [...prev, { sender: "user", text }]);
+    setChatMessages((prev) => [
+      ...prev,
+      { sender: "user", text },
+      { sender: "ai", text: "" },
+    ]);
     setChatInput("");
     setChatLoading(true);
 
@@ -157,21 +161,43 @@ export default function App() {
           risk_level: analysis?.risk_level ?? null,
           wellness_summary: analysis?.recommendation ?? null,
         },
+        onToken: (token) => {
+          setChatMessages((prev) => {
+            const next = [...prev];
+            const lastIdx = next.length - 1;
+            if (lastIdx >= 0 && next[lastIdx].sender === "ai") {
+              next[lastIdx] = {
+                ...next[lastIdx],
+                text: (next[lastIdx].text || "") + token,
+              };
+            }
+            return next;
+          });
+        },
         onComplete: ({ text: replyText, isSafety }) => {
-          setChatMessages((prev) => [...prev, { sender: "ai", text: replyText }]);
+          setChatMessages((prev) => {
+            const next = [...prev];
+            const lastIdx = next.length - 1;
+            if (lastIdx >= 0 && next[lastIdx].sender === "ai") {
+              next[lastIdx] = { sender: "ai", text: replyText || next[lastIdx].text };
+            }
+            return next;
+          });
           if (isSafety) setIsCrisis(true);
         },
         onError: (err) => {
-          setChatMessages((prev) => [
-            ...prev,
-            {
-              sender: "ai",
-              text:
-                err.name === "AbortError"
-                  ? "MindSetu AI took too long to respond. Take a short pause and consider connecting with a trusted colleague or welfare officer."
-                  : "MindSetu AI is momentarily reconnecting. You can still use your wellbeing summary and recovery guidance.",
-            },
-          ]);
+          setChatMessages((prev) => {
+            const next = [...prev];
+            const lastIdx = next.length - 1;
+            const fallbackText =
+              err.name === "AbortError"
+                ? "MindSetu AI took too long to respond. Take a short pause and consider connecting with a trusted colleague or welfare officer."
+                : "MindSetu AI is momentarily reconnecting. You can still use your wellbeing summary and recovery guidance.";
+            if (lastIdx >= 0 && next[lastIdx].sender === "ai") {
+              next[lastIdx] = { sender: "ai", text: fallbackText };
+            }
+            return next;
+          });
         },
       });
     } catch (err) {

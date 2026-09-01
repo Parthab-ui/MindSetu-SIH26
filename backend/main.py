@@ -294,36 +294,57 @@ def crisis_response() -> str:
 
 
 
-def generate_gemini_response(message: str, history=None, wellbeing_context=None) -> str:
-    """Give Gemini one shared response window with validated retries."""
-    if not GEMINI_API_KEY:
-        raise RuntimeError("GEMINI_API_KEY is not configured")
-    from google import genai
+_gemini_client = None
+
+
+def get_gemini_client():
+    global _gemini_client
+    if _gemini_client is None:
+        if not GEMINI_API_KEY:
+            raise RuntimeError("GEMINI_API_KEY is not configured")
+        from google import genai
+        from google.genai import types
+        _gemini_client = genai.Client(
+            api_key=GEMINI_API_KEY,
+            http_options=types.HttpOptions(timeout=int(GEMINI_TOTAL_TIMEOUT_SECONDS * 1000)),
+        )
+    return _gemini_client
+
+
+def stream_gemini_response(message: str, history=None, wellbeing_context=None):
+    """Yield incremental chunks from Gemini 3.5 Flash Lite with bounded output."""
+    client = get_gemini_client()
     from google.genai import types
-    deadline = time.monotonic() + GEMINI_TOTAL_TIMEOUT_SECONDS
-    last_error = None
+
     context = build_ai_context(history, wellbeing_context)
     prompt = f"{context}\n\nLatest user message: {message}"
-    for attempt in range(3):
-        remaining = deadline - time.monotonic()
-        if remaining <= 0: break
-        try:
-            started = time.monotonic()
-            client = genai.Client(api_key=GEMINI_API_KEY, http_options=types.HttpOptions(timeout=max(1000, int(remaining * 1000))))
-            interaction = client.interactions.create(
-                model=GEMINI_MODEL,
-                input=prompt,
-                system_instruction=MINDSETU_SYSTEM_PROMPT
-            )
-            text = validate_ai_response(interaction.output_text, message, history)
-            print(f"GEMINI attempt={attempt + 1} latency_ms={int((time.monotonic()-started)*1000)} valid={bool(text)}")
-            if text: return text
-            raise RuntimeError("Gemini returned an invalid or repeated response")
-        except Exception as exc:
-            last_error = exc
-            if attempt < 2:
-                time.sleep(min(0.6 * (attempt + 1), max(0, deadline - time.monotonic())))
-    raise RuntimeError(f"Gemini unavailable after {GEMINI_TOTAL_TIMEOUT_SECONDS:.0f}s: {last_error}") from last_error
+
+    stream = client.models.generate_content_stream(
+        model=GEMINI_MODEL,
+        contents=prompt,
+        config=types.GenerateContentConfig(
+            system_instruction=MINDSETU_SYSTEM_PROMPT,
+            max_output_tokens=300,
+            temperature=0.7,
+        ),
+    )
+
+    for chunk in stream:
+        text = chunk.text
+        if text:
+            yield text
+
+
+def generate_gemini_response(message: str, history=None, wellbeing_context=None) -> str:
+    """Give Gemini one shared response window with validated output."""
+    accumulated = []
+    for token in stream_gemini_response(message, history, wellbeing_context):
+        accumulated.append(token)
+    full_text = "".join(accumulated).strip()
+    valid_text = validate_ai_response(full_text, message, history)
+    if valid_text:
+        return valid_text
+    raise RuntimeError("Gemini returned an invalid or repeated response")
 
 @app.get("/")
 def root():
@@ -413,14 +434,30 @@ def chat(request: ChatRequest):
 
     def response_generator():
         yield json.dumps({"type": "start", "model": GEMINI_MODEL, "risk_level": "supportive"}) + "\n"
+        accumulated = []
         try:
-            text = generate_gemini_response(message, request.history, request.wellbeing_context)
-            yield json.dumps({"type": "token", "content": text}) + "\n"
+            started = time.monotonic()
+            first_token = True
+            for token in stream_gemini_response(message, request.history, request.wellbeing_context):
+                if first_token:
+                    first_token = False
+                    ttft_ms = int((time.monotonic() - started) * 1000)
+                    print(f"GEMINI STREAM TTFT: {ttft_ms}ms")
+                accumulated.append(token)
+                yield json.dumps({"type": "token", "content": token}) + "\n"
+
+            full_text = "".join(accumulated).strip()
+            if not full_text:
+                fallback_msg = supportive_fallback_response(message)
+                yield json.dumps({"type": "token", "content": fallback_msg}) + "\n"
+                yield json.dumps({"type": "fallback", "source": "empty_stream"}) + "\n"
+
             yield json.dumps({"type": "done"}) + "\n"
         except Exception as exc:
-            print("GEMINI ERROR:", exc)
-            yield json.dumps({"type": "token", "content": supportive_fallback_response(message)}) + "\n"
-            yield json.dumps({"type": "fallback", "source": "deterministic"}) + "\n"
+            print("GEMINI STREAM ERROR:", exc)
+            if not accumulated:
+                yield json.dumps({"type": "token", "content": supportive_fallback_response(message)}) + "\n"
+                yield json.dumps({"type": "fallback", "source": "deterministic"}) + "\n"
             yield json.dumps({"type": "done"}) + "\n"
 
     return StreamingResponse(

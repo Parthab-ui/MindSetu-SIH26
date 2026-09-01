@@ -137,23 +137,67 @@ export const api = {
         throw new Error(errMsg);
       }
 
-      const text = await response.text();
-      const lines = text.split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
       let fullContent = "";
       let isSafety = false;
 
-      for (const line of lines) {
-        try {
-          const chunk = JSON.parse(line);
-          if (chunk.type === "start" && chunk.risk_level === "safety_priority") {
-            isSafety = true;
+      if (response.body && response.body.getReader) {
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = "";
+
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+
+          buffer += decoder.decode(value, { stream: true });
+          const lines = buffer.split("\n");
+          buffer = lines.pop() || "";
+
+          for (const line of lines) {
+            const trimmed = line.trim();
+            if (!trimmed) continue;
+            try {
+              const chunk = JSON.parse(trimmed);
+              if (chunk.type === "start" && chunk.risk_level === "safety_priority") {
+                isSafety = true;
+              }
+              if (chunk.type === "token" && typeof chunk.content === "string") {
+                fullContent += chunk.content;
+                if (onToken) onToken(chunk.content);
+              }
+            } catch {
+              // Ignore partial or non-JSON chunk lines
+            }
           }
-          if (chunk.type === "token" && typeof chunk.content === "string") {
-            fullContent += chunk.content;
-            if (onToken) onToken(chunk.content);
+        }
+
+        if (buffer.trim()) {
+          try {
+            const chunk = JSON.parse(buffer.trim());
+            if (chunk.type === "token" && typeof chunk.content === "string") {
+              fullContent += chunk.content;
+              if (onToken) onToken(chunk.content);
+            }
+          } catch {
+            // Ignore trailing partial buffer
           }
-        } catch {
-          // Ignore non-NDJSON lines
+        }
+      } else {
+        const text = await response.text();
+        const lines = text.split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
+        for (const line of lines) {
+          try {
+            const chunk = JSON.parse(line);
+            if (chunk.type === "start" && chunk.risk_level === "safety_priority") {
+              isSafety = true;
+            }
+            if (chunk.type === "token" && typeof chunk.content === "string") {
+              fullContent += chunk.content;
+              if (onToken) onToken(chunk.content);
+            }
+          } catch {
+            // Ignore non-NDJSON lines
+          }
         }
       }
 

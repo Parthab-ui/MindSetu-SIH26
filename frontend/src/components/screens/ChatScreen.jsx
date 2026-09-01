@@ -56,25 +56,25 @@ export function ChatScreen({
             </div>
           )}
 
-          {messages.map((msg, idx) => (
-            <div key={idx} className={`message-row ${msg.sender}`}>
-              <div className="message-avatar">{msg.sender === "ai" ? "✦" : "👤"}</div>
-              <div className="message-bubble" style={{ whiteSpace: "pre-wrap" }}>
-                {msg.text}
-              </div>
-            </div>
-          ))}
+          {messages.map((msg, idx) => {
+            const isLatestAI = idx === messages.length - 1 && msg.sender === "ai";
+            const isStreamingThis = isLatestAI && loading;
 
-          {loading && (
-            <div className="message-row ai">
-              <div className="message-avatar">✦</div>
-              <div className="message-bubble typing-indicator">
-                <span className="typing-dot" />
-                <span className="typing-dot" />
-                <span className="typing-dot" />
+            return (
+              <div key={idx} className={`message-row ${msg.sender}`}>
+                <div className="message-avatar">{msg.sender === "ai" ? "✦" : "👤"}</div>
+                <div className="message-bubble" style={{ whiteSpace: "pre-wrap" }}>
+                  {msg.text || (isStreamingThis ? (
+                    <div className="typing-indicator" style={{ padding: "4px 0" }}>
+                      <span className="typing-dot" />
+                      <span className="typing-dot" />
+                      <span className="typing-dot" />
+                    </div>
+                  ) : "")}
+                </div>
               </div>
-            </div>
-          )}
+            );
+          })}
 
           <div ref={messagesEndRef} />
         </div>
