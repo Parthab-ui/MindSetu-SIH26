@@ -25,9 +25,11 @@ export function WellnessScreen({ answers, setAnswers, onNext, onBack, loading, e
   const progressPercent = Math.round((answeredCount / WELLNESS_QUESTIONS.length) * 100);
 
   function handleSelect(questionIndex, value) {
-    const updated = [...answers];
-    updated[questionIndex] = value;
-    setAnswers(updated);
+    setAnswers((prev) => {
+      const updated = [...prev];
+      updated[questionIndex] = value;
+      return updated;
+    });
     setLocalError("");
   }
 

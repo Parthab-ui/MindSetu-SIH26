@@ -1,15 +1,54 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState, useId } from "react";
 import { CrisisBanner } from "../common/CrisisBanner";
 
-const STARTER_PROMPTS = [
-  "I feel overwhelmed by my workload and cannot switch off after duty.",
-  "What are practical ways to manage sleep recovery during night shifts?",
-  "How can I set realistic boundaries when duty pressure is continuous?",
-  "I need help organising one actionable recovery step for today.",
+const SUGGESTION_CARDS = [
+  {
+    id: "workload",
+    title: "Decompress After Duty",
+    subtitle: "Workload pacing & switching off",
+    prompt: "I feel overwhelmed by my workload and cannot switch off after duty.",
+    tag: "Workload",
+  },
+  {
+    id: "sleep",
+    title: "Shift Sleep & Recovery",
+    subtitle: "Rest cycles & night duty fatigue",
+    prompt: "What are practical ways to manage sleep recovery during night shifts?",
+    tag: "Recovery",
+  },
+  {
+    id: "boundaries",
+    title: "Operational Boundaries",
+    subtitle: "Duty pressure & realistic limits",
+    prompt: "How can I set realistic boundaries when duty pressure is continuous?",
+    tag: "Boundaries",
+  },
+  {
+    id: "action-plan",
+    title: "Daily Action Step",
+    subtitle: "One practical step for today",
+    prompt: "Help me organize one practical, actionable recovery step for today.",
+    tag: "Action",
+  },
 ];
 
-/* High-contrast paper-plane send icon */
-function SendIcon({ size = 18 }) {
+/* Custom SVG Icons */
+function SparkIcon({ size = 18, className = "" }) {
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="currentColor"
+      className={className}
+      aria-hidden="true"
+    >
+      <path d="M12 2L14.2 9.8L22 12L14.2 14.2L12 22L9.8 14.2L2 12L9.8 9.8L12 2Z" />
+    </svg>
+  );
+}
+
+function ArrowUpIcon({ size = 18 }) {
   return (
     <svg
       width={size}
@@ -17,15 +56,177 @@ function SendIcon({ size = 18 }) {
       viewBox="0 0 24 24"
       fill="none"
       stroke="currentColor"
-      strokeWidth="2.2"
+      strokeWidth="2.4"
       strokeLinecap="round"
       strokeLinejoin="round"
-      style={{ display: "block", flexShrink: 0 }}
       aria-hidden="true"
     >
-      <line x1="22" y1="2" x2="11" y2="13" />
-      <polygon points="22 2 15 22 11 13 2 9 22 2" fill="currentColor" fillOpacity="0.2" />
+      <line x1="12" y1="19" x2="12" y2="5" />
+      <polyline points="5 12 12 5 19 12" />
     </svg>
+  );
+}
+
+function ArrowRightIcon({ size = 15 }) {
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <line x1="5" y1="12" x2="19" y2="12" />
+      <polyline points="12 5 19 12 12 19" />
+    </svg>
+  );
+}
+
+function CopyIcon({ size = 14 }) {
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
+      <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+    </svg>
+  );
+}
+
+function CheckIcon({ size = 14 }) {
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <polyline points="20 6 9 17 4 12" />
+    </svg>
+  );
+}
+
+/**
+ * Format inline text (e.g. **bold**) safely into React elements
+ */
+function formatInlineText(text) {
+  if (!text) return null;
+  const parts = text.split(/(\*\*[^*]+\*\*)/g);
+  return parts.map((part, i) => {
+    if (part.startsWith("**") && part.endsWith("**")) {
+      return (
+        <strong key={i} className="ai-bold-highlight">
+          {part.slice(2, -2)}
+        </strong>
+      );
+    }
+    return part;
+  });
+}
+
+/**
+ * Editorial Formatter for AI responses supporting paragraphs,
+ * bullet lists, numbered lists, and bold highlights.
+ */
+function FormattedAIResponse({ content }) {
+  if (!content) return null;
+
+  const lines = content.split("\n");
+  const blocks = [];
+  let currentList = null;
+
+  lines.forEach((line) => {
+    const trimmed = line.trim();
+    if (!trimmed) {
+      if (currentList) {
+        blocks.push(currentList);
+        currentList = null;
+      }
+      return;
+    }
+
+    const isBullet = /^[-*•]\s+/.test(trimmed);
+    const isNumber = /^\d+\.\s+/.test(trimmed);
+
+    if (isBullet) {
+      const itemText = trimmed.replace(/^[-*•]\s+/, "");
+      if (!currentList || currentList.type !== "bullet") {
+        if (currentList) blocks.push(currentList);
+        currentList = { type: "bullet", items: [] };
+      }
+      currentList.items.push(itemText);
+    } else if (isNumber) {
+      const itemText = trimmed.replace(/^\d+\.\s+/, "");
+      if (!currentList || currentList.type !== "number") {
+        if (currentList) blocks.push(currentList);
+        currentList = { type: "number", items: [] };
+      }
+      currentList.items.push(itemText);
+    } else {
+      if (currentList) {
+        blocks.push(currentList);
+        currentList = null;
+      }
+      blocks.push({ type: "paragraph", content: trimmed });
+    }
+  });
+
+  if (currentList) {
+    blocks.push(currentList);
+  }
+
+  return (
+    <div className="ai-editorial-content">
+      {blocks.map((block, bIdx) => {
+        if (block.type === "paragraph") {
+          return (
+            <p key={bIdx} className="ai-editorial-p">
+              {formatInlineText(block.content)}
+            </p>
+          );
+        }
+        if (block.type === "bullet") {
+          return (
+            <ul key={bIdx} className="ai-editorial-ul">
+              {block.items.map((item, iIdx) => (
+                <li key={iIdx} className="ai-editorial-li">
+                  {formatInlineText(item)}
+                </li>
+              ))}
+            </ul>
+          );
+        }
+        if (block.type === "number") {
+          return (
+            <ol key={bIdx} className="ai-editorial-ol">
+              {block.items.map((item, iIdx) => (
+                <li key={iIdx} className="ai-editorial-li">
+                  {formatInlineText(item)}
+                </li>
+              ))}
+            </ol>
+          );
+        }
+        return null;
+      })}
+    </div>
   );
 }
 
@@ -40,6 +241,8 @@ export function ChatScreen({
 }) {
   const messagesEndRef = useRef(null);
   const textareaRef = useRef(null);
+  const inputId = useId();
+  const [copiedIdx, setCopiedIdx] = useState(null);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -48,130 +251,233 @@ export function ChatScreen({
   function handleKeyDown(e) {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
-      onSendMessage();
+      if (canSend) {
+        onSendMessage();
+        if (textareaRef.current) {
+          textareaRef.current.style.height = "48px";
+        }
+      }
     }
   }
 
-  // Auto-grow textarea
   function handleInput(e) {
     setInputMessage(e.target.value);
     const el = e.target;
-    el.style.height = "44px";
-    el.style.height = Math.min(el.scrollHeight, 120) + "px";
+    el.style.height = "48px";
+    el.style.height = Math.min(el.scrollHeight, 140) + "px";
+  }
+
+  function handleSelectSuggestion(promptText) {
+    setInputMessage(promptText);
+    if (textareaRef.current) {
+      textareaRef.current.focus();
+      textareaRef.current.style.height = "48px";
+      setTimeout(() => {
+        if (textareaRef.current) {
+          textareaRef.current.style.height = Math.min(textareaRef.current.scrollHeight, 140) + "px";
+        }
+      }, 20);
+    }
+  }
+
+  async function handleCopyResponse(text, idx) {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopiedIdx(idx);
+      setTimeout(() => setCopiedIdx(null), 2000);
+    } catch {
+      // ignore
+    }
   }
 
   const canSend = !loading && inputMessage.trim().length > 0;
+  const isWelcomeState = messages.length === 0;
 
   return (
-    <div className="page-container narrow">
-      <div style={{ marginBottom: "20px", animation: "slideUp 280ms cubic-bezier(0.2,0.8,0.2,1) both" }}>
+    <div className="chat-workspace-page">
+      {/* Top Header Eyebrow */}
+      <div className="chat-header-section">
         <span className="eyebrow">STEP 05 · SUPPORTIVE AI COMPANION</span>
-        <h1 className="page-title">MindSetu AI Companion</h1>
-        <p className="page-subtitle">
+        <h1 className="page-title" style={{ margin: "4px 0 6px" }}>MindSetu AI Companion</h1>
+        <p className="page-subtitle" style={{ margin: 0 }}>
           A confidential, empathetic conversation space powered by Gemini. Designed to explore practical recovery steps.
         </p>
       </div>
 
       {isCrisis && <CrisisBanner onDismiss={onDismissCrisis} />}
 
-      <div className="chat-window-card" style={{ animation: "slideUp 340ms cubic-bezier(0.2,0.8,0.2,1) both" }}>
-        <div className="chat-messages-pane" role="log" aria-live="polite" aria-label="MindSetu AI conversation history">
-          {/* Empty state */}
-          {messages.length === 0 && (
-            <div className="chat-empty-state">
-              <div className="chat-empty-avatar" aria-hidden="true">✦</div>
-              <h2 style={{ fontSize: "1.25rem", fontWeight: 700, margin: 0 }}>
-                How can I support you today?
-              </h2>
-              <p style={{ color: "var(--text-secondary)", fontSize: "0.93rem", maxWidth: "400px", margin: 0, lineHeight: "1.6" }}>
-                Share what is on your mind, explore workload pacing, or ask for simple recovery recommendations.
+      <div className="chat-workspace-container">
+        {/* Messages / Welcome Viewport */}
+        <div
+          className="chat-viewport"
+          role="log"
+          aria-live="polite"
+          aria-label="MindSetu AI conversation history"
+        >
+          {/* STATE A — EMPTY / WELCOME */}
+          {isWelcomeState ? (
+            <div className="chat-welcome-box">
+              <div className="chat-welcome-badge" aria-hidden="true">
+                <SparkIcon size={24} />
+              </div>
+              <h2 className="chat-welcome-title">How can I support you today?</h2>
+              <p className="chat-welcome-subtitle">
+                Talk through what is on your mind, understand workload pressure, or find practical, immediate recovery steps.
               </p>
+
+              <div className="suggestion-cards-grid" role="group" aria-label="Suggested starter prompts">
+                {SUGGESTION_CARDS.map((card) => (
+                  <button
+                    key={card.id}
+                    type="button"
+                    className="suggestion-card"
+                    onClick={() => handleSelectSuggestion(card.prompt)}
+                    aria-label={`Suggested prompt: ${card.title}. ${card.prompt}`}
+                  >
+                    <div className="suggestion-card-header">
+                      <span className="suggestion-tag">{card.tag}</span>
+                      <span className="suggestion-arrow" aria-hidden="true">
+                        <ArrowRightIcon size={14} />
+                      </span>
+                    </div>
+                    <strong className="suggestion-title">{card.title}</strong>
+                    <span className="suggestion-prompt-text">{card.prompt}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          ) : (
+            /* STATE B — ACTIVE CONVERSATION */
+            <div className="chat-conversation-flow">
+              {messages.map((msg, idx) => {
+                const isAI = msg.sender === "ai";
+                const isLatestAI = idx === messages.length - 1 && isAI;
+                const isStreamingWaiting = isLatestAI && loading && !msg.text;
+
+                return (
+                  <div
+                    key={idx}
+                    className={`conversation-entry ${isAI ? "assistant-entry" : "user-entry"}`}
+                  >
+                    {isAI && (
+                      <div className="assistant-header-meta">
+                        <div className="assistant-badge" aria-hidden="true">
+                          <SparkIcon size={14} />
+                        </div>
+                        <span className="assistant-name">MindSetu AI</span>
+                      </div>
+                    )}
+
+                    <div className={isAI ? "assistant-message-body" : "user-message-capsule"}>
+                      <span className="sr-only">{isAI ? "MindSetu AI says: " : "You said: "}</span>
+
+                      {isAI ? (
+                        isStreamingWaiting ? (
+                          /* STATE C — THINKING STATE */
+                          <div
+                            className="thinking-state-row"
+                            role="status"
+                            aria-label="MindSetu is thinking"
+                          >
+                            <span className="thinking-spark-pulse" aria-hidden="true">
+                              <SparkIcon size={16} />
+                            </span>
+                            <span className="thinking-text">MindSetu is thinking</span>
+                            <span className="thinking-wave" aria-hidden="true">
+                              <span className="thinking-dot" />
+                              <span className="thinking-dot" />
+                              <span className="thinking-dot" />
+                            </span>
+                          </div>
+                        ) : (
+                          <>
+                            <FormattedAIResponse content={msg.text} />
+                            {msg.text && (
+                              <div className="message-action-bar">
+                                <button
+                                  type="button"
+                                  className="action-copy-btn"
+                                  onClick={() => handleCopyResponse(msg.text, idx)}
+                                  aria-label={copiedIdx === idx ? "Copied response to clipboard" : "Copy response"}
+                                  title="Copy response"
+                                >
+                                  {copiedIdx === idx ? (
+                                    <>
+                                      <CheckIcon size={13} />
+                                      <span>Copied</span>
+                                    </>
+                                  ) : (
+                                    <>
+                                      <CopyIcon size={13} />
+                                      <span>Copy</span>
+                                    </>
+                                  )}
+                                </button>
+                              </div>
+                            )}
+                          </>
+                        )
+                      ) : (
+                        <div className="user-text">{msg.text}</div>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+              <div ref={messagesEndRef} />
             </div>
           )}
-
-          {/* Messages */}
-          {messages.map((msg, idx) => {
-            const isLatestAI = idx === messages.length - 1 && msg.sender === "ai";
-            const isStreamingThis = isLatestAI && loading;
-
-            return (
-              <div key={idx} className={`message-row ${msg.sender}`}>
-                <div className="message-avatar" aria-hidden="true">
-                  {msg.sender === "ai" ? "✦" : "👤"}
-                </div>
-                <div className="message-bubble" style={{ whiteSpace: "pre-wrap" }}>
-                  <span className="sr-only">{msg.sender === "ai" ? "MindSetu AI: " : "You: "}</span>
-                  {msg.text || (isStreamingThis ? (
-                    <div className="typing-indicator" style={{ padding: "4px 0" }} aria-label="MindSetu AI is responding...">
-                      <span className="typing-dot" />
-                      <span className="typing-dot" />
-                      <span className="typing-dot" />
-                    </div>
-                  ) : "")}
-                </div>
-              </div>
-            );
-          })}
-          <div ref={messagesEndRef} />
         </div>
 
-        {/* Starter chips — shown only when empty */}
-        {messages.length === 0 && (
-          <div className="starters-wrap" role="group" aria-label="Suggested starter prompts">
-            {STARTER_PROMPTS.map((prompt, i) => (
-              <button
-                key={i}
-                className="starter-chip"
-                onClick={() => {
-                  setInputMessage(prompt);
-                  textareaRef.current?.focus();
-                }}
-                title={prompt}
-                aria-label={`Prompt: ${prompt}`}
-              >
-                {prompt}
-              </button>
-            ))}
+        {/* INTEGRATED PROMPT COMPOSER */}
+        <div className="composer-wrapper">
+          <div className={`integrated-composer ${canSend ? "has-input" : ""}`}>
+            <label htmlFor={inputId} className="sr-only">
+              Type your message to MindSetu AI Companion
+            </label>
+            <textarea
+              ref={textareaRef}
+              id={inputId}
+              className="composer-textarea"
+              placeholder="Ask anything about your workload, sleep, or recovery…"
+              value={inputMessage}
+              onChange={handleInput}
+              onKeyDown={handleKeyDown}
+              disabled={loading}
+              rows={1}
+              aria-label="Type your message to MindSetu AI Companion"
+            />
+
+            <button
+              id="chat-send-btn"
+              type="button"
+              className="composer-send-btn"
+              onClick={onSendMessage}
+              disabled={!canSend}
+              aria-label={loading ? "Generating response…" : "Send message"}
+              title={loading ? "Generating response…" : canSend ? "Send (Enter)" : "Type a message to send"}
+            >
+              {loading ? (
+                <span className="composer-spinner" aria-hidden="true" />
+              ) : (
+                <ArrowUpIcon size={18} />
+              )}
+            </button>
           </div>
-        )}
 
-        {/* Input bar */}
-        <div className="chat-input-bar">
-          <textarea
-            ref={textareaRef}
-            id="chat-message-input"
-            placeholder="Share what is happening (Shift + Enter for new line)…"
-            value={inputMessage}
-            onChange={handleInput}
-            onKeyDown={handleKeyDown}
-            disabled={loading}
-            rows={1}
-            aria-label="Type your message to MindSetu AI Companion"
-          />
-          <button
-            id="chat-send-btn"
-            type="button"
-            className="chat-send-btn"
-            onClick={onSendMessage}
-            disabled={!canSend}
-            aria-label="Send message"
-            title={loading ? "Generating AI response..." : canSend ? "Send message (Enter)" : "Type a message to send"}
-          >
-            <SendIcon size={18} />
-          </button>
+          <div className="composer-footer-hint">
+            <span className="keyboard-hint">
+              Press <kbd>Enter</kbd> to send · <kbd>Shift</kbd> + <kbd>Enter</kbd> for newline
+            </span>
+          </div>
         </div>
-
       </div>
 
-      <p style={{
-        marginTop: "14px",
-        fontSize: "0.78rem",
-        color: "var(--text-muted)",
-        textAlign: "center",
-        lineHeight: "1.5",
-      }}>
-        MindSetu AI is not a crisis service. In an emergency, contact Tele-MANAS&nbsp;<strong>14416</strong> or KIRAN&nbsp;<strong>1800-599-0019</strong>.
+      {/* Safety & Crisis Helpline Disclaimer */}
+      <p className="chat-safety-disclaimer">
+        MindSetu AI is an assistive welfare companion, not a clinical or crisis service. In an emergency, contact Tele-MANAS&nbsp;<strong>14416</strong> or KIRAN&nbsp;<strong>1800-599-0019</strong>.
       </p>
     </div>
   );
 }
+
