@@ -1,10 +1,10 @@
 export function Navigation({ screen, setScreen, hasAnalysis }) {
   const steps = [
-    { id: "wellness", label: "01 Wellbeing Pulse" },
-    { id: "workload", label: "02 Duty & Context" },
-    { id: "analysis", label: "03 Welfare Summary", disabled: !hasAnalysis },
-    { id: "chat", label: "04 AI Companion", disabled: !hasAnalysis },
-    { id: "mood", label: "05 Mood Check-in" },
+    { id: "wellness", label: "Wellbeing Pulse" },
+    { id: "workload", label: "Duty & Context" },
+    { id: "analysis", label: "Welfare Summary", disabled: !hasAnalysis },
+    { id: "chat",     label: "AI Companion",   disabled: !hasAnalysis },
+    { id: "mood",     label: "Mood Check-in" },
   ];
 
   return (

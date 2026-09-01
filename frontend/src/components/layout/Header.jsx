@@ -1,7 +1,22 @@
 export function Header({ darkMode, setDarkMode, sessionId, onResetSession }) {
+  function handleKeyDown(e) {
+    if (e.key === "Enter" || e.key === " ") {
+      e.preventDefault();
+      onResetSession();
+    }
+  }
+
   return (
     <header className="topbar">
-      <div className="brand-wrapper" onClick={onResetSession} title="MindSetu Home">
+      <div
+        className="brand-wrapper"
+        onClick={onResetSession}
+        onKeyDown={handleKeyDown}
+        role="button"
+        tabIndex={0}
+        title="MindSetu Home"
+        aria-label="MindSetu home, reset session"
+      >
         <div className="brand-logo">✦</div>
         <div className="brand-text">
           Mind<span>Setu</span>

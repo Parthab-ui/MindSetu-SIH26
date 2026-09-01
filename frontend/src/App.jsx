@@ -60,6 +60,7 @@ export default function App() {
 
   // Global UI State
   const [loading, setLoading] = useState(false);
+  const [loadingLabel, setLoadingLabel] = useState("Processing…");
   const [error, setError] = useState("");
 
   // Sync theme
@@ -83,6 +84,7 @@ export default function App() {
   async function handleStartSession(contextData) {
     setError("");
     setLoading(true);
+    setLoadingLabel("Creating protected session…");
     setRole(contextData.role);
     setUnit(contextData.unit);
     try {
@@ -100,6 +102,7 @@ export default function App() {
   async function handleSaveWellness() {
     setError("");
     setLoading(true);
+    setLoadingLabel("Saving wellbeing pulse…");
     try {
       await api.submitWellness(sessionId, answers);
       setScreen("workload");
@@ -114,6 +117,7 @@ export default function App() {
   async function handleRunAnalysis() {
     setError("");
     setLoading(true);
+    setLoadingLabel("Generating your triage analysis…");
     try {
       await api.submitWorkload(sessionId, { role, unit, ...workload });
       const result = await api.runAnalysis(sessionId);
@@ -211,6 +215,7 @@ export default function App() {
   async function handleSaveMood() {
     if (!selectedMood || !sessionId) return;
     setLoading(true);
+    setLoadingLabel("Saving mood check-in…");
     try {
       await api.submitMood(sessionId, selectedMood, moodNote);
       const hist = await api.getMoodHistory(sessionId);
@@ -236,6 +241,13 @@ export default function App() {
 
   return (
     <div className="app-shell">
+      {loading && (
+        <div className="global-loading-overlay" role="status" aria-live="polite">
+          <div className="spinner-ring" />
+          <p>{loadingLabel}</p>
+        </div>
+      )}
+
       <Header
         darkMode={darkMode}
         setDarkMode={setDarkMode}

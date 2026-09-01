@@ -6,8 +6,8 @@ export function WorkloadScreen({ workload, setWorkload, onAnalyze, onBack, loadi
   }
 
   return (
-    <div className="page-container">
-      <div style={{ marginBottom: "28px" }}>
+    <div className="page-container narrow">
+      <div style={{ marginBottom: "28px", animation: "slideUp 280ms cubic-bezier(0.2,0.8,0.2,1) both" }}>
         <span className="eyebrow">STEP 03 · OPERATIONAL CONTEXT</span>
         <h1 className="page-title">Duty & Recovery Context</h1>
         <p className="page-subtitle">
@@ -15,7 +15,7 @@ export function WorkloadScreen({ workload, setWorkload, onAnalyze, onBack, loadi
         </p>
       </div>
 
-      <div className="card card-elevated" style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
+      <div className="card card-elevated" style={{ display: "flex", flexDirection: "column", gap: "24px", animation: "slideUp 340ms cubic-bezier(0.2,0.8,0.2,1) both" }}>
         <div className="form-section">
           <SliderField
             label="Duty Hours / Day"
@@ -102,16 +102,7 @@ export function WorkloadScreen({ workload, setWorkload, onAnalyze, onBack, loadi
         </label>
 
         {error && (
-          <div
-            style={{
-              color: "var(--signal-high)",
-              background: "var(--signal-high-bg)",
-              padding: "14px 18px",
-              borderRadius: "var(--radius-md)",
-              fontSize: "0.92rem",
-              border: "1px solid var(--signal-high-border)",
-            }}
-          >
+          <div className="inline-error" role="alert">
             {error}
           </div>
         )}

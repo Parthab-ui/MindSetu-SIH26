@@ -4,19 +4,19 @@ export function HomeScreen({ onStart }) {
       num: "01",
       name: "LightGBM",
       role: "Supervised Research Model",
-      desc: "Computes risk indicators from operational duty and wellbeing signals.",
+      desc: "Computes welfare-risk indicators from duty and wellbeing signals.",
     },
     {
       num: "02",
       name: "SHAP",
       role: "Model Explainability",
-      desc: "Highlights exact contributing factors behind the research signal.",
+      desc: "Highlights the exact contributing factors behind each research signal.",
     },
     {
       num: "03",
       name: "Gemini",
       role: "Supportive AI Layer",
-      desc: "Translates complex findings into empathetic, practical recovery guidance.",
+      desc: "Translates findings into empathetic, practical recovery guidance.",
     },
     {
       num: "04",
@@ -26,65 +26,157 @@ export function HomeScreen({ onStart }) {
     },
   ];
 
+  const trustItems = [
+    { icon: "🔒", text: "Anonymous sessions — no personal IDs stored" },
+    { icon: "⚡", text: "Real-time AI companion powered by Gemini" },
+    { icon: "🔬", text: "Explainable ML with SHAP factor analysis" },
+    { icon: "🛡", text: "Human welfare officer always in the loop" },
+  ];
+
   return (
     <div className="page-container">
       <div className="hero-grid">
-        <div>
+        {/* Left — Hero Copy */}
+        <div style={{ animation: "slideUp 400ms cubic-bezier(0.2,0.8,0.2,1) both" }}>
           <span className="eyebrow">SIH26186 · PERSONNEL WELFARE SUPPORT</span>
-          <h1 className="page-title" style={{ fontSize: "clamp(2.4rem, 5vw, 4rem)", marginBottom: "16px" }}>
-            Understand what matters.<br />
+          <h1
+            className="page-title"
+            style={{ fontSize: "clamp(2.3rem, 4.5vw, 3.8rem)", marginBottom: "20px", lineHeight: 1.1 }}
+          >
+            Understand what matters.
+            <br />
             <span style={{ color: "var(--primary)" }}>Choose support earlier.</span>
           </h1>
-          <p className="page-subtitle" style={{ fontSize: "1.15rem", maxWidth: "600px", marginBottom: "32px" }}>
-            MindSetu provides a calm, confidential space for personnel to complete a brief wellbeing pulse, contextualize
-            workload strain, and access actionable next steps.
+          <p
+            className="page-subtitle"
+            style={{ fontSize: "1.1rem", maxWidth: "580px", marginBottom: "36px" }}
+          >
+            MindSetu provides a calm, confidential space for personnel to complete a
+            brief wellbeing pulse, contextualise operational strain, and access
+            structured, actionable welfare guidance.
           </p>
 
-          <div style={{ display: "flex", gap: "16px", flexWrap: "wrap", alignItems: "center" }}>
-            <button className="btn btn-primary" style={{ padding: "14px 28px", fontSize: "1.05rem" }} onClick={onStart}>
-              Start a Protected Session →
-            </button>
+          <button
+            id="home-start-btn"
+            className="btn btn-primary"
+            style={{ padding: "15px 32px", fontSize: "1.02rem", marginBottom: "32px" }}
+            onClick={onStart}
+          >
+            Start a Protected Session →
+          </button>
+
+          {/* Trust chips */}
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "1fr 1fr",
+              gap: "10px",
+              maxWidth: "520px",
+            }}
+          >
+            {trustItems.map((item, i) => (
+              <div
+                key={i}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "10px",
+                  padding: "10px 14px",
+                  borderRadius: "var(--radius-md)",
+                  background: "var(--bg-surface-card)",
+                  border: "1px solid var(--border-subtle)",
+                  fontSize: "0.83rem",
+                  color: "var(--text-secondary)",
+                  fontWeight: 500,
+                  animation: `slideUp ${360 + i * 60}ms cubic-bezier(0.2,0.8,0.2,1) both`,
+                }}
+              >
+                <span style={{ fontSize: "1rem", flexShrink: 0 }}>{item.icon}</span>
+                {item.text}
+              </div>
+            ))}
           </div>
-
-          <p style={{ marginTop: "24px", fontSize: "0.85rem", color: "var(--text-muted)", maxWidth: "560px", lineHeight: "1.5" }}>
-            🔒 <strong>Confidential & Demo-Safe:</strong> Sessions are generated anonymously. Outputs represent supportive
-            triage signals, not clinical diagnoses or disciplinary actions.
-          </p>
         </div>
 
-        <div>
-          <div className="card card-elevated" style={{ padding: "32px" }}>
+        {/* Right — Architecture Card */}
+        <div style={{ animation: "slideUp 480ms cubic-bezier(0.2,0.8,0.2,1) both" }}>
+          <div
+            className="card card-elevated"
+            style={{
+              padding: "30px",
+              background: "var(--bg-surface-card)",
+              backdropFilter: "blur(20px)",
+            }}
+          >
             <span className="eyebrow">SYSTEM ARCHITECTURE</span>
-            <h2 style={{ fontSize: "1.35rem", fontWeight: 700, margin: "4px 0 20px" }}>
+            <h2
+              style={{
+                fontSize: "1.28rem",
+                fontWeight: 700,
+                margin: "6px 0 22px",
+                color: "var(--text-primary)",
+              }}
+            >
               Clear Responsibilities at Every Layer
             </h2>
 
-            <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+            <div style={{ display: "flex", flexDirection: "column", gap: "0" }}>
               {pillars.map((p) => (
-                <div
-                  key={p.num}
-                  style={{
-                    display: "grid",
-                    gridTemplateColumns: "36px 1fr",
-                    gap: "14px",
-                    paddingBottom: "14px",
-                    borderBottom: "1px solid var(--border-subtle)",
-                  }}
-                >
-                  <span style={{ fontWeight: 800, color: "var(--primary)", fontSize: "1rem" }}>{p.num}</span>
+                <div key={p.num} className="pillar-row">
+                  <span className="pillar-num">{p.num}</span>
                   <div>
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: "3px" }}>
-                      <strong style={{ fontSize: "0.98rem", color: "var(--text-primary)" }}>{p.name}</strong>
-                      <span style={{ fontSize: "0.75rem", color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.05em" }}>
+                    <div
+                      style={{
+                        display: "flex",
+                        justifyContent: "space-between",
+                        alignItems: "baseline",
+                        flexWrap: "wrap",
+                        gap: "4px",
+                        marginBottom: "4px",
+                      }}
+                    >
+                      <strong style={{ fontSize: "0.96rem", color: "var(--text-primary)" }}>
+                        {p.name}
+                      </strong>
+                      <span
+                        style={{
+                          fontSize: "0.70rem",
+                          color: "var(--text-muted)",
+                          textTransform: "uppercase",
+                          letterSpacing: "0.06em",
+                          fontWeight: 700,
+                        }}
+                      >
                         {p.role}
                       </span>
                     </div>
-                    <p style={{ margin: 0, fontSize: "0.86rem", color: "var(--text-secondary)", lineHeight: "1.45" }}>
+                    <p
+                      style={{
+                        margin: 0,
+                        fontSize: "0.84rem",
+                        color: "var(--text-secondary)",
+                        lineHeight: "1.5",
+                      }}
+                    >
                       {p.desc}
                     </p>
                   </div>
                 </div>
               ))}
+            </div>
+
+            <div
+              style={{
+                marginTop: "20px",
+                paddingTop: "18px",
+                borderTop: "1px solid var(--border-subtle)",
+                fontSize: "0.78rem",
+                color: "var(--text-muted)",
+                lineHeight: "1.5",
+              }}
+            >
+              🔒 <strong>Research prototype.</strong> MindSetu generates welfare-support signals, not clinical
+              diagnoses or disciplinary recommendations.
             </div>
           </div>
         </div>
