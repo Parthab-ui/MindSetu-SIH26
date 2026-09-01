@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { ProgressBar } from "../common/ProgressBar";
+import { InfoTooltip } from "../common/InfoTooltip";
 
 const WELLNESS_QUESTIONS = [
   "I feel exhausted even after having time to rest.",
@@ -44,12 +45,30 @@ export function WellnessScreen({ answers, setAnswers, onNext, onBack, loading, e
   return (
     <div className="page-container narrow">
       <div style={{ marginBottom: "20px", animation: "slideUp 280ms cubic-bezier(0.2,0.8,0.2,1) both" }}>
-        <span className="eyebrow">STEP 02 · WELLBEING PULSE</span>
-        <h1 className="page-title">Recent Wellbeing Check-in</h1>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+          <div>
+            <span className="eyebrow">STEP 02 · WELLBEING PULSE</span>
+            <h1 className="page-title">Recent Wellbeing Check-in</h1>
+          </div>
+          <InfoTooltip
+            title="About Wellbeing Pulse"
+            text="These 6 brief check-in questions capture your emotional, cognitive, and fatigue levels over the past 2–4 weeks."
+            techDetail="Scored 0–3 per question (Total 0–18). Scaled to a 0–100 baseline: Stress Score = (Sum / 18) × 100."
+            label="Information about Wellbeing Pulse"
+          />
+        </div>
         <p className="page-subtitle">
           Over the past 2–4 weeks, how often have you experienced the following?
         </p>
 
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "6px" }}>
+          <span style={{ fontSize: "0.78rem", color: "var(--text-secondary)", fontWeight: 600 }}>
+            {answeredCount} of {WELLNESS_QUESTIONS.length} answered
+          </span>
+          <span style={{ fontSize: "0.78rem", color: "var(--text-muted)" }}>
+            {progressPercent}% complete
+          </span>
+        </div>
         <ProgressBar percent={progressPercent} />
       </div>
 

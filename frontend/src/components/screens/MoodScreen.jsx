@@ -1,9 +1,11 @@
+import { InfoTooltip } from "../common/InfoTooltip";
+
 const MOODS = [
-  { value: 1, emoji: "😞", label: "Very Low" },
-  { value: 2, emoji: "😕", label: "Low" },
-  { value: 3, emoji: "😐", label: "Steady" },
-  { value: 4, emoji: "🙂", label: "Good" },
-  { value: 5, emoji: "😄", label: "Great" },
+  { value: 1, emoji: "😞", label: "Very Low", desc: "Exhausted or high distress" },
+  { value: 2, emoji: "😕", label: "Low", desc: "Strained or low energy" },
+  { value: 3, emoji: "😐", label: "Steady", desc: "Manageable and balanced" },
+  { value: 4, emoji: "🙂", label: "Good", desc: "Energised and positive" },
+  { value: 5, emoji: "😄", label: "Great", desc: "Fully rested and strong" },
 ];
 
 export function MoodScreen({
@@ -16,24 +18,43 @@ export function MoodScreen({
   moodTrend,
   loading,
 }) {
+  const trendEntries = moodTrend || [];
+  const historyEntries = moodHistory || [];
+
+  // Calculate average if trend points exist
+  const totalEntries = trendEntries.reduce((acc, curr) => acc + (curr.entries || 1), 0);
+  const avgMood =
+    trendEntries.length > 0
+      ? (
+          trendEntries.reduce((acc, curr) => acc + curr.average_mood * (curr.entries || 1), 0) /
+          Math.max(totalEntries, 1)
+        ).toFixed(1)
+      : null;
+
   return (
     <div className="page-container narrow">
+      {/* Header */}
       <div style={{ marginBottom: "28px", animation: "slideUp 280ms cubic-bezier(0.2,0.8,0.2,1) both" }}>
-        <span className="eyebrow">STEP 06 · MOOD TRACKING</span>
+        <span className="eyebrow">STEP 06 · MOOD & RECOVERY TRACKING</span>
         <h1 className="page-title">Daily Mood Check-in</h1>
         <p className="page-subtitle">
-          Logging simple check-ins helps you observe recovery patterns and emotional rhythms over time.
+          Logging quick check-ins helps you observe recovery patterns, energy rhythms, and operational strain over time.
         </p>
       </div>
 
+      {/* Check-in Form Card */}
       <div
         className="card card-elevated"
-        style={{ display: "flex", flexDirection: "column", gap: "20px", animation: "slideUp 340ms cubic-bezier(0.2,0.8,0.2,1) both" }}
+        style={{ display: "flex", flexDirection: "column", gap: "24px", animation: "slideUp 340ms cubic-bezier(0.2,0.8,0.2,1) both" }}
       >
         <div>
-          <label style={{ fontSize: "0.80rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.07em", color: "var(--text-secondary)" }}>
-            How do you feel today?
-          </label>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "12px" }}>
+            <label style={{ fontSize: "0.82rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.07em", color: "var(--text-secondary)" }}>
+              How do you feel today?
+            </label>
+            <span style={{ fontSize: "0.78rem", color: "var(--text-muted)" }}>Select one option</span>
+          </div>
+
           <div className="mood-cards-row">
             {MOODS.map((m) => (
               <button
@@ -42,12 +63,19 @@ export function MoodScreen({
                 className={`mood-select-btn ${selectedMood === m.value ? "selected" : ""}`}
                 onClick={() => setSelectedMood(m.value)}
                 aria-pressed={selectedMood === m.value}
+                title={`${m.label}: ${m.desc}`}
               >
                 <span className="mood-emoji">{m.emoji}</span>
                 <span className="mood-label">{m.label}</span>
               </button>
             ))}
           </div>
+
+          {selectedMood && (
+            <p style={{ marginTop: "8px", fontSize: "0.82rem", color: "var(--primary-hover)", textAlign: "center", fontWeight: 500 }}>
+              {MOODS.find((m) => m.value === selectedMood)?.desc}
+            </p>
+          )}
         </div>
 
         <div className="input-field">
@@ -55,53 +83,126 @@ export function MoodScreen({
           <textarea
             id="mood-note"
             className="textarea-input"
-            placeholder="Add brief thoughts about today's duty, energy levels, or recovery..."
+            placeholder="e.g., Note shift hours, sleep quality, workload intensity, or what helped you recharge today..."
             value={moodNote}
             onChange={(e) => setMoodNote(e.target.value)}
             maxLength={1000}
             rows={3}
           />
+          <span style={{ fontSize: "0.75rem", color: "var(--text-muted)", marginTop: "4px", display: "block" }}>
+            Confidential · Kept within this session for personal reflection.
+          </span>
         </div>
 
-        <div style={{ display: "flex", justifyContent: "flex-end" }}>
-          <button className="btn btn-primary" onClick={onSaveMood} disabled={loading || !selectedMood}>
-            {loading ? "Recording..." : "Save Mood Check-in →"}
+        <div style={{ display: "flex", justifyContent: "flex-end", alignItems: "center" }}>
+          <button
+            className="btn btn-primary"
+            onClick={onSaveMood}
+            disabled={loading || !selectedMood}
+            title={!selectedMood ? "Select a mood rating to save" : "Save this check-in"}
+          >
+            {loading ? "Recording Check-in..." : "Save Mood Check-in →"}
           </button>
         </div>
       </div>
 
-      {/* Mood Trend Visualization */}
-      {moodTrend && moodTrend.length > 1 && (
-        <div className="mood-chart-box" style={{ animation: "slideUp 400ms cubic-bezier(0.2,0.8,0.2,1) both" }}>
-          <span className="eyebrow">TREND ANALYSIS</span>
-          <h3 style={{ fontSize: "1.1rem", fontWeight: 700, margin: "4px 0 16px" }}>30-Day Average Mood Pattern</h3>
-          <div className="mood-bar-chart">
-            {moodTrend.slice(-14).map((pt, i) => {
-              const heightPercent = Math.round((pt.average_mood / 5) * 100);
-              return (
-                <div key={i} className="mood-bar-item">
-                  <span style={{ fontSize: "0.7rem", color: "var(--text-muted)", fontWeight: 600 }}>{pt.average_mood}</span>
-                  <div
-                    className="mood-bar-fill"
-                    style={{ height: `${heightPercent}%` }}
-                    title={`${pt.date}: ${pt.average_mood}/5 (${pt.entries} check-ins)`}
-                  />
-                  <span style={{ fontSize: "0.65rem", color: "var(--text-muted)", whiteSpace: "nowrap" }}>
-                    {pt.date.split("-").slice(1).join("/")}
-                  </span>
-                </div>
-              );
-            })}
+      {/* Mood Trend Visualization Section */}
+      <div className="mood-chart-box" style={{ marginTop: "32px", animation: "slideUp 400ms cubic-bezier(0.2,0.8,0.2,1) both" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "16px" }}>
+          <div>
+            <span className="eyebrow" style={{ margin: 0 }}>LONGITUDINAL PATTERNS</span>
+            <h3 style={{ fontSize: "1.15rem", fontWeight: 700, margin: "4px 0 2px" }}>
+              Mood & Recovery Trend
+            </h3>
+            <p style={{ fontSize: "0.84rem", color: "var(--text-secondary)", margin: 0 }}>
+              {trendEntries.length > 1
+                ? `Based on ${totalEntries} check-in${totalEntries === 1 ? "" : "s"} across ${trendEntries.length} days.`
+                : "Observes your wellbeing rhythm over consecutive duty periods."}
+            </p>
           </div>
-        </div>
-      )}
 
-      {/* Recent History */}
-      {moodHistory && moodHistory.length > 0 && (
+          <InfoTooltip
+            title="Mood Trend Analysis"
+            text="Tracks your daily mood logs (1 = Very Low to 5 = Great) over time to help you identify periods of sustained strain or positive recovery."
+            techDetail="Values show daily aggregated arithmetic averages (1.0 to 5.0 scale). Trend chart renders the last 14 active days."
+            label="Information about Mood Trend"
+          />
+        </div>
+
+        {/* State 1: Zero Entries */}
+        {trendEntries.length === 0 && historyEntries.length === 0 && (
+          <div style={{ padding: "32px 16px", textAlign: "center", background: "var(--bg-input)", borderRadius: "var(--radius-md)", border: "1px dashed var(--border-medium)" }}>
+            <span style={{ fontSize: "1.8rem", display: "block", marginBottom: "8px" }}>📊</span>
+            <strong style={{ display: "block", fontSize: "0.95rem", color: "var(--text-primary)" }}>
+              No mood check-ins recorded yet
+            </strong>
+            <p style={{ fontSize: "0.84rem", color: "var(--text-secondary)", maxWidth: "360px", margin: "4px auto 0" }}>
+              Select how you feel above and save your first check-in to begin tracking patterns over time.
+            </p>
+          </div>
+        )}
+
+        {/* State 2: One Entry (Building History) */}
+        {trendEntries.length === 1 && (
+          <div style={{ padding: "24px 16px", textAlign: "center", background: "var(--bg-input)", borderRadius: "var(--radius-md)", border: "1px solid var(--border-subtle)" }}>
+            <span style={{ fontSize: "1.5rem", display: "block", marginBottom: "6px" }}>🌱</span>
+            <strong style={{ display: "block", fontSize: "0.95rem", color: "var(--text-primary)" }}>
+              1 Check-in Recorded · History Building
+            </strong>
+            <p style={{ fontSize: "0.84rem", color: "var(--text-secondary)", maxWidth: "380px", margin: "4px auto 0" }}>
+              Your mood pattern will become visible as you log additional daily check-ins over your duty rotation.
+            </p>
+          </div>
+        )}
+
+        {/* State 3: Multiple Entries Chart */}
+        {trendEntries.length > 1 && (
+          <div>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px", padding: "10px 14px", background: "var(--bg-surface-elevated)", borderRadius: "var(--radius-sm)" }}>
+              <span style={{ fontSize: "0.84rem", color: "var(--text-secondary)" }}>Recent Average Mood</span>
+              <strong style={{ fontSize: "1.05rem", color: "var(--primary-hover)" }}>
+                {avgMood} / 5.0
+              </strong>
+            </div>
+
+            <div className="mood-bar-chart">
+              {trendEntries.slice(-14).map((pt, i) => {
+                const heightPercent = Math.min(Math.max(Math.round((pt.average_mood / 5) * 100), 10), 100);
+                return (
+                  <div key={i} className="mood-bar-item">
+                    <span style={{ fontSize: "0.72rem", color: "var(--text-secondary)", fontWeight: 700 }}>
+                      {pt.average_mood}
+                    </span>
+                    <div
+                      className="mood-bar-fill"
+                      style={{ height: `${heightPercent}%` }}
+                      title={`${pt.date}: ${pt.average_mood}/5 (${pt.entries} check-in${pt.entries === 1 ? "" : "s"})`}
+                      role="img"
+                      aria-label={`${pt.date}: ${pt.average_mood} out of 5`}
+                    />
+                    <span style={{ fontSize: "0.68rem", color: "var(--text-muted)", whiteSpace: "nowrap" }}>
+                      {pt.date.split("-").slice(1).join("/")}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Recent History List */}
+      {historyEntries.length > 0 && (
         <div style={{ marginTop: "32px", animation: "slideUp 440ms cubic-bezier(0.2,0.8,0.2,1) both" }}>
-          <h3 style={{ fontSize: "1.1rem", fontWeight: 700, marginBottom: "16px" }}>Recent Check-ins</h3>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
+            <h3 style={{ fontSize: "1.1rem", fontWeight: 700, margin: 0 }}>Recent Check-ins</h3>
+            <span style={{ fontSize: "0.78rem", color: "var(--text-muted)" }}>
+              Showing last {Math.min(historyEntries.length, 5)} entries
+            </span>
+          </div>
+
           <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
-            {moodHistory.slice(0, 5).map((entry, idx) => {
+            {historyEntries.slice(0, 5).map((entry, idx) => {
               const item = MOODS.find((m) => m.value === entry.mood);
               const dateStr = entry.created_at
                 ? new Date(entry.created_at).toLocaleDateString(undefined, {
@@ -122,20 +223,29 @@ export function MoodScreen({
                     background: "var(--bg-surface-elevated)",
                     borderRadius: "var(--radius-md)",
                     border: "1px solid var(--border-subtle)",
+                    gap: "12px",
                   }}
                 >
                   <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-                    <span style={{ fontSize: "1.5rem" }}>{item?.emoji || "😐"}</span>
+                    <span style={{ fontSize: "1.6rem", lineHeight: 1 }} aria-hidden="true">
+                      {item?.emoji || "😐"}
+                    </span>
                     <div>
-                      <strong style={{ display: "block", fontSize: "0.95rem" }}>{item?.label || "Check-in"}</strong>
-                      {entry.note && (
-                        <p style={{ margin: "2px 0 0", fontSize: "0.85rem", color: "var(--text-secondary)" }}>
+                      <strong style={{ display: "block", fontSize: "0.95rem" }}>
+                        {item?.label || "Check-in"}
+                      </strong>
+                      {entry.note ? (
+                        <p style={{ margin: "2px 0 0", fontSize: "0.85rem", color: "var(--text-secondary)", lineHeight: "1.4" }}>
                           {entry.note}
                         </p>
+                      ) : (
+                        <span style={{ fontSize: "0.78rem", color: "var(--text-muted)" }}>No note attached</span>
                       )}
                     </div>
                   </div>
-                  <small style={{ color: "var(--text-muted)", fontSize: "0.8rem" }}>{dateStr}</small>
+                  <small style={{ color: "var(--text-muted)", fontSize: "0.8rem", whiteSpace: "nowrap" }}>
+                    {dateStr}
+                  </small>
                 </div>
               );
             })}
