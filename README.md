@@ -15,9 +15,16 @@ It demonstrates an end-to-end, confidential wellbeing check-in journey combining
 
 ---
 
-## ⚡ Quick Start
+## 🌐 Public Cloud Demo vs. Local Setup
 
-### 1. Backend Service (FastAPI)
+### 🚀 Public Demo (One URL — Zero Local Installation)
+Teammates and evaluators can access the full working MVP directly in **Microsoft Edge** or any modern browser without installing Python, Node.js, PostgreSQL, or project dependencies:
+- **Public Application URL**: `https://<your-deployed-app>.vercel.app`
+- **Hosted Stack**: Single Vercel domain hosting React 19 UI with same-origin serverless `/api/*` routing, managed PostgreSQL, LightGBM + SHAP, and Google Gemini streaming.
+
+### 💻 Local Development Setup
+
+#### 1. Backend Service (FastAPI)
 ```powershell
 cd backend
 python -m venv .venv
@@ -26,7 +33,7 @@ pip install -r requirements.txt
 uvicorn main:app --host 127.0.0.1 --port 8000 --reload
 ```
 
-### 2. Frontend Application (React + Vite)
+#### 2. Frontend Application (React + Vite)
 ```powershell
 cd frontend
 npm ci

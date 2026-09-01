@@ -55,6 +55,7 @@ def _build_conninfo() -> str:
 
 
 _pool: ConnectionPool | None = None
+_tables_initialized = False
 
 
 def _init_pool():
@@ -75,11 +76,24 @@ def _close_pool():
         _pool = None
 
 
+def _ensure_tables_once():
+    global _tables_initialized
+    if not _tables_initialized:
+        try:
+            ensure_core_tables()
+            from sih26186_server import ensure_sih26186_tables
+            ensure_sih26186_tables()
+            _tables_initialized = True
+        except Exception as exc:
+            print("SCHEMA INIT NOTICE:", exc)
+
+
 @contextmanager
 def get_connection():
-    """Borrow a connection from the pool (context manager)."""
+    """Borrow a connection from the pool (context manager), initializing lazily if needed."""
     if _pool is None:
-        raise RuntimeError("Database pool is not initialised.")
+        _init_pool()
+        _ensure_tables_once()
     with _pool.connection() as conn:
         yield conn
 
@@ -88,9 +102,7 @@ def get_connection():
 async def lifespan(application: FastAPI):
     """Application startup and shutdown."""
     _init_pool()
-    ensure_core_tables()
-    from sih26186_server import ensure_sih26186_tables
-    ensure_sih26186_tables()
+    _ensure_tables_once()
     yield
     _close_pool()
 
@@ -105,9 +117,10 @@ app = FastAPI(
 app.add_middleware(
     CORSMiddleware,
     allow_origins=CORS_ORIGINS,
+    allow_origin_regex=r"https:\/\/.*\.vercel\.app",
     allow_credentials=True,
-    allow_methods=["GET", "POST"],
-    allow_headers=["Content-Type"],
+    allow_methods=["GET", "POST", "OPTIONS"],
+    allow_headers=["Content-Type", "Authorization"],
 )
 
 
