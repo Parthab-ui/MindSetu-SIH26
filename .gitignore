@@ -32,9 +32,11 @@ Thumbs.db
 # Logs
 *.log
 
-# Testing
+# Testing & Scratch
 .pytest_cache/
 .coverage
 htmlcov/
+scratch/
+
 # Local ML training data
 backend/ml/data/
