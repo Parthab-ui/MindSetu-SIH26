@@ -24,7 +24,7 @@ export function StartScreen({ onStartSession, onCancel, loading, error }) {
 
   return (
     <div className="page-container narrow">
-      <div style={{ marginBottom: "28px" }}>
+      <div style={{ marginBottom: "28px", animation: "slideUp 280ms cubic-bezier(0.2,0.8,0.2,1) both" }}>
         <span className="eyebrow">STEP 01 · PROTECTED INITIALIZATION</span>
         <h1 className="page-title">Session Context</h1>
         <p className="page-subtitle">
@@ -32,7 +32,7 @@ export function StartScreen({ onStartSession, onCancel, loading, error }) {
         </p>
       </div>
 
-      <div className="card card-elevated">
+      <div className="card card-elevated" style={{ animation: "slideUp 340ms cubic-bezier(0.2,0.8,0.2,1) both" }}>
         <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
           <div className="input-field">
             <label htmlFor="role-input">Role / Designation</label>
@@ -43,6 +43,8 @@ export function StartScreen({ onStartSession, onCancel, loading, error }) {
               placeholder="e.g. Field Operations Personnel"
               value={role}
               onChange={(e) => setRole(e.target.value)}
+              disabled={loading}
+              required
             />
           </div>
 
@@ -55,6 +57,7 @@ export function StartScreen({ onStartSession, onCancel, loading, error }) {
               placeholder="e.g. Operations Sector 4"
               value={unit}
               onChange={(e) => setUnit(e.target.value)}
+              disabled={loading}
             />
           </div>
 
@@ -64,10 +67,11 @@ export function StartScreen({ onStartSession, onCancel, loading, error }) {
               alignItems: "flex-start",
               gap: "12px",
               cursor: "pointer",
-              padding: "14px",
+              padding: "16px",
               background: "var(--bg-input)",
               borderRadius: "var(--radius-md)",
               border: "1px solid var(--border-subtle)",
+              transition: "border-color var(--transition-fast)",
             }}
           >
             <input
@@ -75,14 +79,15 @@ export function StartScreen({ onStartSession, onCancel, loading, error }) {
               style={{ marginTop: "3px", width: "18px", height: "18px", accentColor: "var(--primary)" }}
               checked={consent}
               onChange={(e) => setConsent(e.target.checked)}
+              disabled={loading}
             />
-            <span style={{ fontSize: "0.88rem", color: "var(--text-secondary)", lineHeight: "1.4" }}>
+            <span style={{ fontSize: "0.88rem", color: "var(--text-secondary)", lineHeight: "1.5" }}>
               I understand this session is anonymous, confidential, and used strictly for supportive welfare triage.
             </span>
           </label>
 
           {activeError && (
-            <div style={{ color: "var(--signal-high)", background: "var(--signal-high-bg)", padding: "12px 16px", borderRadius: "var(--radius-md)", fontSize: "0.9rem", border: "1px solid var(--signal-high-border)" }}>
+            <div className="inline-error" role="alert">
               {activeError}
             </div>
           )}

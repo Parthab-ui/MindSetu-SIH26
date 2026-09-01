@@ -43,7 +43,7 @@ export function WellnessScreen({ answers, setAnswers, onNext, onBack, loading, e
 
   return (
     <div className="page-container narrow">
-      <div style={{ marginBottom: "20px" }}>
+      <div style={{ marginBottom: "20px", animation: "slideUp 280ms cubic-bezier(0.2,0.8,0.2,1) both" }}>
         <span className="eyebrow">STEP 02 · WELLBEING PULSE</span>
         <h1 className="page-title">Recent Wellbeing Check-in</h1>
         <p className="page-subtitle">
@@ -57,7 +57,11 @@ export function WellnessScreen({ answers, setAnswers, onNext, onBack, loading, e
         {WELLNESS_QUESTIONS.map((question, qIdx) => {
           const selectedValue = answers[qIdx];
           return (
-            <div key={qIdx} className="question-card">
+            <div
+              key={qIdx}
+              className="question-card"
+              style={{ animationDelay: `${qIdx * 40}ms` }}
+            >
               <div className="question-header">
                 <div className="question-num">{String(qIdx + 1).padStart(2, "0")}</div>
                 <h3 className="question-text">{question}</h3>
@@ -82,17 +86,7 @@ export function WellnessScreen({ answers, setAnswers, onNext, onBack, loading, e
       </div>
 
       {activeError && (
-        <div
-          style={{
-            color: "var(--signal-high)",
-            background: "var(--signal-high-bg)",
-            padding: "14px 18px",
-            borderRadius: "var(--radius-md)",
-            fontSize: "0.92rem",
-            marginTop: "20px",
-            border: "1px solid var(--signal-high-border)",
-          }}
-        >
+        <div className="inline-error" style={{ marginTop: "20px" }} role="alert">
           {activeError}
         </div>
       )}

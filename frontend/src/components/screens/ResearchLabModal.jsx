@@ -1,6 +1,23 @@
 import { useState } from "react";
 import { SliderField } from "../common/SliderField";
 
+/* Step progress pips at the top of the modal */
+function StepPips({ current, total }) {
+  return (
+    <div className="ml-step-pips">
+      {Array.from({ length: total }, (_, i) => (
+        <div
+          key={i}
+          className={`ml-pip ${i + 1 < current ? "done" : i + 1 === current ? "current" : ""}`}
+        />
+      ))}
+      <span style={{ fontSize: "0.75rem", color: "var(--text-muted)", marginLeft: "4px", fontWeight: 600 }}>
+        Step {current} of {total}
+      </span>
+    </div>
+  );
+}
+
 export function ResearchLabModal({ isOpen, onClose, onRunML, mlInputs, setMlInputs, mlResult, loading }) {
   const [step, setStep] = useState(1);
 
@@ -46,10 +63,8 @@ export function ResearchLabModal({ isOpen, onClose, onRunML, mlInputs, setMlInpu
         {step === 1 && (
           <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
             <div>
-              <span className="badge badge-low" style={{ marginBottom: "8px" }}>
-                Step 1 of 3
-              </span>
-              <h3 style={{ fontSize: "1.15rem", fontWeight: 700, margin: "6px 0 8px" }}>
+              <StepPips current={1} total={3} />
+              <h3 style={{ fontSize: "1.15rem", fontWeight: 700, margin: "0 0 8px" }}>
                 Stress & Symptom Assessment (PCL-M)
               </h3>
               <p style={{ color: "var(--text-secondary)", fontSize: "0.92rem", lineHeight: "1.5" }}>
@@ -80,10 +95,8 @@ export function ResearchLabModal({ isOpen, onClose, onRunML, mlInputs, setMlInpu
         {step === 2 && (
           <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
             <div>
-              <span className="badge badge-low" style={{ marginBottom: "8px" }}>
-                Step 2 of 3
-              </span>
-              <h3 style={{ fontSize: "1.15rem", fontWeight: 700, margin: "6px 0 8px" }}>
+              <StepPips current={2} total={3} />
+              <h3 style={{ fontSize: "1.15rem", fontWeight: 700, margin: "0 0 8px" }}>
                 Operational & Critical Experiences
               </h3>
               <p style={{ color: "var(--text-secondary)", fontSize: "0.92rem", lineHeight: "1.5" }}>
@@ -151,10 +164,8 @@ export function ResearchLabModal({ isOpen, onClose, onRunML, mlInputs, setMlInpu
         {step === 3 && (
           <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
             <div>
-              <span className="badge badge-low" style={{ marginBottom: "8px" }}>
-                Step 3 of 3
-              </span>
-              <h3 style={{ fontSize: "1.15rem", fontWeight: 700, margin: "6px 0 8px" }}>
+              <StepPips current={3} total={3} />
+              <h3 style={{ fontSize: "1.15rem", fontWeight: 700, margin: "0 0 8px" }}>
                 Daily Duty & Work Impact (SF-36 RP)
               </h3>
               <p style={{ color: "var(--text-secondary)", fontSize: "0.92rem", lineHeight: "1.5" }}>
