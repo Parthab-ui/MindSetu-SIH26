@@ -953,7 +953,7 @@
 
 .chat-input-bar textarea {
   flex: 1;
-  padding: 10px 14px;
+  padding: 11px 15px;
   border-radius: var(--radius-lg);
   background: var(--bg-input);
   border: 1px solid var(--border-subtle);
@@ -961,10 +961,11 @@
   font-size: 0.94rem;
   resize: none;
   height: 44px;
+  min-height: 44px;
   max-height: 120px;
   outline: none;
   font-family: inherit;
-  line-height: 1.5;
+  line-height: 1.45;
   transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
 }
 
@@ -976,11 +977,63 @@
 .chat-send-btn {
   width: 44px;
   height: 44px;
-  border-radius: var(--radius-lg);
-  display: flex;
+  min-width: 44px;
+  min-height: 44px;
+  padding: 0;
+  margin: 0;
+  border-radius: var(--radius-md);
+  display: inline-flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
+  background: linear-gradient(135deg, var(--primary) 0%, var(--primary-hover) 100%);
+  color: #ffffff;
+  border: 1px solid transparent;
+  cursor: pointer;
+  outline: none;
+  box-shadow: 0 3px 12px var(--primary-glow);
+  transition:
+    background var(--transition-fast),
+    border-color var(--transition-fast),
+    box-shadow var(--transition-fast),
+    transform 120ms var(--ease-smooth),
+    opacity var(--transition-fast);
+}
+
+.chat-send-btn:hover:not(:disabled) {
+  background: linear-gradient(135deg, var(--primary-hover) 0%, var(--primary) 100%);
+  box-shadow: 0 6px 20px var(--primary-glow-strong);
+  transform: translateY(-1px);
+}
+
+.chat-send-btn:active:not(:disabled) {
+  transform: translateY(0);
+  box-shadow: 0 2px 8px var(--primary-glow);
+}
+
+.chat-send-btn:focus-visible {
+  outline: 3px solid var(--border-focus);
+  outline-offset: 2px;
+}
+
+.chat-send-btn:disabled {
+  opacity: 0.38;
+  background: var(--bg-surface-card);
+  border-color: var(--border-subtle);
+  color: var(--text-muted);
+  box-shadow: none;
+  cursor: not-allowed;
+  transform: none !important;
+}
+
+.chat-send-btn svg {
+  display: block;
+  flex-shrink: 0;
+  transition: transform 150ms var(--ease-smooth);
+}
+
+.chat-send-btn:hover:not(:disabled) svg {
+  transform: scale(1.08) translate(1px, -1px);
 }
 
 .starters-wrap {
@@ -1249,4 +1302,7 @@
   .modal-content   { padding: 22px; }
   .metrics-grid    { grid-template-columns: 1fr; }
   .chat-window-card { height: 520px; }
+  .chat-input-bar  { padding: 10px 12px; gap: 8px; }
+  .chat-send-btn   { width: 40px; height: 40px; min-width: 40px; min-height: 40px; }
 }
+
