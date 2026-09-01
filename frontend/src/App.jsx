@@ -1,474 +1,310 @@
-import { useEffect, useMemo, useState } from "react";
-import "./App.css";
+import { useEffect, useState } from "react";
+import { Header } from "./components/layout/Header";
+import { Navigation } from "./components/layout/Navigation";
+import { Footer } from "./components/layout/Footer";
+import { HomeScreen } from "./components/screens/HomeScreen";
+import { StartScreen } from "./components/screens/StartScreen";
+import { WellnessScreen } from "./components/screens/WellnessScreen";
+import { WorkloadScreen } from "./components/screens/WorkloadScreen";
+import { AnalysisScreen } from "./components/screens/AnalysisScreen";
+import { ResearchLabModal } from "./components/screens/ResearchLabModal";
+import { ChatScreen } from "./components/screens/ChatScreen";
+import { MoodScreen } from "./components/screens/MoodScreen";
+import { api } from "./services/api";
 
-const API = import.meta.env.VITE_API_BASE_URL || "";
-
-const WELLNESS_QUESTIONS = [
-  "I feel exhausted even after having time to rest.",
-  "I find it difficult to switch off after duty.",
-  "I feel irritable or emotionally strained.",
-  "Stress makes it harder for me to concentrate.",
-  "My responsibilities feel difficult to manage.",
-  "I continue worrying about duty when I am off duty.",
-];
-
-const RESPONSE_OPTIONS = ["Never", "Some days", "Often", "Nearly every day"];
-const MOODS = [
-  { value: 1, emoji: "😞", label: "Very low" },
-  { value: 2, emoji: "😕", label: "Low" },
-  { value: 3, emoji: "😐", label: "Okay" },
-  { value: 4, emoji: "🙂", label: "Good" },
-  { value: 5, emoji: "😄", label: "Great" },
-];
-
-async function apiRequest(endpoint, options = {}) {
-  const controller = new AbortController();
-  const timer = window.setTimeout(() => controller.abort(), 20000);
-  try {
-    const response = await fetch(`${API}${endpoint}`, {
-      ...options,
-      signal: controller.signal,
-      headers: { "Content-Type": "application/json", ...(options.headers || {}) },
-    });
-    const text = await response.text();
-    let data = {};
-    try { data = text ? JSON.parse(text) : {}; } catch { data = { detail: text }; }
-    if (!response.ok) throw new Error(data.detail || `Request failed (${response.status})`);
-    return data;
-  } finally {
-    window.clearTimeout(timer);
-  }
-}
-
-function Header({ darkMode, setDarkMode }) {
-  return (
-    <header className="topbar">
-      <div className="brand">Mind<span>Setu</span></div>
-      <div className="topbar-actions">
-        <span className="topbar-caption">Personnel wellbeing support</span>
-        <button className="icon-button" onClick={() => setDarkMode((value) => !value)} aria-label="Toggle theme">
-          {darkMode ? "☀" : "☾"}
-        </button>
-      </div>
-    </header>
-  );
-}
-
-function App() {
+export default function App() {
   const [screen, setScreen] = useState("home");
   const [darkMode, setDarkMode] = useState(() => localStorage.getItem("mindsetu-theme") === "dark");
   const [sessionId, setSessionId] = useState(null);
-  const [role, setRole] = useState("");
-  const [unit, setUnit] = useState("");
-  const [answers, setAnswers] = useState(Array(WELLNESS_QUESTIONS.length).fill(null));
+
+  // Workflow state
+  const [role, setRole] = useState("Field Operations Personnel");
+  const [unit, setUnit] = useState("Sector Unit Bravo");
+  const [answers, setAnswers] = useState(Array(6).fill(null));
+  const [workload, setWorkload] = useState({
+    duty_hours: 8,
+    night_duties: 1,
+    rest_hours: 8,
+    days_since_leave: 7,
+    workload_level: 3,
+    high_pressure_assignment: false,
+    duty_change_frequency: 1,
+  });
   const [analysis, setAnalysis] = useState(null);
+
+  // ML Lab State
+  const [isResearchModalOpen, setIsResearchModalOpen] = useState(false);
+  const [mlInputs, setMlInputs] = useState({
+    Q29_Total: 17,
+    Q12_weapon: 0,
+    Q13_feltdie: 0,
+    Q23a_cutdowntime: 0,
+    Q23b_Accomplished_less: 0,
+    Q23c_limited_work: 0,
+    Q23d_difficulty_performing: 0,
+  });
   const [mlResult, setMlResult] = useState(null);
-  const [mlInputs, setMlInputs] = useState({ Q29_Total: 17, Q12_weapon: 0, Q13_feltdie: 0, Q23a_cutdowntime: 0, Q23b_Accomplished_less: 0, Q23c_limited_work: 0, Q23d_difficulty_performing: 0 });
-  const [mlStep, setMlStep] = useState(0);
+  const [mlLoading, setMlLoading] = useState(false);
+
+  // Chat State
   const [chatMessages, setChatMessages] = useState([]);
   const [chatInput, setChatInput] = useState("");
-  const [mood, setMood] = useState(null);
+  const [isCrisis, setIsCrisis] = useState(false);
+  const [chatLoading, setChatLoading] = useState(false);
+
+  // Mood State
+  const [selectedMood, setSelectedMood] = useState(null);
   const [moodNote, setMoodNote] = useState("");
   const [moodHistory, setMoodHistory] = useState([]);
+  const [moodTrend, setMoodTrend] = useState([]);
+
+  // Global UI State
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const [showWhy, setShowWhy] = useState(false);
-  const [showResearch, setShowResearch] = useState(false);
-  const [workload, setWorkload] = useState({ duty_hours: 8, night_duties: 1, rest_hours: 8, days_since_leave: 7, workload_level: 3, high_pressure_assignment: false, duty_change_frequency: 1 });
 
+  // Sync theme
   useEffect(() => {
     document.documentElement.dataset.theme = darkMode ? "dark" : "light";
     localStorage.setItem("mindsetu-theme", darkMode ? "dark" : "light");
   }, [darkMode]);
 
-  const progress = useMemo(() => ({ home: 0, wellness: 25, workload: 50, analysis: 75, chat: 100, mood: 100 }[screen] ?? 0), [screen]);
+  // Reset or Start Session
+  function handleResetSession() {
+    setScreen("home");
+    setSessionId(null);
+    setAnswers(Array(6).fill(null));
+    setAnalysis(null);
+    setChatMessages([]);
+    setSelectedMood(null);
+    setMoodNote("");
+    setError("");
+  }
 
-  function clearError() { if (error) setError(""); }
-
-  async function startSession() {
-    clearError();
-    if (role.trim().length < 2) { setError("Enter a role or designation to continue."); return; }
+  async function handleStartSession(contextData) {
+    setError("");
+    setLoading(true);
+    setRole(contextData.role);
+    setUnit(contextData.unit);
     try {
-      setLoading(true);
-      const data = await apiRequest("/api/sessions", { method: "POST", body: JSON.stringify({ consent_given: true }) });
-      setSessionId(data.session_id);
+      const res = await api.createSession(true);
+      setSessionId(res.session_id);
       setScreen("wellness");
-    } catch (err) { setError(err.message); }
-    finally { setLoading(false); }
-  }
-
-  async function saveWellness() {
-    clearError();
-    if (answers.some((answer) => answer === null)) { setError("Please answer every wellbeing statement."); return; }
-    try {
-      setLoading(true);
-      await apiRequest("/api/sih26186/wellness", { method: "POST", body: JSON.stringify({ session_id: sessionId, answers }) });
-      setScreen("workload");
-    } catch (err) { setError(err.message); }
-    finally { setLoading(false); }
-  }
-
-  async function runAnalysis() {
-    clearError();
-    try {
-      setLoading(true);
-      await apiRequest("/api/sih26186/workload", { method: "POST", body: JSON.stringify({ session_id: sessionId, role, unit, ...workload }) });
-      const result = await apiRequest(`/api/sih26186/analyze/${sessionId}`, { method: "POST" });
-      setAnalysis(result);
-      setScreen("analysis");
-    } catch (err) { setError(err.message); }
-    finally { setLoading(false); }
-  }
-
-  async function loadDashboard() {
-    clearError();
-    try {
-      setLoading(true);
-      const result = await apiRequest(`/api/sih26186/dashboard/${sessionId}`);
-      setAnalysis(result);
-      setScreen("analysis");
-    } catch (err) { setError(err.message); }
-    finally { setLoading(false); }
-  }
-
-
-
-  async function runResearchModel() {
-    clearError();
-    try {
-      setLoading(true);
-      const result = await apiRequest("/api/sih26186/ml/analyze", {
-        method: "POST",
-        body: JSON.stringify({ ...mlInputs, generate_response: true }),
-      });
-      setMlResult(result);
-    } catch (err) { 
-      setMlResult({ error: err.message }); 
-      setMlStep(0); // Reset to intro on error
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
     }
-    finally { setLoading(false); }
   }
 
-  async function sendMessage() {
-    const message = chatInput.trim();
-    if (!message || !sessionId || loading) return;
-    setChatMessages((previous) => [...previous, { sender: "user", text: message }]);
-    setChatInput("");
+  // Save Wellness
+  async function handleSaveWellness() {
+    setError("");
     setLoading(true);
     try {
-      const controller = new AbortController();
-      const timeout = window.setTimeout(() => controller.abort(), 70000);
-      let response;
-      let text = "";
-      try {
-        response = await fetch(`${API}/api/chat`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({
-          session_id: sessionId,
-          message,
-          history: chatMessages.slice(-12).map((item) => ({ sender: item.sender, text: item.text })),
-          wellbeing_context: {
-            risk_level: analysis?.risk_level ?? null,
-            primary_focus: analysis?.primary_focus ?? null,
-            wellness_summary: analysis?.wellness_summary ?? analysis?.summary ?? null,
-            recommended_next_step: analysis?.recommended_next_step ?? analysis?.recommendation ?? null,
-          },
-        }), signal: controller.signal });
-        text = await response.text();
-      } finally { window.clearTimeout(timeout); }
-      if (!response.ok) throw new Error((() => { try { const data = JSON.parse(text); return data.detail || `AI server returned ${response.status}.`; } catch { return `AI server returned ${response.status}.`; } })());
-      const lines = text.split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
-      let combined = "";
-      for (const line of lines) {
-        try {
-          const chunk = JSON.parse(line);
-          if (chunk.type === "token" && typeof chunk.content === "string" && chunk.content.trim()) combined += chunk.content;
-        } catch {
-          // Ignore non-NDJSON noise rather than displaying protocol metadata.
-        }
-      }
-      const safeFallback =
-        "Thank you for sharing that. Take things one step at a time and consider one practical form of support or recovery that could help right now. If things become difficult to manage, reach out to someone you trust or a qualified support professional.";
-      setChatMessages((previous) => [...previous, { sender: "ai", text: combined.trim() || safeFallback }]);
+      await api.submitWellness(sessionId, answers);
+      setScreen("workload");
     } catch (err) {
-      setChatMessages((previous) => [...previous, { sender: "ai", text: err.name === "AbortError" ? "MindSetu AI took too long to respond. Take a short pause, identify one immediate source of pressure, and consider contacting someone you trust for support." : `MindSetu AI is temporarily unavailable. You can still use the wellbeing summary and practical next steps while the service reconnects.` }]);
-    } finally { setLoading(false); }
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
   }
 
-  async function saveMood() {
-    if (!mood || !sessionId) return;
+  // Run Main SIH26186 Triage Analysis
+  async function handleRunAnalysis() {
+    setError("");
+    setLoading(true);
     try {
-      setLoading(true);
-      await apiRequest("/api/mood", { method: "POST", body: JSON.stringify({ session_id: sessionId, mood, note: moodNote.trim() || null }) });
-      const history = await apiRequest(`/api/mood/${sessionId}`);
-      setMoodHistory(history.history || history || []);
+      await api.submitWorkload(sessionId, { role, unit, ...workload });
+      const result = await api.runAnalysis(sessionId);
+      setAnalysis(result);
+      setScreen("analysis");
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  // Run ML Explainable Model
+  async function handleRunML() {
+    setMlLoading(true);
+    try {
+      const res = await api.runMLAnalyze({ ...mlInputs, generate_response: true });
+      setMlResult(res);
+    } catch (err) {
+      setMlResult({ error: err.message });
+    } finally {
+      setMlLoading(false);
+    }
+  }
+
+  // Send Chat Message with Streaming
+  async function handleSendMessage() {
+    const text = chatInput.trim();
+    if (!text || !sessionId || chatLoading) return;
+
+    setChatMessages((prev) => [...prev, { sender: "user", text }]);
+    setChatInput("");
+    setChatLoading(true);
+
+    try {
+      await api.streamChat({
+        sessionId,
+        message: text,
+        history: chatMessages,
+        wellbeingContext: {
+          risk_level: analysis?.risk_level ?? null,
+          wellness_summary: analysis?.recommendation ?? null,
+        },
+        onComplete: ({ text: replyText, isSafety }) => {
+          setChatMessages((prev) => [...prev, { sender: "ai", text: replyText }]);
+          if (isSafety) setIsCrisis(true);
+        },
+        onError: (err) => {
+          setChatMessages((prev) => [
+            ...prev,
+            {
+              sender: "ai",
+              text:
+                err.name === "AbortError"
+                  ? "MindSetu AI took too long to respond. Take a short pause and consider connecting with a trusted colleague or welfare officer."
+                  : "MindSetu AI is momentarily reconnecting. You can still use your wellbeing summary and recovery guidance.",
+            },
+          ]);
+        },
+      });
+    } catch (err) {
+      console.error("Chat error:", err);
+    } finally {
+      setChatLoading(false);
+    }
+  }
+
+  // Save Mood Check-in
+  async function handleSaveMood() {
+    if (!selectedMood || !sessionId) return;
+    setLoading(true);
+    try {
+      await api.submitMood(sessionId, selectedMood, moodNote);
+      const hist = await api.getMoodHistory(sessionId);
+      setMoodHistory(hist.history || []);
+      const trend = await api.getMoodTrend();
+      setMoodTrend(trend.trend || []);
       setMoodNote("");
-    } catch (err) { setError(err.message); }
-    finally { setLoading(false); }
+      setSelectedMood(null);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
   }
 
-  const nav = sessionId ? (
-    <nav className="session-nav">
-      {analysis && <button className={screen === "analysis" ? "active" : ""} onClick={loadDashboard}>Analysis</button>}
-      {analysis && <button className={screen === "chat" ? "active" : ""} onClick={() => setScreen("chat")}>AI companion</button>}
-      <button className={screen === "mood" ? "active" : ""} onClick={() => setScreen("mood")}>Mood check-in</button>
-    </nav>
-  ) : null;
-
-  if (screen === "home") return (
-    <div className="app-shell"><Header darkMode={darkMode} setDarkMode={setDarkMode} /><main className="hero page"><section className="hero-copy"><span className="eyebrow">PERSONNEL WELLBEING SUPPORT</span><h1>Understand what matters.<br /><span>Choose support earlier.</span></h1><p>MindSetu helps turn a wellbeing check-in into a clear, responsible summary and practical next steps, while keeping the research technology separate.</p><div className="hero-actions"><button className="primary-button" onClick={() => setScreen("start")}>Start a protected session →</button></div><p className="privacy-note">Designed for fictional demo data. Results are support signals, not diagnoses or disciplinary decisions.</p></section><section className="hero-card"><div className="hero-icon">✦</div><h2>One clear responsibility at every layer</h2>{[["01", "LightGBM", "prediction"], ["02", "SHAP", "explanation"], ["03", "Gemini", "communication"], ["04", "Human", "intervention"]].map(([n, a, b]) => <div className="flow-item" key={n}><b>{n}</b><span>{a}</span><small>{b}</small></div>)}</section></main></div>
-  );
-
-  if (screen === "start") return (
-    <div className="app-shell"><Header darkMode={darkMode} setDarkMode={setDarkMode} /><main className="page narrow"><span className="eyebrow">01 · PROTECTED SESSION</span><h1>Start with context.</h1><p className="lead">Use fictional personnel details for the demonstration. The session is created without requiring a personal identity.</p><div className="card form-card"><div className="field"><label>ROLE / DESIGNATION</label><input value={role} onChange={(event) => setRole(event.target.value)} placeholder="Field Operations Personnel" /></div><div className="field"><label>UNIT / DEPARTMENT</label><input value={unit} onChange={(event) => setUnit(event.target.value)} placeholder="Operations Unit" /></div>{error && <div className="error" role="alert">{error}</div>}<button className="primary-button" disabled={loading} onClick={startSession}>{loading ? "Starting…" : "Continue to wellbeing →"}</button></div></main></div>
-  );
-
-  if (screen === "wellness") return (
-    <div className="app-shell"><Header darkMode={darkMode} setDarkMode={setDarkMode} />{nav}<main className="page narrow"><span className="eyebrow">02 · WELLBEING PULSE</span><h1>How has the recent period felt?</h1><p className="lead">Choose the response that best matches your experience.</p><div className="progress"><span style={{ width: `${progress}%` }} /></div><div className="question-list">{WELLNESS_QUESTIONS.map((question, index) => <div className="question-card" key={question}><div className="question-index">{String(index + 1).padStart(2, "0")}</div><div><h3>{question}</h3><div className="answer-grid">{RESPONSE_OPTIONS.map((label, value) => <button className={`answer ${answers[index] === value ? "selected" : ""}`} key={label} onClick={() => setAnswers((previous) => previous.map((item, itemIndex) => itemIndex === index ? value : item))}>{label}</button>)}</div></div></div>)}</div>{error && <div className="error">{error}</div>}<div className="action-row"><button className="secondary-button" onClick={() => setScreen("start")}>← Back</button><button className="primary-button" disabled={loading} onClick={saveWellness}>{loading ? "Saving…" : "Save & continue →"}</button></div></main></div>
-  );
-
-  if (screen === "workload") return (
-    <div className="app-shell"><Header darkMode={darkMode} setDarkMode={setDarkMode} />{nav}<main className="page narrow"><span className="eyebrow">03 · DUTY & RECOVERY</span><h1>Add the operational context.</h1><p className="lead">These inputs support welfare planning and do not make personnel decisions.</p><div className="progress"><span style={{ width: `${progress}%` }} /></div><div className="card form-grid">{[['duty_hours','Duty hours / day',0,24,8],['night_duties','Night duties / recent period',0,14,1],['rest_hours','Rest / recovery hours',0,24,8],['days_since_leave','Days since last leave',0,90,7],['duty_change_frequency','Duty changes / recent period',0,7,1]].map(([key,label,min,max,defaultValue]) => <div className="field" key={key}><label>{label}</label><input type="number" min={min} max={max} value={workload[key] ?? defaultValue} onChange={(event) => setWorkload((current) => ({ ...current, [key]: Number(event.target.value) }))} /></div>)}<div className="field"><label>WORKLOAD INTENSITY</label><select value={workload.workload_level} onChange={(event) => setWorkload((current) => ({ ...current, workload_level: Number(event.target.value) }))}><option value={1}>1 · Very manageable</option><option value={2}>2 · Manageable</option><option value={3}>3 · Moderate</option><option value={4}>4 · Heavy</option><option value={5}>5 · Very heavy</option></select></div><label className="check-row"><input type="checkbox" checked={workload.high_pressure_assignment} onChange={(event) => setWorkload((current) => ({ ...current, high_pressure_assignment: event.target.checked }))} /> Recent high-pressure assignment</label></div>{error && <div className="error">{error}</div>}<div className="action-row"><button className="secondary-button" onClick={() => setScreen("wellness")}>← Back</button><button className="primary-button" disabled={loading} onClick={runAnalysis}>{loading ? "Analysing…" : "See my wellbeing summary →"}</button></div></main></div>
-  );
-
-  if (screen === "analysis") {
-    const level = String(analysis?.risk_level || "unknown").toLowerCase();
-    const meaning = level === "high"
-      ? "Your answers suggest that additional support should be considered soon."
-      : level === "moderate"
-        ? "Some signs of strain are present. A timely check-in and practical recovery support may help."
-        : level === "low"
-          ? "No strong support signal was identified from this check-in. Continue to notice changes over time."
-          : "Complete the workflow to generate your wellbeing summary.";
-    const nextStep = analysis?.recommendation || "Use this check-in as a starting point for a practical conversation about support and recovery.";
-    return (
-      <div className="app-shell"><Header darkMode={darkMode} setDarkMode={setDarkMode} />{nav}
-        <main className="page analysis-page">
-          <div className="page-heading analysis-heading">
-            <span className="eyebrow">YOUR WELLBEING SUMMARY</span>
-            <h1>Here is what to know right now.</h1>
-            <p>This is a support signal from your check-in, not a judgement about you.</p>
-          </div>
-
-          <section className={`card takeaway-card ${level}`}>
-            <div className="takeaway-top">
-              <div>
-                <span className="eyebrow">CURRENT SUPPORT SIGNAL</span>
-                <div className="risk-value">{level === "unknown" ? "Not available" : level}</div>
-              </div>
-              <div className="signal-badge">Support, not diagnosis</div>
-            </div>
-            <p className="takeaway-meaning">{meaning}</p>
-            <div className="next-step-box">
-              <span>WHAT MAY HELP NEXT</span>
-              <p>{nextStep}</p>
-            </div>
-            <div className="takeaway-actions">
-              <button className="primary-button" onClick={() => setScreen("chat")}>Talk to AI companion →</button>
-              <button className="secondary-button" onClick={() => setScreen("mood")}>Record how I feel</button>
-            </div>
-          </section>
-
-          <section className="understand-grid">
-            <article className="card understand-card">
-              <span className="eyebrow">WHAT THIS LOOKED AT</span>
-              <h2>Your recent experience</h2>
-              <p>MindSetu considered two broad areas from this session: your wellbeing check-in and your duty and recovery context.</p>
-              <div className="domain-list">
-                <div><b>Wellbeing check-in</b><span>How the recent period has felt</span></div>
-                <div><b>Duty & recovery</b><span>Workload, rest and operational context</span></div>
-              </div>
-            </article>
-            <article className="card understand-card">
-              <span className="eyebrow">IMPORTANT TO REMEMBER</span>
-              <h2>You are more than a score.</h2>
-              <p>MindSetu cannot diagnose a condition, decide fitness for duty, discipline anyone or make employment decisions.</p>
-              <p>Human judgement remains responsible for any follow-up or intervention.</p>
-            </article>
-          </section>
-
-          <section className="card why-card">
-            <button className="disclosure-button" onClick={() => setShowWhy((value) => !value)} aria-expanded={showWhy} aria-label="Toggle explanation of this result">
-              <span><b>Why did I receive this result?</b><small>See the simple explanation and session details</small></span>
-              <span>{showWhy ? "−" : "+"}</span>
-            </button>
-            {showWhy && <div className="disclosure-content">
-              <p>The result is based on the information provided in this session. The numbers below are supporting system details, not a measure of your value or a medical diagnosis.</p>
-              <div className="metric-grid compact-metrics">
-                <div className="metric-card"><span>Wellbeing check-in</span><strong>{analysis?.wellness_score ?? "—"}</strong></div>
-                <div className="metric-card"><span>Duty & recovery context</span><strong>{analysis?.workload_score ?? "—"}</strong></div>
-                <div className="metric-card"><span>Combined support signal</span><strong>{analysis?.combined_score ?? "—"}</strong></div>
-              </div>
-            </div>}
-          </section>
-
-          <section className="card research-disclosure">
-            <button className="disclosure-button" onClick={() => setShowResearch((value) => !value)} aria-expanded={showResearch} aria-label="Toggle research and technical details">
-              <span><span className="eyebrow">FOR JUDGES & RESEARCH DEMO</span><b>Inspect the separate ML + SHAP layer</b><small>This research model is intentionally separate from your wellbeing summary.</small></span>
-              <span>{showResearch ? "−" : "+"}</span>
-            </button>
-            {showResearch && <div className="research-content guided-assessment">
-              {mlStep === 0 && (
-                <div className="ml-wizard-step">
-                  <div className="research-intro">
-                    <div>
-                      <span className="eyebrow">DEEP INSIGHTS</span>
-                      <h2>Wellbeing Insights Assessment</h2>
-                      <p>This guided check-in uses a research model to provide personalized insights and practical next steps based on your current experience. This is an informational tool, not a clinical diagnosis.</p>
-                    </div>
-                  </div>
-                  {mlResult?.error && <div className="error">{mlResult.error}</div>}
-                  <button className="primary-button" onClick={() => setMlStep(1)}>Begin Assessment →</button>
-                </div>
-              )}
-              
-              {mlStep === 1 && (
-                <div className="ml-wizard-step">
-                  <span className="eyebrow">STEP 1 OF 3</span>
-                  <h2>Recent Stress Level</h2>
-                  <p>Over the last few weeks, how would you rate your overall stress and symptom severity?</p>
-                  <div className="field slider-field">
-                    <label>17 (Very Low) to 85 (Very High)</label>
-                    <input type="range" min="17" max="85" value={mlInputs.Q29_Total} onChange={(e) => setMlInputs({ ...mlInputs, Q29_Total: Number(e.target.value) })} />
-                    <div className="slider-value">{mlInputs.Q29_Total}</div>
-                  </div>
-                  <div className="action-row">
-                    <button className="secondary-button" onClick={() => setMlStep(0)}>Cancel</button>
-                    <button className="primary-button" onClick={() => setMlStep(2)}>Next →</button>
-                  </div>
-                </div>
-              )}
-
-              {mlStep === 2 && (
-                <div className="ml-wizard-step">
-                  <span className="eyebrow">STEP 2 OF 3</span>
-                  <h2>Critical Experiences</h2>
-                  <p>Have you encountered any of the following recently?</p>
-                  <div className="segmented-field">
-                    <label>Have you been exposed to a weapon or combat situation?</label>
-                    <div className="segmented-controls">
-                      <button className={mlInputs.Q12_weapon === 1 ? "selected" : ""} onClick={() => setMlInputs({ ...mlInputs, Q12_weapon: 1 })}>Yes</button>
-                      <button className={mlInputs.Q12_weapon === 0 ? "selected" : ""} onClick={() => setMlInputs({ ...mlInputs, Q12_weapon: 0 })}>No</button>
-                    </div>
-                  </div>
-                  <div className="segmented-field">
-                    <label>Have you experienced a situation where you felt your life was threatened?</label>
-                    <div className="segmented-controls">
-                      <button className={mlInputs.Q13_feltdie === 1 ? "selected" : ""} onClick={() => setMlInputs({ ...mlInputs, Q13_feltdie: 1 })}>Yes</button>
-                      <button className={mlInputs.Q13_feltdie === 0 ? "selected" : ""} onClick={() => setMlInputs({ ...mlInputs, Q13_feltdie: 0 })}>No</button>
-                    </div>
-                  </div>
-                  <div className="action-row">
-                    <button className="secondary-button" onClick={() => setMlStep(1)}>← Back</button>
-                    <button className="primary-button" onClick={() => setMlStep(3)}>Next →</button>
-                  </div>
-                </div>
-              )}
-
-              {mlStep === 3 && (
-                <div className="ml-wizard-step">
-                  <span className="eyebrow">STEP 3 OF 3</span>
-                  <h2>Daily Impact</h2>
-                  <p>In the past few weeks, have you experienced any of the following?</p>
-                  <div className="segmented-field">
-                    <label>Had to reduce the amount of time spent on duties</label>
-                    <div className="segmented-controls">
-                      <button className={mlInputs.Q23a_cutdowntime === 1 ? "selected" : ""} onClick={() => setMlInputs({ ...mlInputs, Q23a_cutdowntime: 1 })}>Yes</button>
-                      <button className={mlInputs.Q23a_cutdowntime === 0 ? "selected" : ""} onClick={() => setMlInputs({ ...mlInputs, Q23a_cutdowntime: 0 })}>No</button>
-                    </div>
-                  </div>
-                  <div className="segmented-field">
-                    <label>Accomplished less than you usually would</label>
-                    <div className="segmented-controls">
-                      <button className={mlInputs.Q23b_Accomplished_less === 1 ? "selected" : ""} onClick={() => setMlInputs({ ...mlInputs, Q23b_Accomplished_less: 1 })}>Yes</button>
-                      <button className={mlInputs.Q23b_Accomplished_less === 0 ? "selected" : ""} onClick={() => setMlInputs({ ...mlInputs, Q23b_Accomplished_less: 0 })}>No</button>
-                    </div>
-                  </div>
-                  <div className="segmented-field">
-                    <label>Were limited in the kind of work you could perform</label>
-                    <div className="segmented-controls">
-                      <button className={mlInputs.Q23c_limited_work === 1 ? "selected" : ""} onClick={() => setMlInputs({ ...mlInputs, Q23c_limited_work: 1 })}>Yes</button>
-                      <button className={mlInputs.Q23c_limited_work === 0 ? "selected" : ""} onClick={() => setMlInputs({ ...mlInputs, Q23c_limited_work: 0 })}>No</button>
-                    </div>
-                  </div>
-                  <div className="segmented-field">
-                    <label>Had difficulty performing duties (e.g., took extra effort)</label>
-                    <div className="segmented-controls">
-                      <button className={mlInputs.Q23d_difficulty_performing === 1 ? "selected" : ""} onClick={() => setMlInputs({ ...mlInputs, Q23d_difficulty_performing: 1 })}>Yes</button>
-                      <button className={mlInputs.Q23d_difficulty_performing === 0 ? "selected" : ""} onClick={() => setMlInputs({ ...mlInputs, Q23d_difficulty_performing: 0 })}>No</button>
-                    </div>
-                  </div>
-                  <div className="action-row">
-                    <button className="secondary-button" onClick={() => setMlStep(2)}>← Back</button>
-                    <button className="primary-button" disabled={loading} onClick={() => { setMlStep(4); runResearchModel(); }}>{loading ? "Analyzing..." : "Get Insights →"}</button>
-                  </div>
-                </div>
-              )}
-
-              {mlStep === 4 && loading && (
-                <div className="ml-wizard-step">
-                  <div className="loading-state">
-                    <div className="hero-icon rotating">✦</div>
-                    <h2>Analyzing responses...</h2>
-                  </div>
-                </div>
-              )}
-
-              {mlStep === 4 && !loading && mlResult?.probability !== undefined && (
-                <div className="ml-wizard-step results-step">
-                  <div className="result-header">
-                    <span className="eyebrow">ASSESSMENT RESULT</span>
-                    <h2>Wellbeing Snapshot</h2>
-                    <p className="takeaway-meaning">
-                      {mlResult.signal === "elevated" 
-                        ? "Your recent wellbeing check-in suggests that stress and recovery may be areas worth paying attention to."
-                        : "Your check-in indicates a steady baseline, though it is always good to continue healthy recovery practices."}
-                    </p>
-                  </div>
-                  
-                  <div className="result-factors">
-                    <h3>Key Contributing Factors</h3>
-                    <p>Based on your responses, these areas had the most influence on your result:</p>
-                    <div className="factor-list">
-                      {(mlResult.contributors || []).slice(0, 4).map((item) => (
-                        <div className="factor-item" key={item.feature}>
-                          <span className={`factor-icon ${item.direction === "increases signal" ? "up" : "down"}`}>
-                            {item.direction === "increases signal" ? "↗" : "↘"}
-                          </span>
-                          <span>{item.label}</span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-
-                  {mlResult.supportive_response && (
-                    <div className="result-next-steps">
-                      <h3>Practical Next Steps</h3>
-                      <p>{mlResult.supportive_response}</p>
-                    </div>
-                  )}
-
-                  <div className="safety-note">
-                    <small><b>Note:</b> This assessment provides wellbeing insights and is not a clinical diagnosis. It does not determine employment or disciplinary action.</small>
-                  </div>
-                  
-                  <div className="action-row">
-                    <button className="secondary-button" onClick={() => { setMlStep(0); setMlResult(null); }}>Start Over</button>
-                  </div>
-                </div>
-              )}
-            </div>}
-          </section>
-        </main>
-      </div>
-    );
-  }
-
-  if (screen === "chat") return (
-    <div className="app-shell"><Header darkMode={darkMode} setDarkMode={setDarkMode} />{nav}<main className="page chat-page"><div className="page-heading"><span className="eyebrow">MINDSETU AI COMPANION</span><h1>A private place to talk.</h1><p>Gemini provides supportive communication. It does not diagnose or replace qualified human care.</p></div><div className="chat-window">{chatMessages.length === 0 && <div className="empty-chat"><div className="hero-icon">✦</div><h2>What is on your mind?</h2><p>MindSetu AI offers supportive conversation and practical next steps.</p><div className="chat-starters"><button onClick={() => setChatInput("I feel overwhelmed by my workload and I can't switch off after duty.")}>I feel overwhelmed</button><button onClick={() => setChatInput("Help me think about recovery after a difficult period.")}>Think about recovery</button><button onClick={() => setChatInput("I need help organizing one practical next step.")}>Choose a next step</button></div></div>}{chatMessages.map((message, index) => <div className={`message-row ${message.sender}`} key={`${message.sender}-${index}`}><div className="message-bubble">{message.text}</div></div>)}{loading && <div className="message-row ai"><div className="message-bubble typing">Gemini is thinking…</div></div>}</div><div className="chat-compose"><textarea value={chatInput} onChange={(event) => setChatInput(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter" && !event.shiftKey) { event.preventDefault(); sendMessage(); } }} placeholder="Share what's happening…" /><button className="primary-button" onClick={sendMessage} disabled={loading || !chatInput.trim()}>Send</button></div></main></div>
-  );
+  // Fetch initial mood trend on mount
+  useEffect(() => {
+    api
+      .getMoodTrend()
+      .then((t) => setMoodTrend(t.trend || []))
+      .catch(() => {});
+  }, []);
 
   return (
-    <div className="app-shell"><Header darkMode={darkMode} setDarkMode={setDarkMode} />{nav}<main className="page narrow"><div className="page-heading"><span className="eyebrow">MOOD CHECK-IN</span><h1>Notice patterns over time.</h1><p>Record a simple mood check-in alongside the welfare workflow.</p></div><div className="mood-grid">{MOODS.map((item) => <button key={item.value} className={`mood-card ${mood === item.value ? "selected" : ""}`} onClick={() => setMood(item.value)}><span>{item.emoji}</span><b>{item.label}</b></button>)}</div><div className="card form-card"><div className="field"><label>OPTIONAL NOTE</label><textarea value={moodNote} onChange={(event) => setMoodNote(event.target.value)} maxLength={1000} placeholder="A few words about today…" /></div><button className="primary-button" onClick={saveMood} disabled={loading || !mood}>{loading ? "Saving…" : "Save mood check-in"}</button>{error && <div className="error">{error}</div>}{moodHistory.length > 0 && <div className="history"><h3>Recent check-ins</h3>{moodHistory.slice(-5).reverse().map((entry, index) => { const moodItem = MOODS.find((item) => item.value === entry.mood); const timestamp = entry.created_at || entry.date; const label = moodItem ? `${moodItem.emoji} ${moodItem.label}` : `Mood ${entry.mood}`; const when = timestamp ? new Date(timestamp).toLocaleString([], { dateStyle: "medium", timeStyle: "short" }) : "Recent"; return <div className="history-row" key={index}><span>{label}</span><small>{when}</small></div>; })}</div>}</div></main></div>
+    <div className="app-shell">
+      <Header
+        darkMode={darkMode}
+        setDarkMode={setDarkMode}
+        sessionId={sessionId}
+        onResetSession={handleResetSession}
+      />
+
+      {sessionId && (
+        <Navigation
+          screen={screen}
+          setScreen={setScreen}
+          hasAnalysis={Boolean(analysis)}
+        />
+      )}
+
+      <main style={{ flex: 1, display: "flex", flexDirection: "column" }}>
+        {screen === "home" && <HomeScreen onStart={() => (sessionId ? setScreen("wellness") : setScreen("start"))} />}
+
+        {screen === "start" && (
+          <StartScreen
+            onStartSession={handleStartSession}
+            onCancel={() => setScreen("home")}
+            loading={loading}
+            error={error}
+          />
+        )}
+
+        {screen === "wellness" && (
+          <WellnessScreen
+            answers={answers}
+            setAnswers={setAnswers}
+            onNext={handleSaveWellness}
+            onBack={() => setScreen("start")}
+            loading={loading}
+            error={error}
+          />
+        )}
+
+        {screen === "workload" && (
+          <WorkloadScreen
+            workload={workload}
+            setWorkload={setWorkload}
+            onAnalyze={handleRunAnalysis}
+            onBack={() => setScreen("wellness")}
+            loading={loading}
+            error={error}
+          />
+        )}
+
+        {screen === "analysis" && (
+          <AnalysisScreen
+            analysis={analysis}
+            onNavigateToChat={() => setScreen("chat")}
+            onNavigateToMood={() => setScreen("mood")}
+            onOpenResearchModal={() => setIsResearchModalOpen(true)}
+          />
+        )}
+
+        {screen === "chat" && (
+          <ChatScreen
+            messages={chatMessages}
+            inputMessage={chatInput}
+            setInputMessage={setChatInput}
+            onSendMessage={handleSendMessage}
+            loading={chatLoading}
+            isCrisis={isCrisis}
+            onDismissCrisis={() => setIsCrisis(false)}
+          />
+        )}
+
+        {screen === "mood" && (
+          <MoodScreen
+            selectedMood={selectedMood}
+            setSelectedMood={setSelectedMood}
+            moodNote={moodNote}
+            setMoodNote={setMoodNote}
+            onSaveMood={handleSaveMood}
+            moodHistory={moodHistory}
+            moodTrend={moodTrend}
+            loading={loading}
+          />
+        )}
+      </main>
+
+      <ResearchLabModal
+        isOpen={isResearchModalOpen}
+        onClose={() => setIsResearchModalOpen(false)}
+        onRunML={handleRunML}
+        mlInputs={mlInputs}
+        setMlInputs={setMlInputs}
+        mlResult={mlResult}
+        loading={mlLoading}
+      />
+
+      <Footer />
+    </div>
   );
 }
-
-export default App;
