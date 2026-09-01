@@ -215,6 +215,7 @@ export default function App() {
   async function handleSaveMood() {
     if (!selectedMood || !sessionId) return;
     setLoading(true);
+    setLoadingLabel("Saving mood check-in…");
     try {
       await api.submitMood(sessionId, selectedMood, moodNote);
       const hist = await api.getMoodHistory(sessionId);

@@ -27,7 +27,7 @@
   --bg-surface-card: rgba(14, 26, 37, 0.9);
   --bg-surface-glass: rgba(14, 26, 37, 0.70);
   --bg-input: rgba(8, 16, 26, 0.75);
-  --bg-overlay: rgba(0,0,0,0.78);
+  --bg-overlay: rgba(0, 0, 0, 0.78);
 
   --border-subtle: rgba(255, 255, 255, 0.07);
   --border-medium: rgba(255, 255, 255, 0.13);
@@ -68,7 +68,7 @@
   --signal-high-glow: rgba(248, 113, 113, 0.20);
 
   /* Shadows */
-  --shadow-xs: 0 1px 4px rgba(0,0,0,0.18);
+  --shadow-xs: 0 1px 4px rgba(0, 0, 0, 0.18);
   --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.22);
   --shadow-md: 0 8px 28px rgba(0, 0, 0, 0.32);
   --shadow-lg: 0 20px 56px rgba(0, 0, 0, 0.40);
@@ -78,7 +78,7 @@
   --nav-backdrop: rgba(7, 16, 26, 0.88);
 }
 
-/* ── Light Theme ──────────────────────────────────────────────── */
+/* Light Theme */
 html[data-theme="light"] {
   --bg-app: #f0f6f9;
   --bg-surface: #ffffff;
@@ -86,7 +86,7 @@ html[data-theme="light"] {
   --bg-surface-card: rgba(255, 255, 255, 0.92);
   --bg-surface-glass: rgba(255, 255, 255, 0.80);
   --bg-input: #f4f8fb;
-  --bg-overlay: rgba(0,0,0,0.55);
+  --bg-overlay: rgba(0, 0, 0, 0.55);
 
   --border-subtle: rgba(15, 30, 50, 0.07);
   --border-medium: rgba(15, 30, 50, 0.13);
@@ -123,7 +123,7 @@ html[data-theme="light"] {
   --signal-high-border: rgba(225, 29, 72, 0.22);
   --signal-high-glow: rgba(225, 29, 72, 0.15);
 
-  --shadow-xs: 0 1px 3px rgba(15,23,42,0.05);
+  --shadow-xs: 0 1px 3px rgba(15, 23, 42, 0.05);
   --shadow-sm: 0 1px 4px rgba(15, 23, 42, 0.06);
   --shadow-md: 0 6px 22px rgba(15, 23, 42, 0.09);
   --shadow-lg: 0 16px 44px rgba(15, 23, 42, 0.12);

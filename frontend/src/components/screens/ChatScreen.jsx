@@ -8,12 +8,23 @@ const STARTER_PROMPTS = [
   "I need help organising one actionable recovery step for today.",
 ];
 
-/* Simple paper-plane SVG send icon */
+/* High-contrast paper-plane send icon */
 function SendIcon({ size = 18 }) {
   return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2.2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      style={{ display: "block", flexShrink: 0 }}
+      aria-hidden="true"
+    >
       <line x1="22" y1="2" x2="11" y2="13" />
-      <polygon points="22 2 15 22 11 13 2 9 22 2" />
+      <polygon points="22 2 15 22 11 13 2 9 22 2" fill="currentColor" fillOpacity="0.2" />
     </svg>
   );
 }
@@ -137,13 +148,14 @@ export function ChatScreen({
           />
           <button
             id="chat-send-btn"
-            className="btn btn-primary chat-send-btn"
+            type="button"
+            className="chat-send-btn"
             onClick={onSendMessage}
             disabled={!canSend}
             aria-label="Send message"
-            title="Send"
+            title={loading ? "Generating AI response..." : canSend ? "Send message (Enter)" : "Type a message to send"}
           >
-            <SendIcon size={17} />
+            <SendIcon size={18} />
           </button>
         </div>
       </div>
