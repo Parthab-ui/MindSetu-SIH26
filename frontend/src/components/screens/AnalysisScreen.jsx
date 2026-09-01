@@ -2,11 +2,18 @@ import { useState } from "react";
 import { Badge } from "../common/Badge";
 import { InfoTooltip } from "../common/InfoTooltip";
 
-function ScoreBar({ value, level }) {
+function ScoreBar({ value, level, label = "Score progress" }) {
   const pct = Math.min(Math.max(Number(value) || 0, 0), 100);
   const cls = level === "high" ? "high" : level === "moderate" ? "mod" : "low";
   return (
-    <div className="score-bar-track" role="progressbar" aria-valuenow={pct} aria-valuemin={0} aria-valuemax={100}>
+    <div
+      className="score-bar-track"
+      role="progressbar"
+      aria-valuenow={pct}
+      aria-valuemin={0}
+      aria-valuemax={100}
+      aria-label={`${label}: ${pct}%`}
+    >
       <div
         className={`score-bar-fill ${cls}`}
         style={{ width: `${pct}%`, transition: "width 700ms cubic-bezier(0.2,0.8,0.2,1)" }}
@@ -14,6 +21,7 @@ function ScoreBar({ value, level }) {
     </div>
   );
 }
+
 
 export function AnalysisScreen({ analysis, onNavigateToChat, onNavigateToMood, onOpenResearchModal }) {
   const level = String(analysis?.risk_level || "unknown").toLowerCase();
@@ -184,7 +192,7 @@ export function AnalysisScreen({ analysis, onNavigateToChat, onNavigateToMood, o
 
           <p className="metric-interpretation">{wellnessInterpretation}</p>
 
-          {analysis && <ScoreBar value={wellnessVal} level={wellnessLevel} />}
+          {analysis && <ScoreBar value={wellnessVal} level={wellnessLevel} label="Wellbeing Pulse score" />}
 
           <details className="score-disclosure">
             <summary>How this score is calculated</summary>
@@ -221,7 +229,7 @@ export function AnalysisScreen({ analysis, onNavigateToChat, onNavigateToMood, o
 
           <p className="metric-interpretation">{workloadInterpretation}</p>
 
-          {analysis && <ScoreBar value={workloadVal} level={workloadLevel} />}
+          {analysis && <ScoreBar value={workloadVal} level={workloadLevel} label="Duty and Workload score" />}
 
           <details className="score-disclosure">
             <summary>How this score is calculated</summary>
@@ -259,7 +267,8 @@ export function AnalysisScreen({ analysis, onNavigateToChat, onNavigateToMood, o
 
           <p className="metric-interpretation">{combinedInterpretation}</p>
 
-          {analysis && <ScoreBar value={combinedVal} level={level} />}
+          {analysis && <ScoreBar value={combinedVal} level={level} label="Overall Support Score" />}
+
 
           <details className="score-disclosure">
             <summary>How this score is calculated</summary>

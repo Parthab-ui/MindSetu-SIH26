@@ -75,18 +75,21 @@ export function WellnessScreen({ answers, setAnswers, onNext, onBack, loading, e
       <div className="question-list">
         {WELLNESS_QUESTIONS.map((question, qIdx) => {
           const selectedValue = answers[qIdx];
+          const questionId = `wellness-q-${qIdx}`;
           return (
-            <div
+            <fieldset
               key={qIdx}
               className="question-card"
-              style={{ animationDelay: `${qIdx * 40}ms` }}
+              style={{ animationDelay: `${qIdx * 40}ms`, border: "1px solid var(--border-subtle)", margin: 0 }}
+              aria-labelledby={questionId}
             >
+              <legend className="sr-only">Question {qIdx + 1} of {WELLNESS_QUESTIONS.length}</legend>
               <div className="question-header">
-                <div className="question-num">{String(qIdx + 1).padStart(2, "0")}</div>
-                <h3 className="question-text">{question}</h3>
+                <div className="question-num" aria-hidden="true">{String(qIdx + 1).padStart(2, "0")}</div>
+                <h2 id={questionId} className="question-text" style={{ fontSize: "1rem", margin: 0 }}>{question}</h2>
               </div>
 
-              <div className="likert-grid">
+              <div className="likert-grid" role="radiogroup" aria-labelledby={questionId}>
                 {RESPONSE_OPTIONS.map((opt) => (
                   <button
                     key={opt.value}
@@ -94,15 +97,17 @@ export function WellnessScreen({ answers, setAnswers, onNext, onBack, loading, e
                     className={`likert-btn ${selectedValue === opt.value ? "selected" : ""}`}
                     onClick={() => handleSelect(qIdx, opt.value)}
                     aria-pressed={selectedValue === opt.value}
+                    aria-label={`Question ${qIdx + 1}: ${question} — ${opt.label}`}
                   >
                     {opt.label}
                   </button>
                 ))}
               </div>
-            </div>
+            </fieldset>
           );
         })}
       </div>
+
 
       {activeError && (
         <div className="inline-error" style={{ marginTop: "20px" }} role="alert">

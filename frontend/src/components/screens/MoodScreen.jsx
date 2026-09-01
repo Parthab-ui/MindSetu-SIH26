@@ -47,15 +47,15 @@ export function MoodScreen({
         className="card card-elevated"
         style={{ display: "flex", flexDirection: "column", gap: "24px", animation: "slideUp 340ms cubic-bezier(0.2,0.8,0.2,1) both" }}
       >
-        <div>
+        <fieldset style={{ border: "none", padding: 0, margin: 0 }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "12px" }}>
-            <label style={{ fontSize: "0.82rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.07em", color: "var(--text-secondary)" }}>
+            <legend style={{ fontSize: "0.82rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.07em", color: "var(--text-secondary)" }}>
               How do you feel today?
-            </label>
+            </legend>
             <span style={{ fontSize: "0.78rem", color: "var(--text-muted)" }}>Select one option</span>
           </div>
 
-          <div className="mood-cards-row">
+          <div className="mood-cards-row" role="radiogroup" aria-label="Daily mood selection">
             {MOODS.map((m) => (
               <button
                 key={m.value}
@@ -63,20 +63,21 @@ export function MoodScreen({
                 className={`mood-select-btn ${selectedMood === m.value ? "selected" : ""}`}
                 onClick={() => setSelectedMood(m.value)}
                 aria-pressed={selectedMood === m.value}
+                aria-label={`${m.label}: ${m.desc}`}
                 title={`${m.label}: ${m.desc}`}
               >
-                <span className="mood-emoji">{m.emoji}</span>
+                <span className="mood-emoji" aria-hidden="true">{m.emoji}</span>
                 <span className="mood-label">{m.label}</span>
               </button>
             ))}
           </div>
 
           {selectedMood && (
-            <p style={{ marginTop: "8px", fontSize: "0.82rem", color: "var(--primary-hover)", textAlign: "center", fontWeight: 500 }}>
-              {MOODS.find((m) => m.value === selectedMood)?.desc}
+            <p style={{ marginTop: "8px", fontSize: "0.82rem", color: "var(--primary-hover)", textAlign: "center", fontWeight: 500 }} aria-live="polite">
+              Selected: <strong>{MOODS.find((m) => m.value === selectedMood)?.label}</strong> — {MOODS.find((m) => m.value === selectedMood)?.desc}
             </p>
           )}
-        </div>
+        </fieldset>
 
         <div className="input-field">
           <label htmlFor="mood-note">Optional Note or Reflection</label>
@@ -88,6 +89,7 @@ export function MoodScreen({
             onChange={(e) => setMoodNote(e.target.value)}
             maxLength={1000}
             rows={3}
+            aria-label="Optional note or reflection"
           />
           <span style={{ fontSize: "0.75rem", color: "var(--text-muted)", marginTop: "4px", display: "block" }}>
             Confidential · Kept within this session for personal reflection.
@@ -100,6 +102,7 @@ export function MoodScreen({
             onClick={onSaveMood}
             disabled={loading || !selectedMood}
             title={!selectedMood ? "Select a mood rating to save" : "Save this check-in"}
+            aria-label={loading ? "Recording Check-in..." : "Save Mood Check-in"}
           >
             {loading ? "Recording Check-in..." : "Save Mood Check-in →"}
           </button>
@@ -107,7 +110,7 @@ export function MoodScreen({
       </div>
 
       {/* Mood Trend Visualization Section */}
-      <div className="mood-chart-box" style={{ marginTop: "32px", animation: "slideUp 400ms cubic-bezier(0.2,0.8,0.2,1) both" }}>
+      <div className="mood-chart-box" style={{ marginTop: "32px", animation: "slideUp 400ms cubic-bezier(0.2,0.8,0.2,1) both" }} role="region" aria-label="Mood and recovery trend summary">
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "16px" }}>
           <div>
             <span className="eyebrow" style={{ margin: 0 }}>LONGITUDINAL PATTERNS</span>
@@ -132,7 +135,7 @@ export function MoodScreen({
         {/* State 1: Zero Entries */}
         {trendEntries.length === 0 && historyEntries.length === 0 && (
           <div style={{ padding: "32px 16px", textAlign: "center", background: "var(--bg-input)", borderRadius: "var(--radius-md)", border: "1px dashed var(--border-medium)" }}>
-            <span style={{ fontSize: "1.8rem", display: "block", marginBottom: "8px" }}>📊</span>
+            <span style={{ fontSize: "1.8rem", display: "block", marginBottom: "8px" }} aria-hidden="true">📊</span>
             <strong style={{ display: "block", fontSize: "0.95rem", color: "var(--text-primary)" }}>
               No mood check-ins recorded yet
             </strong>
@@ -145,7 +148,7 @@ export function MoodScreen({
         {/* State 2: One Entry (Building History) */}
         {trendEntries.length === 1 && (
           <div style={{ padding: "24px 16px", textAlign: "center", background: "var(--bg-input)", borderRadius: "var(--radius-md)", border: "1px solid var(--border-subtle)" }}>
-            <span style={{ fontSize: "1.5rem", display: "block", marginBottom: "6px" }}>🌱</span>
+            <span style={{ fontSize: "1.5rem", display: "block", marginBottom: "6px" }} aria-hidden="true">🌱</span>
             <strong style={{ display: "block", fontSize: "0.95rem", color: "var(--text-primary)" }}>
               1 Check-in Recorded · History Building
             </strong>
@@ -165,12 +168,12 @@ export function MoodScreen({
               </strong>
             </div>
 
-            <div className="mood-bar-chart">
+            <div className="mood-bar-chart" role="group" aria-label={`Mood trend bar chart: ${trendEntries.length} days recorded, average ${avgMood} out of 5.0`}>
               {trendEntries.slice(-14).map((pt, i) => {
                 const heightPercent = Math.min(Math.max(Math.round((pt.average_mood / 5) * 100), 10), 100);
                 return (
                   <div key={i} className="mood-bar-item">
-                    <span style={{ fontSize: "0.72rem", color: "var(--text-secondary)", fontWeight: 700 }}>
+                    <span style={{ fontSize: "0.72rem", color: "var(--text-secondary)", fontWeight: 700 }} aria-hidden="true">
                       {pt.average_mood}
                     </span>
                     <div
@@ -178,9 +181,9 @@ export function MoodScreen({
                       style={{ height: `${heightPercent}%` }}
                       title={`${pt.date}: ${pt.average_mood}/5 (${pt.entries} check-in${pt.entries === 1 ? "" : "s"})`}
                       role="img"
-                      aria-label={`${pt.date}: ${pt.average_mood} out of 5`}
+                      aria-label={`${pt.date}: ${pt.average_mood} out of 5 (${pt.entries} check-ins)`}
                     />
-                    <span style={{ fontSize: "0.68rem", color: "var(--text-muted)", whiteSpace: "nowrap" }}>
+                    <span style={{ fontSize: "0.68rem", color: "var(--text-muted)", whiteSpace: "nowrap" }} aria-hidden="true">
                       {pt.date.split("-").slice(1).join("/")}
                     </span>
                   </div>
@@ -201,7 +204,7 @@ export function MoodScreen({
             </span>
           </div>
 
-          <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+          <div className="history-list" role="list" aria-label="Recent mood check-in history">
             {historyEntries.slice(0, 5).map((entry, idx) => {
               const item = MOODS.find((m) => m.value === entry.mood);
               const dateStr = entry.created_at
@@ -215,6 +218,7 @@ export function MoodScreen({
               return (
                 <div
                   key={idx}
+                  role="listitem"
                   style={{
                     display: "flex",
                     justifyContent: "space-between",
@@ -252,6 +256,7 @@ export function MoodScreen({
           </div>
         </div>
       )}
+
     </div>
   );
 }

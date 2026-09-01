@@ -1,11 +1,18 @@
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { SliderField } from "../common/SliderField";
 import { InfoTooltip } from "../common/InfoTooltip";
 
 /* Step progress pips at the top of the modal */
 function StepPips({ current, total }) {
   return (
-    <div className="ml-step-pips" role="progressbar" aria-valuenow={current} aria-valuemin={1} aria-valuemax={total}>
+    <div
+      className="ml-step-pips"
+      role="progressbar"
+      aria-label={`Research Lab Step ${current} of ${total}`}
+      aria-valuenow={current}
+      aria-valuemin={1}
+      aria-valuemax={total}
+    >
       {Array.from({ length: total }, (_, i) => (
         <div
           key={i}
@@ -21,6 +28,62 @@ function StepPips({ current, total }) {
 
 export function ResearchLabModal({ isOpen, onClose, onRunML, mlInputs, setMlInputs, mlResult, loading }) {
   const [step, setStep] = useState(1);
+  const modalRef = useRef(null);
+  const closeBtnRef = useRef(null);
+  const openerRef = useRef(null);
+
+  // Focus trap, Escape key handling, and focus restoration
+  useEffect(() => {
+    if (!isOpen) return;
+
+    openerRef.current = document.activeElement;
+    document.body.style.overflow = "hidden";
+
+    // Set initial focus to close button
+    const timer = setTimeout(() => {
+      closeBtnRef.current?.focus();
+    }, 50);
+
+    function handleKeyDown(e) {
+      if (e.key === "Escape") {
+        e.preventDefault();
+        onClose();
+        return;
+      }
+
+      if (e.key === "Tab" && modalRef.current) {
+        const focusable = modalRef.current.querySelectorAll(
+          'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
+        );
+        if (focusable.length === 0) return;
+        const firstElement = focusable[0];
+        const lastElement = focusable[focusable.length - 1];
+
+        if (e.shiftKey) {
+          if (document.activeElement === firstElement) {
+            e.preventDefault();
+            lastElement.focus();
+          }
+        } else {
+          if (document.activeElement === lastElement) {
+            e.preventDefault();
+            firstElement.focus();
+          }
+        }
+      }
+    }
+
+    document.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      clearTimeout(timer);
+      document.removeEventListener("keydown", handleKeyDown);
+      document.body.style.overflow = "";
+      if (openerRef.current && typeof openerRef.current.focus === "function") {
+        openerRef.current.focus();
+      }
+    };
+  }, [isOpen, onClose]);
 
   if (!isOpen) return null;
 
@@ -47,8 +110,14 @@ export function ResearchLabModal({ isOpen, onClose, onRunML, mlInputs, setMlInpu
   }
 
   return (
-    <div className="modal-overlay" onClick={onClose} role="dialog" aria-modal="true" aria-labelledby="modal-title">
-      <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+    <div
+      className="modal-overlay"
+      onClick={onClose}
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="modal-title"
+    >
+      <div className="modal-content" ref={modalRef} onClick={(e) => e.stopPropagation()}>
         {/* Modal Top Bar */}
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "16px" }}>
           <div>
@@ -65,10 +134,17 @@ export function ResearchLabModal({ isOpen, onClose, onRunML, mlInputs, setMlInpu
               Explore how individual stress, duty, and operational factors contribute to the research model's output.
             </p>
           </div>
-          <button className="btn-icon" onClick={onClose} aria-label="Close modal" title="Close modal">
+          <button
+            ref={closeBtnRef}
+            className="btn-icon"
+            onClick={onClose}
+            aria-label="Close Research Lab modal"
+            title="Close modal (Escape)"
+          >
             ✕
           </button>
         </div>
+
 
         {/* STEP 1: Stress & Trauma Symptoms (PCL-M) */}
         {step === 1 && (
@@ -117,10 +193,11 @@ export function ResearchLabModal({ isOpen, onClose, onRunML, mlInputs, setMlInpu
               <button className="btn btn-ghost" onClick={onClose}>
                 Cancel
               </button>
-              <button className="btn btn-primary" onClick={() => setStep(2)}>
+              <button id="modal-step1-next" className="btn btn-primary" onClick={() => setStep(2)}>
                 Next: Operational Events →
               </button>
             </div>
+
           </div>
         )}
 
@@ -160,6 +237,7 @@ export function ResearchLabModal({ isOpen, onClose, onRunML, mlInputs, setMlInpu
                     className={`btn ${mlInputs.Q12_weapon === 1 ? "btn-primary" : "btn-secondary"}`}
                     onClick={() => updateInput("Q12_weapon", 1)}
                     aria-pressed={mlInputs.Q12_weapon === 1}
+                    aria-label="Discharged weapon or direct tactical combat: Yes"
                   >
                     <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
                       <span style={{ fontWeight: 700 }}>YES</span>
@@ -171,6 +249,7 @@ export function ResearchLabModal({ isOpen, onClose, onRunML, mlInputs, setMlInpu
                     className={`btn ${mlInputs.Q12_weapon === 0 ? "btn-primary" : "btn-secondary"}`}
                     onClick={() => updateInput("Q12_weapon", 0)}
                     aria-pressed={mlInputs.Q12_weapon === 0}
+                    aria-label="Discharged weapon or direct tactical combat: No"
                   >
                     <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
                       <span style={{ fontWeight: 700 }}>NO</span>
@@ -191,6 +270,7 @@ export function ResearchLabModal({ isOpen, onClose, onRunML, mlInputs, setMlInpu
                     className={`btn ${mlInputs.Q13_feltdie === 1 ? "btn-primary" : "btn-secondary"}`}
                     onClick={() => updateInput("Q13_feltdie", 1)}
                     aria-pressed={mlInputs.Q13_feltdie === 1}
+                    aria-label="Severe personal danger of injury or death: Yes"
                   >
                     <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
                       <span style={{ fontWeight: 700 }}>YES</span>
@@ -202,6 +282,7 @@ export function ResearchLabModal({ isOpen, onClose, onRunML, mlInputs, setMlInpu
                     className={`btn ${mlInputs.Q13_feltdie === 0 ? "btn-primary" : "btn-secondary"}`}
                     onClick={() => updateInput("Q13_feltdie", 0)}
                     aria-pressed={mlInputs.Q13_feltdie === 0}
+                    aria-label="Severe personal danger of injury or death: No"
                   >
                     <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
                       <span style={{ fontWeight: 700 }}>NO</span>
@@ -216,10 +297,11 @@ export function ResearchLabModal({ isOpen, onClose, onRunML, mlInputs, setMlInpu
               <button className="btn btn-ghost" onClick={() => setStep(1)}>
                 ← Back
               </button>
-              <button className="btn btn-primary" onClick={() => setStep(3)}>
+              <button id="modal-step2-next" className="btn btn-primary" onClick={() => setStep(3)}>
                 Next: Daily Functioning →
               </button>
             </div>
+
           </div>
         )}
 
@@ -277,6 +359,7 @@ export function ResearchLabModal({ isOpen, onClose, onRunML, mlInputs, setMlInpu
                       style={{ padding: "6px 14px", fontSize: "0.82rem", minWidth: "50px" }}
                       onClick={() => updateInput(item.key, 1)}
                       aria-pressed={mlInputs[item.key] === 1}
+                      aria-label={`${item.label}: Yes`}
                     >
                       Yes
                     </button>
@@ -286,6 +369,7 @@ export function ResearchLabModal({ isOpen, onClose, onRunML, mlInputs, setMlInpu
                       style={{ padding: "6px 14px", fontSize: "0.82rem", minWidth: "50px" }}
                       onClick={() => updateInput(item.key, 0)}
                       aria-pressed={mlInputs[item.key] === 0}
+                      aria-label={`${item.label}: No`}
                     >
                       No
                     </button>
@@ -299,6 +383,7 @@ export function ResearchLabModal({ isOpen, onClose, onRunML, mlInputs, setMlInpu
                 ← Back
               </button>
               <button
+                id="btn-compute-insights"
                 className="btn btn-primary"
                 onClick={handleRunAssessment}
                 disabled={loading}
@@ -310,14 +395,16 @@ export function ResearchLabModal({ isOpen, onClose, onRunML, mlInputs, setMlInpu
                 </span>
               </button>
             </div>
+
           </div>
         )}
 
         {/* STEP 4: Results, Confidence, SHAP Values & Gemini Synthesis */}
         {step === 4 && (
-          <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: "20px" }} role="status" aria-live="polite">
             {loading && (
               <div style={{ textAlign: "center", padding: "40px 0" }}>
+
                 <div className="session-pulse" style={{ width: "28px", height: "28px", margin: "0 auto 16px" }} />
                 <h3 style={{ fontSize: "1.2rem", fontWeight: 700, margin: "0 0 8px" }}>
                   Computing Explainable Insights...

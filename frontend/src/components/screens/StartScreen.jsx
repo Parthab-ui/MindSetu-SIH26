@@ -62,6 +62,7 @@ export function StartScreen({ onStartSession, onCancel, loading, error }) {
           </div>
 
           <label
+            htmlFor="consent-check"
             style={{
               display: "flex",
               alignItems: "flex-start",
@@ -75,16 +76,19 @@ export function StartScreen({ onStartSession, onCancel, loading, error }) {
             }}
           >
             <input
+              id="consent-check"
               type="checkbox"
-              style={{ marginTop: "3px", width: "18px", height: "18px", accentColor: "var(--primary)" }}
+              style={{ marginTop: "3px", width: "18px", height: "18px", accentColor: "var(--primary)", cursor: "pointer" }}
               checked={consent}
               onChange={(e) => setConsent(e.target.checked)}
               disabled={loading}
+              aria-label="I understand this session is anonymous, confidential, and used strictly for supportive welfare triage."
             />
             <span style={{ fontSize: "0.88rem", color: "var(--text-secondary)", lineHeight: "1.5" }}>
               I understand this session is anonymous, confidential, and used strictly for supportive welfare triage.
             </span>
           </label>
+
 
           {activeError && (
             <div className="inline-error" role="alert">

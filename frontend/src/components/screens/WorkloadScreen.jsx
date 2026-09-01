@@ -95,7 +95,7 @@ export function WorkloadScreen({ workload, setWorkload, onAnalyze, onBack, loadi
           </div>
         </div>
 
-        <label className="toggle-switch-row">
+        <label htmlFor="high-pressure-check" className="toggle-switch-row">
           <div>
             <strong style={{ display: "block", fontSize: "0.95rem", color: "var(--text-primary)" }}>
               High-Pressure / Emergency Duty
@@ -105,12 +105,15 @@ export function WorkloadScreen({ workload, setWorkload, onAnalyze, onBack, loadi
             </span>
           </div>
           <input
+            id="high-pressure-check"
             type="checkbox"
-            style={{ width: "20px", height: "20px", accentColor: "var(--primary)" }}
+            style={{ width: "20px", height: "20px", accentColor: "var(--primary)", cursor: "pointer" }}
             checked={workload.high_pressure_assignment}
             onChange={(e) => updateField("high_pressure_assignment", e.target.checked)}
+            aria-label="High-Pressure or Emergency Duty Assignment"
           />
         </label>
+
 
         {error && (
           <div className="inline-error" role="alert">

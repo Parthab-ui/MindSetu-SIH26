@@ -1,8 +1,8 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useId } from "react";
 
 /**
  * Accessible, responsive popover for Layer 2 progressive disclosure.
- * Allows users to tap/click for a concise, plain-language explanation
+ * Allows users to tap/click or use keyboard for a concise, plain-language explanation
  * with optional technical/research metadata without leaving the page.
  */
 export function InfoTooltip({
@@ -14,8 +14,10 @@ export function InfoTooltip({
 }) {
   const [isOpen, setIsOpen] = useState(false);
   const containerRef = useRef(null);
+  const triggerRef = useRef(null);
+  const popoverId = useId();
 
-  // Close on outside click or Escape key
+  // Close on outside click or Escape key, and return focus to trigger
   useEffect(() => {
     if (!isOpen) return;
 
@@ -27,7 +29,9 @@ export function InfoTooltip({
 
     function handleKeyDown(e) {
       if (e.key === "Escape") {
+        e.stopPropagation();
         setIsOpen(false);
+        triggerRef.current?.focus();
       }
     }
 
@@ -39,13 +43,26 @@ export function InfoTooltip({
     };
   }, [isOpen]);
 
+  function handleTriggerClick(e) {
+    e.stopPropagation();
+    setIsOpen((prev) => !prev);
+  }
+
+  function handleCloseClick(e) {
+    e.stopPropagation();
+    setIsOpen(false);
+    triggerRef.current?.focus();
+  }
+
   return (
     <div className="info-tooltip-wrapper" ref={containerRef}>
       <button
+        ref={triggerRef}
         type="button"
         className={`info-tooltip-trigger ${isOpen ? "active" : ""}`}
-        onClick={() => setIsOpen((prev) => !prev)}
+        onClick={handleTriggerClick}
         aria-expanded={isOpen}
+        aria-controls={isOpen ? popoverId : undefined}
         aria-label={label}
         title={label}
       >
@@ -54,6 +71,7 @@ export function InfoTooltip({
 
       {isOpen && (
         <div
+          id={popoverId}
           className={`info-tooltip-popover align-${align}`}
           role="region"
           aria-label={title || label}
@@ -63,7 +81,7 @@ export function InfoTooltip({
             <button
               type="button"
               className="info-tooltip-close"
-              onClick={() => setIsOpen(false)}
+              onClick={handleCloseClick}
               aria-label="Close information dialog"
             >
               ✕
@@ -81,3 +99,4 @@ export function InfoTooltip({
     </div>
   );
 }
+

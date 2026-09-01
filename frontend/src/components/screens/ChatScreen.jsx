@@ -75,11 +75,11 @@ export function ChatScreen({
       {isCrisis && <CrisisBanner onDismiss={onDismissCrisis} />}
 
       <div className="chat-window-card" style={{ animation: "slideUp 340ms cubic-bezier(0.2,0.8,0.2,1) both" }}>
-        <div className="chat-messages-pane">
+        <div className="chat-messages-pane" role="log" aria-live="polite" aria-label="MindSetu AI conversation history">
           {/* Empty state */}
           {messages.length === 0 && (
             <div className="chat-empty-state">
-              <div className="chat-empty-avatar">✦</div>
+              <div className="chat-empty-avatar" aria-hidden="true">✦</div>
               <h2 style={{ fontSize: "1.25rem", fontWeight: 700, margin: 0 }}>
                 How can I support you today?
               </h2>
@@ -96,12 +96,13 @@ export function ChatScreen({
 
             return (
               <div key={idx} className={`message-row ${msg.sender}`}>
-                <div className="message-avatar">
+                <div className="message-avatar" aria-hidden="true">
                   {msg.sender === "ai" ? "✦" : "👤"}
                 </div>
                 <div className="message-bubble" style={{ whiteSpace: "pre-wrap" }}>
+                  <span className="sr-only">{msg.sender === "ai" ? "MindSetu AI: " : "You: "}</span>
                   {msg.text || (isStreamingThis ? (
-                    <div className="typing-indicator" style={{ padding: "4px 0" }}>
+                    <div className="typing-indicator" style={{ padding: "4px 0" }} aria-label="MindSetu AI is responding...">
                       <span className="typing-dot" />
                       <span className="typing-dot" />
                       <span className="typing-dot" />
@@ -116,7 +117,7 @@ export function ChatScreen({
 
         {/* Starter chips — shown only when empty */}
         {messages.length === 0 && (
-          <div className="starters-wrap">
+          <div className="starters-wrap" role="group" aria-label="Suggested starter prompts">
             {STARTER_PROMPTS.map((prompt, i) => (
               <button
                 key={i}
@@ -126,6 +127,7 @@ export function ChatScreen({
                   textareaRef.current?.focus();
                 }}
                 title={prompt}
+                aria-label={`Prompt: ${prompt}`}
               >
                 {prompt}
               </button>
@@ -144,7 +146,7 @@ export function ChatScreen({
             onKeyDown={handleKeyDown}
             disabled={loading}
             rows={1}
-            aria-label="Chat message"
+            aria-label="Type your message to MindSetu AI Companion"
           />
           <button
             id="chat-send-btn"
@@ -158,6 +160,7 @@ export function ChatScreen({
             <SendIcon size={18} />
           </button>
         </div>
+
       </div>
 
       <p style={{
