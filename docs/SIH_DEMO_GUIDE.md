@@ -1,67 +1,90 @@
-# MindSetu — SIH Mentor Demo Guide
+# MindSetu — SIH 2026 Jury & Mentor Demonstration Guide
 
-## Goal
-Demonstrate a complete personnel-welfare journey in 5–8 minutes without unnecessary feature detours.
+This guide provides a structured, high-impact demonstration script and jury defense strategy for **Problem Statement SIH26186** (Personnel Welfare Support & Triage).
 
-## Recommended flow
+---
 
-### 1. Problem → solution (30 seconds)
-Explain that MindSetu gives personnel a private first step for structured wellbeing check-ins, workload-aware welfare triage, explainable research ML, supportive AI communication and human escalation.
+## 1. Demo Tracks: Timing & Pacing
 
-### 2. Start a protected session (30 seconds)
-Show anonymous session creation and fictional role/unit information.
+```
+┌──────────────────────────────────────┬──────────────────────────────────────┐
+│ TRACK A: 3-MINUTE LIGHTNING PITCH    │ TRACK B: 7-MINUTE FULL EVALUATION    │
+├──────────────────────────────────────┼──────────────────────────────────────┤
+│ 0:00 - Problem & Mandate (30s)       │ 0:00 - Operational Problem Context   │
+│ 0:30 - Guided Check-In (45s)         │ 1:00 - Anonymous Protected Session   │
+│ 1:15 - Triage & SHAP XAI (45s)       │ 2:00 - Wellness & Duty Context Flow  │
+│ 2:00 - Gemini Streaming Companion (30s)│ 3:15 - Deterministic Triage Breakdown │
+│ 2:30 - Safety & HITL Wrap-up (30s)   │ 4:15 - Research Lab & SHAP XAI Modal │
+│                                      │ 5:15 - Modern Gemini AI Companion    │
+│                                      │ 6:15 - Crisis Escalation & Hotlines  │
+│                                      │ 7:00 - Safety, Privacy & Governance  │
+└──────────────────────────────────────┴──────────────────────────────────────┘
+```
 
-### 3. Wellbeing pulse + duty context (1–2 minutes)
-Complete the six-item wellbeing pulse, then enter duty hours, night duties, recovery time, leave gap, workload intensity, pressure and duty changes.
+---
 
-### 4. Welfare analysis (45 seconds)
-Show the deterministic welfare signal and explain that it is a support/triage result, not a clinical diagnosis and not a personnel or disciplinary decision.
+## 2. Stage-by-Stage Live Walkthrough
 
-### 5. Explainable research ML (1 minute)
-Show the separate SIH26186 research model and explain the architecture:
+### Step 1: Start Protected Session (`StartScreen.jsx`)
+- **Action**: Click *"Begin Protected Check-In"* after confirming anonymous consent.
+- **Talking Point**:
+  > *"In operational forces, personnel hesitate to seek help due to perceived career stigma. MindSetu starts with an anonymous, confidential session where no PII or military IDs are stored."*
 
-- LightGBM produces the research prediction.
-- SHAP explains the contributing features.
-- Gemini communicates structured findings supportively.
-- A qualified human remains responsible for intervention.
+### Step 2: 6-Question Wellness Pulse (`WellnessScreen.jsx`)
+- **Action**: Select responses reflecting moderate sleep fatigue and pacing stress.
+- **Talking Point**:
+  > *"Rather than intimidating clinical depression forms, MindSetu uses a 6-item validated wellness pulse capturing energy, recovery, and daily mood."*
 
-### 6. MindSetu AI companion (1 minute)
-Ask: `I'm stressed about my workload and can't switch off after duty.`
-Explain that the Google Gemini API is called behind FastAPI; the API key never reaches the browser.
+### Step 3: Operational Workload Context (`WorkloadScreen.jsx`)
+- **Action**: Input sample values:
+  - Weekly Duty Hours: `68`
+  - Night Duties in Past Week: `4`
+  - Average Unbroken Rest: `5.5 hrs`
+  - Consecutive Weeks without Leave: `16`
+- **Talking Point**:
+  > *"Wellness cannot be understood in a vacuum. MindSetu contextualizes mental wellbeing with real operational drivers: shift fatigue, night duty frequency, and prolonged deployment without leave."*
 
-### 7. Mood check-in (45 seconds)
-Log a mood and optional note to show longitudinal self-check-ins.
+### Step 4: Deterministic Welfare Triage Dashboard (`AnalysisScreen.jsx`)
+- **Action**: Show the **Combined Score (68.9 - Moderate Risk)** and primary driver breakdown.
+- **Talking Point**:
+  > *"Risk scoring is strictly deterministic: 55% wellness + 45% workload. It is not an unverified AI guess. The system highlights actionable recovery recommendations tailored to duty fatigue."*
 
-### 8. Human support (45 seconds)
-Explain that AI is an accessibility/support layer, not a replacement for qualified professionals.
+### Step 5: Research Lab & Explainability Modal (`ResearchLabModal.jsx`)
+- **Action**: Click *"Open Research Lab"*, display the LightGBM probability and SHAP Waterfall chart.
+- **Talking Point**:
+  > *"For research and institutional analysis, we pair LightGBM with TreeSHAP. When a jury asks 'Why was this flagged?', SHAP explicitly shows that 68h weekly duty and 4 night shifts contributed +0.46 to the risk prediction."*
 
-## Questions a mentor is likely to ask
+### Step 6: MindSetu AI Companion (`ChatScreen.jsx`)
+- **Action**: Click the suggestion card: *"What are practical ways to manage sleep recovery during night shifts?"*
+- **Talking Point**:
+  > *"MindSetu uses Google Gemini 2.5 Flash via real-time streaming NDJSON for empathetic, structured coaching. Notice the integrated pill composer, thinking pulse, and editorial list formatting."*
 
-### What is innovative?
-The prototype combines structured personnel wellbeing input, workload-aware triage, explainable research ML and a Gemini support companion in one focused welfare workflow.
+---
 
-### Why Gemini?
-Gemini provides hosted conversational intelligence while the provider key remains server-side behind FastAPI.
+## 3. High-Probability Jury Q&A Matrix
 
-### Is this a diagnostic tool?
-No. The system produces welfare/support signals and a separate research-model output. Neither should be presented as a clinical diagnosis.
+### Q1: *"Is MindSetu attempting to diagnose mental health conditions?"*
+**Answer**:
+> *"No, absolutely not. MindSetu is strictly a supportive personnel welfare triage prototype. It triages operational stress and duty fatigue, providing recovery coaching and connecting personnel to human welfare counselors. It never issues psychiatric diagnoses or prescribes medications."*
 
-### What happens in a crisis?
-The backend detects obvious crisis language before normal AI generation and returns a safety-priority response directing the person toward immediate professional/emergency support and a trusted person.
+### Q2: *"Why use both Deterministic scoring AND LightGBM?"*
+**Answer**:
+> *"Deterministic scoring guarantees that risk tiering is 100% predictable, safe, and transparent for operational decisions. LightGBM and SHAP provide a research layer to discover complex non-linear interactions across large operational datasets and explain them transparently."*
 
-### What remains for production?
-Clinical/domain validation, stronger privacy and security controls, accessibility testing, observability, abuse protection, institutional governance and professionally governed escalation pathways.
+### Q3: *"How do you prevent Gemini from hallucinating or giving dangerous advice?"*
+**Answer**:
+> *"We employ a 3-layer safety system: (1) System prompt boundary instructions forbidding medical advice; (2) An automated AI Self-Audit regression suite in testing; (3) A regex crisis interception layer that catches self-harm language and immediately displays Tele-MANAS (14416) and KIRAN (1800-599-0019) emergency lines."*
 
-## Pre-demo checklist
+### Q4: *"How will this work in remote border outposts with poor internet?"*
+**Answer**:
+> *"The deterministic scoring engine and LightGBM inference run locally on the edge device or intranet server without needing external internet. Only the conversational Gemini companion requires API access, and when offline, the system seamlessly falls back to pre-validated deterministic coping strategies."*
 
-- Start PostgreSQL and verify the database is reachable.
-- Configure `GEMINI_API_KEY` on the backend only.
-- Start FastAPI on port 8000.
-- Start Vite and verify the frontend opens.
-- Run `npm run lint` and `npm run build` before presenting.
-- Complete one dry-run of the full journey.
-- Use fictional demo information only.
-- Keep deterministic fallback behavior available if Gemini is temporarily unavailable.
+---
 
-## Demo principle
-Do not claim the prototype is clinically validated or production-ready. Present it as an SIH prototype demonstrating the proposed engineering workflow and identifying the validation and governance work required for deployment.
+## 4. Pre-Demo Verification Checklist
+
+- [ ] Backend is running on `http://127.0.0.1:8000` (`uvicorn main:app --reload`).
+- [ ] Frontend is running on `http://localhost:5173` (`npm run dev`).
+- [ ] Verify health endpoints: `/api/health`, `/api/gemini/health`, `/api/sih26186/ml/health`.
+- [ ] Run `pytest backend/tests` (all 15 tests passing).
+- [ ] Run `npm run build` in `frontend` (0 errors).

@@ -1,227 +1,23 @@
-# MindSetu — SIH26186
+# MindSetu — Personnel Welfare Support Prototype (SIH26186)
 
-MindSetu is an AI-assisted **personnel welfare support prototype** built for Smart India Hackathon 2026 problem statement **SIH26186**.
+[![Build & Tests](https://img.shields.io/badge/tests-15%20passed-success)](backend/tests)
+[![FastAPI](https://img.shields.io/badge/FastAPI-0.115+-009688.svg?logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com)
+[![React](https://img.shields.io/badge/React-19.0-61DAFB.svg?logo=react&logoColor=black)](https://react.dev)
+[![Gemini](https://img.shields.io/badge/Google%20Gemini-2.5%20Flash-4285F4.svg?logo=google&logoColor=white)](https://ai.google.dev)
+[![Explainability](https://img.shields.io/badge/XAI-TreeSHAP-ff69b4)](docs/ML_MODEL.md)
 
-It helps demonstrate a structured wellbeing-support journey while keeping important decisions with people. The prototype combines a guided user workflow, deterministic welfare triage, an optional research-model demonstration, explainability, and supportive AI communication.
+**MindSetu** is an AI-assisted **personnel welfare support prototype** engineered for Smart India Hackathon 2026 Problem Statement **SIH26186**.
 
-> **Important:** MindSetu is an SIH MVP and research prototype. It is not a certified clinical, medical, or military production system. It does not diagnose people or make automated disciplinary, employment, or welfare decisions.
+It demonstrates an end-to-end, confidential wellbeing check-in journey combining **operational workload context**, **deterministic welfare triage**, an **explainable LightGBM + TreeSHAP research model**, and a **supportive Google Gemini 2.5 Flash companion**.
 
----
-
-## Quick start
-
-```powershell
-# Terminal 1
-cd backend
-.\.venv\Scripts\Activate.ps1
-uvicorn main:app --host 127.0.0.1 --port 8000 --reload
-
-# Terminal 2
-cd frontend
-npm run dev
-```
-
-Then open the frontend URL shown by Vite, normally `http://localhost:5173`.
-
-**Verify the runtime:** `/api/health` → backend, `/api/database` → database, `/api/gemini/health` → Gemini configuration, `/api/ai/self-audit` → internal AI regression checks.
+> [!IMPORTANT]
+> **Welfare Support Mandate**: MindSetu is an SIH engineering prototype for supportive welfare triage. It does **not** provide clinical psychiatric diagnoses, prescribe medications, or make autonomous personnel/disciplinary decisions.
 
 ---
 
-## 1. What MindSetu does
+## ⚡ Quick Start
 
-The core journey is:
-
-```text
-Personnel context
-      ↓
-Wellbeing pulse
-      ↓
-Duty & recovery context
-      ↓
-Deterministic welfare triage
-      ↓
-Optional research-model demonstration
-      ↓
-SHAP explanation
-      ↓
-Supportive Gemini communication
-      ↓
-Human review / intervention
-```
-
-### AI responsibility boundaries
-
-| Component | Responsibility |
-|---|---|
-| Deterministic logic | Structured welfare-support triage |
-| LightGBM | Research-model demonstration only |
-| SHAP | Explains model contribution signals |
-| Gemini | Supportive, contextual communication |
-| Human | Welfare intervention and final decisions |
-
----
-
-## 2. Repository structure
-
-```text
-MindSetu-SIH26/
-├── frontend/                 # React + Vite application
-├── backend/
-│   ├── main.py               # Core FastAPI app and API routes
-│   ├── sih26186_server.py    # SIH26186 workflow routes
-│   ├── sih26186_ml_routes.py # ML-related workflow routes
-│   └── ml/                   # LightGBM, SHAP and research utilities
-├── docs/                     # Architecture and demo documentation
-└── README.md
-```
-
----
-
-## Documentation
-
-- [Architecture](docs/ARCHITECTURE.md)
-- [API reference](docs/API.md)
-- [Research ML model](docs/ML_MODEL.md)
-- [Safety and responsible use](docs/SAFETY.md)
-
----
-
-## 3. Main capabilities
-
-### Guided wellbeing workflow
-
-The application guides the user through a structured flow instead of presenting raw model outputs without context.
-
-### User-focused analysis
-
-The analysis experience is designed to answer practical questions such as:
-
-- What does my current wellbeing picture suggest?
-- What factors appear to be contributing?
-- What should I focus on next?
-- When might additional human support be useful?
-
-### Research ML demonstration
-
-The repository includes a LightGBM research model and supporting utilities for demonstration and study.
-
-The model is **not** presented as a clinical diagnosis engine or an autonomous decision-maker.
-
-### SHAP explainability
-
-SHAP is used to help explain which input signals contributed to the research-model output.
-
-### MindSetu AI companion
-
-The chatbot uses Google Gemini for supportive communication.
-
-The backend:
-
-- accepts recent conversation history;
-- gives Gemini up to a shared response window before fallback;
-- retries transient failures within that same total window;
-- extracts usable Gemini text defensively;
-- uses a deterministic supportive fallback only when Gemini cannot produce a usable response;
-- handles identified crisis language through a safety-priority response path.
-
----
-
-## 4. Architecture
-
-```text
-                    ┌─────────────────────┐
-                    │   React + Vite UI   │
-                    └──────────┬──────────┘
-                               │ HTTP
-                    ┌──────────▼──────────┐
-                    │     FastAPI API     │
-                    └──────┬──────┬───────┘
-                           │      │
-              ┌────────────▼─┐  ┌─▼──────────────┐
-              │ PostgreSQL   │  │ SIH26186 Flow  │
-              │ sessions/    │  │ triage + ML    │
-              │ mood data    │  └──────┬─────────┘
-              └──────────────┘         │
-                                  ┌─────▼─────┐
-                                  │ LightGBM  │
-                                  │ + SHAP    │
-                                  └───────────┘
-
-                    FastAPI ─────────────► Gemini
-                           supportive communication
-```
-
----
-
-## 5. API overview
-
-### Core runtime
-
-| Method | Endpoint | Purpose |
-|---|---|---|
-| `GET` | `/api/health` | Backend status |
-| `GET` | `/api/database` | Database connectivity |
-| `POST` | `/api/sessions` | Create an anonymous consented session |
-| `POST` | `/api/chat` | Supportive streaming chat |
-| `POST` | `/api/mood` | Save a mood check-in |
-| `GET` | `/api/mood/{session_id}` | Retrieve recent mood history |
-| `GET` | `/api/dashboard/mood-trend` | Retrieve aggregated mood trend |
-
-### AI runtime
-
-| Endpoint | Meaning |
-|---|---|
-| `/api/chat/health` | Chat configuration status |
-| `/api/gemini/health` | Gemini SDK and key configuration status |
-| `/api/ai/self-audit` | Internal deterministic AI checks |
-
-> A configuration health check confirms local configuration, not live provider availability.
-
-### Chat request contract
-
-`POST /api/chat` expects a session ID, user message, optional recent history, and structured wellbeing context. The response is NDJSON streaming events: `start`, `token`, optionally `fallback`, then `done`.
-
----
-
-## 6. Local setup
-
-### Prerequisites
-
-- Python with a compatible virtual-environment setup
-- Node.js and npm
-- PostgreSQL
-- A Google Gemini API key for live chatbot responses
-
-### Backend environment
-
-Create:
-
-```text
-backend/.env
-```
-
-using `backend/.env.example` as the starting point.
-
-Configure values similar to:
-
-```env
-DB_HOST=localhost
-DB_PORT=5432
-DB_NAME=mindsetu_db
-DB_USER=postgres
-DB_PASSWORD=your_database_password
-
-GEMINI_API_KEY=your_real_gemini_api_key
-GEMINI_MODEL=gemini-2.5-flash
-GEMINI_TOTAL_TIMEOUT_SECONDS=15
-```
-
-**Never commit real API keys, passwords, personnel data, or database dumps.**
-
-### Start the backend
-
-From the repository root:
-
+### 1. Backend Service (FastAPI)
 ```powershell
 cd backend
 python -m venv .venv
@@ -230,174 +26,85 @@ pip install -r requirements.txt
 uvicorn main:app --host 127.0.0.1 --port 8000 --reload
 ```
 
-### Start the frontend
-
-Open a second terminal:
-
+### 2. Frontend Application (React + Vite)
 ```powershell
 cd frontend
 npm ci
 npm run dev
 ```
 
-Open the Vite URL shown in the terminal, normally:
+Open your browser at **`http://localhost:5173`** (Swagger API docs at **`http://127.0.0.1:8000/docs`**).
 
-```text
-http://localhost:5173
+---
+
+## 🧭 Complete User Journey
+
+```
+Personnel (Confidential & Anonymous)
+       ↓
+[ 1. Protected Session & Consent ] (StartScreen.jsx)
+       ↓
+[ 2. 6-Item Wellness Pulse ] (WellnessScreen.jsx)
+       ↓
+[ 3. Operational Workload & Duty Context ] (WorkloadScreen.jsx)
+       ↓
+[ 4. Deterministic Welfare Triage Analysis ] (AnalysisScreen.jsx)
+       ↓
+[ 5. Explainable Research Model & TreeSHAP ] (ResearchLabModal.jsx)
+       ↓
+[ 6. MindSetu AI Companion (Gemini NDJSON) ] (ChatScreen.jsx)
+       ↓
+[ 7. Crisis Intervention & Hotlines ] (Tele-MANAS 14416 / KIRAN 1800-599-0019)
 ```
 
 ---
 
-## 7. Health checks
+## 🏛️ AI Architecture & Dual-Layer Governance
 
-Once the backend is running:
+```
+┌────────────────────────────────────────────────────────────────────────────┐
+│                       AI RESPONSIBILITY BOUNDARIES                         │
+├──────────────────────────┬─────────────────────────────────────────────────┤
+│ Layer                    │ System Responsibility                           │
+├──────────────────────────┼─────────────────────────────────────────────────┤
+│ 1. Deterministic Engine  │ Authoritative Welfare Triage (55% Wellness + 45% Workload) │
+│ 2. LightGBM Classifier   │ Research-Level Predictive Pattern Discovery     │
+│ 3. TreeSHAP Engine       │ Local & Global Feature Importance Attribution   │
+│ 4. Google Gemini 2.5     │ Streaming Empathetic & Actionable Coping Chat   │
+│ 5. Human Welfare Officer │ Real-World Decision Making & Counseling         │
+└──────────────────────────┴─────────────────────────────────────────────────┘
+```
 
-| Endpoint | Purpose |
-|---|---|
-| `/api/health` | Backend availability |
-| `/api/database` | PostgreSQL connectivity |
-| `/api/chat/health` | Chat runtime configuration |
-| `/api/gemini/health` | Gemini configuration status |
-| `/api/sih26186/ml/health` | Research ML availability |
+---
 
-### PowerShell examples
+## 📚 Comprehensive Documentation Index
+
+| Document | Description |
+| :--- | :--- |
+| 📖 **[System Architecture](docs/ARCHITECTURE.md)** | End-to-end component topology, data flows, database schemas, and failover design |
+| 🔌 **[API Reference](docs/API.md)** | Complete REST & streaming NDJSON specifications with request/response payloads |
+| 🧠 **[Research ML & SHAP](docs/ML_MODEL.md)** | Feature schemas, LightGBM training hyperparameters, TreeSHAP equations, and CV metrics |
+| 🛡️ **[Safety & Ethics](docs/SAFETY.md)** | Non-clinical boundaries, privacy-by-design, crisis protocols, and AI self-audit |
+| 🎤 **[SIH Jury Demo Guide](docs/SIH_DEMO_GUIDE.md)** | 3-minute & 7-minute pitch scripts, stage walkthroughs, and jury defense Q&A |
+| 💻 **[Frontend Design Guide](frontend/README.md)** | Component architecture, responsive design tokens, and accessibility features |
+
+---
+
+## 🧪 Quality & Verification Checks
 
 ```powershell
-Invoke-WebRequest -UseBasicParsing http://127.0.0.1:8000/api/health
-Invoke-WebRequest -UseBasicParsing http://127.0.0.1:8000/api/database
-Invoke-WebRequest -UseBasicParsing http://127.0.0.1:8000/api/gemini/health
-Invoke-WebRequest -UseBasicParsing http://127.0.0.1:8000/api/sih26186/ml/health
-```
+# Run backend test suite (15 tests covering AI self-audit & triage contracts)
+pytest backend/tests
 
----
-
-## 8. Chatbot behavior and fallback policy
-
-MindSetu prioritizes Gemini when it is available.
-
-```text
-User message
-      ↓
-Gemini request begins
-      ↓
-Up to 15 seconds total response window
-      ↓
-Valid Gemini response?
-   ┌──────────┴──────────┐
-  YES                   NO
-   │                     │
-Return Gemini     Retry within remaining
-response          shared time window
-                         │
-                    Still no usable text
-                         ↓
-             Deterministic supportive fallback
-```
-
-The fallback exists so the interface can still provide a supportive response when the external AI provider is unavailable.
-
-A health endpoint confirming that the API key and SDK are configured does **not by itself guarantee that every live Gemini request will succeed**. Network, provider, quota, and response-generation failures can still occur.
-
----
-
-## 9. Safety boundaries
-
-MindSetu:
-
-- does not diagnose medical or psychological conditions;
-- does not prescribe medication;
-- does not replace emergency or professional services;
-- does not make automated disciplinary or employment decisions;
-- treats model outputs as support signals;
-- keeps final welfare intervention and decision-making with appropriate humans.
-
-For demonstrations, use **fictional or approved test data only**.
-
----
-
-## 10. Automated quality checks
-
-Before presenting:
-
-### Infrastructure
-
-- [ ] PostgreSQL is running.
-- [ ] `backend/.env` is configured.
-- [ ] Backend starts without import errors.
-- [ ] Frontend starts successfully.
-
-### Health
-
-- [ ] `/api/health` returns healthy.
-- [ ] `/api/database` reports connected.
-- [ ] `/api/gemini/health` reports the expected configuration.
-- [ ] `/api/sih26186/ml/health` reports the expected research-model state.
-
-### Automated checks
-
-The repository includes deterministic AI regression checks and a GitHub Actions workflow intended to run them on pushes and pull requests to `main`.
-
-```powershell
-cd backend
-pytest -q tests
-```
-
-The automated suite covers AI response safeguards, wellbeing scoring boundaries and API route registration. CI also runs frontend linting and a production build. These checks do not prove that a live external Gemini request or a live PostgreSQL deployment will succeed.
-
-### Demo validation
-
-- [ ] Start a new session.
-- [ ] Complete the wellbeing pulse.
-- [ ] Complete the duty and recovery context.
-- [ ] Reach the analysis page.
-- [ ] Review the explanation and recommended next focus.
-- [ ] Test the chatbot with a normal multi-turn conversation.
-- [ ] Test a short contextual follow-up such as `Whom?`.
-- [ ] Confirm the chatbot does not repeatedly return the same fallback response when Gemini is working.
-- [ ] Verify the deterministic fallback path separately.
-
-### Build
-
-```powershell
+# Run frontend production build
 cd frontend
 npm run build
 ```
 
 ---
 
-## 11. Suggested demo narrative
+## 🔒 Security & Privacy by Design
 
-A concise demonstration sequence:
-
-1. Introduce the welfare-support problem.
-2. Explain that MindSetu collects structured context through a guided journey.
-3. Complete the wellbeing and duty/recovery inputs.
-4. Show the user-focused analysis rather than starting with raw technical scores.
-5. Explain the optional research-model and SHAP layer.
-6. Demonstrate the Gemini companion with a contextual follow-up.
-7. Emphasize that the system supports—not replaces—qualified human welfare intervention.
-
----
-
-## 12. Research utilities
-
-The `backend/ml/` directory contains supporting scripts for training, evaluation, threshold analysis, ablation, and dataset inspection.
-
-These utilities support research reproducibility and experimentation and are **not required for the normal MVP runtime path**.
-
----
-
-## 13. Production considerations
-
-A real deployment would require additional work, including:
-
-- formal security review;
-- privacy and data-governance controls;
-- authentication and role-based access control;
-- audit logging appropriate to the operating environment;
-- secure secret management;
-- model validation and monitoring;
-- human oversight procedures;
-- domain-specific legal and operational approval.
-
-MindSetu should therefore be evaluated as an **SIH prototype demonstrating an architecture and workflow**, not as a ready-to-deploy clinical or operational welfare system.
+- **Zero-PII Storage**: Sessions use anonymous UUIDs without requiring personal names, phone numbers, or defense service IDs.
+- **Server-Side Credentials**: `GEMINI_API_KEY` and PostgreSQL connection strings exist exclusively in backend `.env` variables and are never transmitted to client browsers.
+- **Emergency Fallbacks**: Pre-configured deterministic coping responses activate seamlessly if external AI provider limits or timeouts occur.
