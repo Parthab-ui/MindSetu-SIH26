@@ -62,7 +62,7 @@ def _init_pool():
     if _pool is None:
         _pool = ConnectionPool(
             conninfo=_build_conninfo(),
-            min_size=2,
+            min_size=0,
             max_size=10,
             open=True,
         )
