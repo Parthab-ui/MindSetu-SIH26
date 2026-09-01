@@ -236,12 +236,11 @@ def _ai_recommendation(risk_level, wellness_score, workload_score, workload):
                 api_key=GEMINI_API_KEY,
                 http_options=types.HttpOptions(timeout=max(1000, int(remaining * 1000))),
             )
-            response = client.models.generate_content(
+            interaction = client.interactions.create(
                 model=GEMINI_MODEL,
-                contents=prompt,
-                config={"temperature": 0.4, "max_output_tokens": 400},
+                input=prompt
             )
-            text = (getattr(response, "text", None) or "").strip()
+            text = (getattr(interaction, "output_text", None) or "").strip()
             cleaned = _clean_ai_recommendation(text, fallback)
             if cleaned and cleaned != fallback:
                 return cleaned

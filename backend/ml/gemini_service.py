@@ -42,15 +42,11 @@ def generate_supportive_response(ml_result: dict) -> str:
     last_error = None
     for attempt in range(1, MAX_ATTEMPTS + 1):
         try:
-            response = client.models.generate_content(
+            interaction = client.interactions.create(
                 model=MODEL,
-                contents=prompt,
-                config={
-                    "temperature": 0.35,
-                    "max_output_tokens": 350,
-                },
+                input=prompt
             )
-            text = (getattr(response, "text", None) or "").strip()
+            text = (getattr(interaction, "output_text", None) or "").strip()
             if text:
                 return text
             last_error = RuntimeError("Gemini returned no text output")

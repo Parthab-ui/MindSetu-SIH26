@@ -20,7 +20,7 @@ ENV_PATH = Path(__file__).resolve().parent / ".env"
 load_dotenv(dotenv_path=ENV_PATH)
 
 GEMINI_API_KEY = (os.getenv("GEMINI_API_KEY") or "").strip()
-GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-2.5-flash")
+GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-3.7-flash")
 GEMINI_TOTAL_TIMEOUT_SECONDS = min(max(float(os.getenv("GEMINI_TOTAL_TIMEOUT_SECONDS", "15")), 5.0), 30.0)
 MAX_CHAT_LENGTH = 4000
 MAX_MOOD_NOTE_LENGTH = 1000
@@ -291,23 +291,7 @@ def crisis_response() -> str:
     )
 
 
-def _extract_gemini_text(response) -> str:
-    text = getattr(response, "text", None)
-    if isinstance(text, str) and text.strip():
-        return text.strip()
 
-    candidates = getattr(response, "candidates", None) or []
-    for candidate in candidates:
-        content = getattr(candidate, "content", None)
-        parts = getattr(content, "parts", None) or []
-        collected = []
-        for part in parts:
-            value = getattr(part, "text", None)
-            if isinstance(value, str) and value.strip():
-                collected.append(value.strip())
-        if collected:
-            return "\n".join(collected)
-    return ""
 
 
 def generate_gemini_response(message: str, history=None, wellbeing_context=None) -> str:
@@ -319,17 +303,19 @@ def generate_gemini_response(message: str, history=None, wellbeing_context=None)
     deadline = time.monotonic() + GEMINI_TOTAL_TIMEOUT_SECONDS
     last_error = None
     context = build_ai_context(history, wellbeing_context)
-    contents = [{"role": "user", "parts": [{"text": context}]}]
-    contents.append({"role": "user", "parts": [{"text": message}]})
+    prompt = f"{context}\n\nLatest user message: {message}"
     for attempt in range(3):
         remaining = deadline - time.monotonic()
         if remaining <= 0: break
         try:
             started = time.monotonic()
             client = genai.Client(api_key=GEMINI_API_KEY, http_options=types.HttpOptions(timeout=max(1000, int(remaining * 1000))))
-            response = client.models.generate_content(model=GEMINI_MODEL, contents=contents,
-                config={"system_instruction": MINDSETU_SYSTEM_PROMPT, "temperature": 0.55, "max_output_tokens": 500})
-            text = validate_ai_response(_extract_gemini_text(response), message, history)
+            interaction = client.interactions.create(
+                model=GEMINI_MODEL,
+                input=prompt,
+                system_instruction=MINDSETU_SYSTEM_PROMPT
+            )
+            text = validate_ai_response(interaction.output_text, message, history)
             print(f"GEMINI attempt={attempt + 1} latency_ms={int((time.monotonic()-started)*1000)} valid={bool(text)}")
             if text: return text
             raise RuntimeError("Gemini returned an invalid or repeated response")
