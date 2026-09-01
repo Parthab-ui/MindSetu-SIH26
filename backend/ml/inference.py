@@ -1,4 +1,5 @@
 """Production inference wrapper for the validated LightGBM research baseline."""
+from functools import lru_cache
 from pathlib import Path
 import os
 import joblib
@@ -11,6 +12,7 @@ THRESHOLD = float(os.getenv("SIH26186_ML_THRESHOLD", "0.45"))
 FEATURES = ["Q29_Total", "Q12_weapon", "Q13_feltdie", "Q23a_cutdowntime", "Q23b_Accomplished_less", "Q23c_limited_work", "Q23d_difficulty_performing"]
 LABELS = {"Q29_Total":"wellbeing score", "Q12_weapon":"weapon exposure indicator", "Q13_feltdie":"perceived life-threat indicator", "Q23a_cutdowntime":"reduced work time", "Q23b_Accomplished_less":"accomplished less work", "Q23c_limited_work":"limited work capacity", "Q23d_difficulty_performing":"difficulty performing duties"}
 
+@lru_cache(maxsize=1)
 def _load():
     if not MODEL_PATH.exists(): raise FileNotFoundError(f"ML model not found: {MODEL_PATH}")
     bundle = joblib.load(MODEL_PATH)

@@ -2,6 +2,7 @@ import os
 import time
 
 from google import genai
+from google.genai import types
 
 MODEL = os.getenv("GEMINI_MODEL", "gemini-2.5-flash")
 TIMEOUT_MS = int(os.getenv("GEMINI_TIMEOUT_MS", "20000"))
@@ -22,7 +23,7 @@ def generate_supportive_response(ml_result: dict) -> str:
 
     client = genai.Client(
         api_key=api_key,
-        http_options={"timeout": TIMEOUT_MS},
+        http_options=types.HttpOptions(timeout=TIMEOUT_MS),
     )
     payload = {
         "signal": ml_result.get("signal"),

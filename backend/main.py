@@ -3,14 +3,17 @@ import os
 import re
 import time
 import uuid
+from contextlib import asynccontextmanager, contextmanager
 from datetime import datetime, timezone
 from pathlib import Path
+from urllib.parse import urlparse
 
 import psycopg
 from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
+from psycopg_pool import ConnectionPool
 from pydantic import BaseModel, Field
 
 ENV_PATH = Path(__file__).resolve().parent / ".env"
@@ -22,15 +25,86 @@ GEMINI_TOTAL_TIMEOUT_SECONDS = min(max(float(os.getenv("GEMINI_TOTAL_TIMEOUT_SEC
 MAX_CHAT_LENGTH = 4000
 MAX_MOOD_NOTE_LENGTH = 1000
 
+_DEFAULT_CORS_ORIGINS = "http://localhost:5173,http://127.0.0.1:5173"
+CORS_ORIGINS = [
+    origin.strip()
+    for origin in os.getenv("CORS_ORIGINS", _DEFAULT_CORS_ORIGINS).split(",")
+    if origin.strip()
+]
+
+
+def _build_conninfo() -> str:
+    """Build a PostgreSQL connection string.
+
+    Supports Render-style ``DATABASE_URL`` or individual ``DB_*`` vars.
+    """
+    database_url = (os.getenv("DATABASE_URL") or "").strip()
+    if database_url:
+        return database_url
+    password = os.getenv("DB_PASSWORD")
+    if not password:
+        raise RuntimeError(
+            "Database credentials are not configured. "
+            "Set DATABASE_URL or DB_HOST/DB_PORT/DB_NAME/DB_USER/DB_PASSWORD in .env"
+        )
+    host = os.getenv("DB_HOST", "localhost")
+    port = os.getenv("DB_PORT", "5432")
+    dbname = os.getenv("DB_NAME", "mindsetu_db")
+    user = os.getenv("DB_USER", "postgres")
+    return f"postgresql://{user}:{password}@{host}:{port}/{dbname}"
+
+
+_pool: ConnectionPool | None = None
+
+
+def _init_pool():
+    global _pool
+    if _pool is None:
+        _pool = ConnectionPool(
+            conninfo=_build_conninfo(),
+            min_size=2,
+            max_size=10,
+            open=True,
+        )
+
+
+def _close_pool():
+    global _pool
+    if _pool is not None:
+        _pool.close()
+        _pool = None
+
+
+@contextmanager
+def get_connection():
+    """Borrow a connection from the pool (context manager)."""
+    if _pool is None:
+        raise RuntimeError("Database pool is not initialised.")
+    with _pool.connection() as conn:
+        yield conn
+
+
+@asynccontextmanager
+async def lifespan(application: FastAPI):
+    """Application startup and shutdown."""
+    _init_pool()
+    ensure_core_tables()
+    from sih26186_server import ensure_sih26186_tables
+    ensure_sih26186_tables()
+    yield
+    _close_pool()
+
+
 app = FastAPI(
     title="MindSetu API",
     description="MindSetu personnel welfare support platform",
     version="2.0.0",
+    lifespan=lifespan,
 )
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173", "http://127.0.0.1:5173"],
+    allow_origins=CORS_ORIGINS,
     allow_credentials=True,
     allow_methods=["GET", "POST"],
     allow_headers=["Content-Type"],
@@ -47,17 +121,6 @@ async def security_headers(request: Request, call_next):
     return response
 
 
-def get_connection():
-    password = os.getenv("DB_PASSWORD")
-    if not password:
-        raise RuntimeError("DB_PASSWORD is missing from the environment.")
-    return psycopg.connect(
-        host=os.getenv("DB_HOST", "localhost"),
-        port=os.getenv("DB_PORT", "5432"),
-        dbname=os.getenv("DB_NAME", "mindsetu_db"),
-        user=os.getenv("DB_USER", "postgres"),
-        password=password,
-    )
 
 
 
@@ -87,10 +150,6 @@ def ensure_core_tables():
             )
 
 
-
-@app.on_event("startup")
-def startup_core_tables():
-    ensure_core_tables()
 
 def session_exists(session_id: uuid.UUID) -> bool:
     with get_connection() as conn:
