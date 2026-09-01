@@ -63,7 +63,8 @@ function App() {
   const [answers, setAnswers] = useState(Array(WELLNESS_QUESTIONS.length).fill(null));
   const [analysis, setAnalysis] = useState(null);
   const [mlResult, setMlResult] = useState(null);
-  const [mlInputs, setMlInputs] = useState({ Q29_Total: 0, Q12_weapon: 0, Q13_feltdie: 0, Q23a_cutdowntime: 0, Q23b_Accomplished_less: 0, Q23c_limited_work: 0, Q23d_difficulty_performing: 0 });
+  const [mlInputs, setMlInputs] = useState({ Q29_Total: 17, Q12_weapon: 0, Q13_feltdie: 0, Q23a_cutdowntime: 0, Q23b_Accomplished_less: 0, Q23c_limited_work: 0, Q23d_difficulty_performing: 0 });
+  const [mlStep, setMlStep] = useState(0);
   const [chatMessages, setChatMessages] = useState([]);
   const [chatInput, setChatInput] = useState("");
   const [mood, setMood] = useState(null);
@@ -130,14 +131,7 @@ function App() {
     finally { setLoading(false); }
   }
 
-  async function checkModel() {
-    try {
-      setLoading(true);
-      const result = await apiRequest("/api/sih26186/ml/health");
-      setMlResult({ health: result });
-    } catch (err) { setMlResult({ error: err.message }); }
-    finally { setLoading(false); }
-  }
+
 
   async function runResearchModel() {
     clearError();
@@ -148,7 +142,10 @@ function App() {
         body: JSON.stringify({ ...mlInputs, generate_response: true }),
       });
       setMlResult(result);
-    } catch (err) { setMlResult({ error: err.message }); }
+    } catch (err) { 
+      setMlResult({ error: err.message }); 
+      setMlStep(0); // Reset to intro on error
+    }
     finally { setLoading(false); }
   }
 
@@ -308,13 +305,156 @@ function App() {
               <span><span className="eyebrow">FOR JUDGES & RESEARCH DEMO</span><b>Inspect the separate ML + SHAP layer</b><small>This research model is intentionally separate from your wellbeing summary.</small></span>
               <span>{showResearch ? "−" : "+"}</span>
             </button>
-            {showResearch && <div className="research-content">
-              <div className="research-intro"><div><span className="eyebrow">TECHNICAL DETAILS</span><h2>Explainable research model</h2><p>These fictional demo inputs are used only for the LightGBM + SHAP research demonstration. They are not inferred from the wellbeing questionnaire and do not control the operational support signal above.</p></div><button className="secondary-button" onClick={checkModel} disabled={loading}>Check model status</button></div>
-              {mlResult?.health && <div className={`status-line ${mlResult.health.status === "ready" ? "" : "error"}`}>{mlResult.health.model} · {mlResult.health.status} · threshold {mlResult.health.threshold}</div>}
-              {mlResult?.error && <div className="error">{mlResult.error}</div>}
-              <div className="ml-grid">{[['Q29_Total','Overall research wellbeing score'],['Q12_weapon','Research exposure indicator'],['Q13_feltdie','Research life-threat indicator'],['Q23a_cutdowntime','Reduced work time'],['Q23b_Accomplished_less','Accomplished less work'],['Q23c_limited_work','Limited work capacity'],['Q23d_difficulty_performing','Difficulty performing duties']].map(([key,label]) => <div className="field" key={key}><label>{label}</label><input type="number" value={mlInputs[key]} onChange={(event) => setMlInputs((current) => ({ ...current, [key]: Number(event.target.value) }))} /></div>)}</div>
-              <button className="primary-button" disabled={loading} onClick={runResearchModel}>Run research demonstration →</button>
-              {mlResult?.probability !== undefined && <div className="ml-output"><div className={`signal ${mlResult.signal}`}>{mlResult.signal} · {mlResult.probability.toFixed(3)}</div><p>This research output is not a clinical diagnosis and does not determine employment or disciplinary action.</p><div className="contributors">{(mlResult.contributors || []).slice(0, 5).map((item) => <div className="contributor" key={item.feature}><span>{item.label}</span><b>{item.direction} · {Math.abs(item.shap_value ?? 0).toFixed(3)}</b></div>)}</div>{mlResult.supportive_response && <div className="gemini-box"><span className="eyebrow">GEMINI COMMUNICATION</span><p>{mlResult.supportive_response}</p><small>Response source: {mlResult.response_source || "not available"}</small></div>}</div>}
+            {showResearch && <div className="research-content guided-assessment">
+              {mlStep === 0 && (
+                <div className="ml-wizard-step">
+                  <div className="research-intro">
+                    <div>
+                      <span className="eyebrow">DEEP INSIGHTS</span>
+                      <h2>Wellbeing Insights Assessment</h2>
+                      <p>This guided check-in uses a research model to provide personalized insights and practical next steps based on your current experience. This is an informational tool, not a clinical diagnosis.</p>
+                    </div>
+                  </div>
+                  {mlResult?.error && <div className="error">{mlResult.error}</div>}
+                  <button className="primary-button" onClick={() => setMlStep(1)}>Begin Assessment →</button>
+                </div>
+              )}
+              
+              {mlStep === 1 && (
+                <div className="ml-wizard-step">
+                  <span className="eyebrow">STEP 1 OF 3</span>
+                  <h2>Recent Stress Level</h2>
+                  <p>Over the last few weeks, how would you rate your overall stress and symptom severity?</p>
+                  <div className="field slider-field">
+                    <label>17 (Very Low) to 85 (Very High)</label>
+                    <input type="range" min="17" max="85" value={mlInputs.Q29_Total} onChange={(e) => setMlInputs({ ...mlInputs, Q29_Total: Number(e.target.value) })} />
+                    <div className="slider-value">{mlInputs.Q29_Total}</div>
+                  </div>
+                  <div className="action-row">
+                    <button className="secondary-button" onClick={() => setMlStep(0)}>Cancel</button>
+                    <button className="primary-button" onClick={() => setMlStep(2)}>Next →</button>
+                  </div>
+                </div>
+              )}
+
+              {mlStep === 2 && (
+                <div className="ml-wizard-step">
+                  <span className="eyebrow">STEP 2 OF 3</span>
+                  <h2>Critical Experiences</h2>
+                  <p>Have you encountered any of the following recently?</p>
+                  <div className="segmented-field">
+                    <label>Have you been exposed to a weapon or combat situation?</label>
+                    <div className="segmented-controls">
+                      <button className={mlInputs.Q12_weapon === 1 ? "selected" : ""} onClick={() => setMlInputs({ ...mlInputs, Q12_weapon: 1 })}>Yes</button>
+                      <button className={mlInputs.Q12_weapon === 0 ? "selected" : ""} onClick={() => setMlInputs({ ...mlInputs, Q12_weapon: 0 })}>No</button>
+                    </div>
+                  </div>
+                  <div className="segmented-field">
+                    <label>Have you experienced a situation where you felt your life was threatened?</label>
+                    <div className="segmented-controls">
+                      <button className={mlInputs.Q13_feltdie === 1 ? "selected" : ""} onClick={() => setMlInputs({ ...mlInputs, Q13_feltdie: 1 })}>Yes</button>
+                      <button className={mlInputs.Q13_feltdie === 0 ? "selected" : ""} onClick={() => setMlInputs({ ...mlInputs, Q13_feltdie: 0 })}>No</button>
+                    </div>
+                  </div>
+                  <div className="action-row">
+                    <button className="secondary-button" onClick={() => setMlStep(1)}>← Back</button>
+                    <button className="primary-button" onClick={() => setMlStep(3)}>Next →</button>
+                  </div>
+                </div>
+              )}
+
+              {mlStep === 3 && (
+                <div className="ml-wizard-step">
+                  <span className="eyebrow">STEP 3 OF 3</span>
+                  <h2>Daily Impact</h2>
+                  <p>In the past few weeks, have you experienced any of the following?</p>
+                  <div className="segmented-field">
+                    <label>Had to reduce the amount of time spent on duties</label>
+                    <div className="segmented-controls">
+                      <button className={mlInputs.Q23a_cutdowntime === 1 ? "selected" : ""} onClick={() => setMlInputs({ ...mlInputs, Q23a_cutdowntime: 1 })}>Yes</button>
+                      <button className={mlInputs.Q23a_cutdowntime === 0 ? "selected" : ""} onClick={() => setMlInputs({ ...mlInputs, Q23a_cutdowntime: 0 })}>No</button>
+                    </div>
+                  </div>
+                  <div className="segmented-field">
+                    <label>Accomplished less than you usually would</label>
+                    <div className="segmented-controls">
+                      <button className={mlInputs.Q23b_Accomplished_less === 1 ? "selected" : ""} onClick={() => setMlInputs({ ...mlInputs, Q23b_Accomplished_less: 1 })}>Yes</button>
+                      <button className={mlInputs.Q23b_Accomplished_less === 0 ? "selected" : ""} onClick={() => setMlInputs({ ...mlInputs, Q23b_Accomplished_less: 0 })}>No</button>
+                    </div>
+                  </div>
+                  <div className="segmented-field">
+                    <label>Were limited in the kind of work you could perform</label>
+                    <div className="segmented-controls">
+                      <button className={mlInputs.Q23c_limited_work === 1 ? "selected" : ""} onClick={() => setMlInputs({ ...mlInputs, Q23c_limited_work: 1 })}>Yes</button>
+                      <button className={mlInputs.Q23c_limited_work === 0 ? "selected" : ""} onClick={() => setMlInputs({ ...mlInputs, Q23c_limited_work: 0 })}>No</button>
+                    </div>
+                  </div>
+                  <div className="segmented-field">
+                    <label>Had difficulty performing duties (e.g., took extra effort)</label>
+                    <div className="segmented-controls">
+                      <button className={mlInputs.Q23d_difficulty_performing === 1 ? "selected" : ""} onClick={() => setMlInputs({ ...mlInputs, Q23d_difficulty_performing: 1 })}>Yes</button>
+                      <button className={mlInputs.Q23d_difficulty_performing === 0 ? "selected" : ""} onClick={() => setMlInputs({ ...mlInputs, Q23d_difficulty_performing: 0 })}>No</button>
+                    </div>
+                  </div>
+                  <div className="action-row">
+                    <button className="secondary-button" onClick={() => setMlStep(2)}>← Back</button>
+                    <button className="primary-button" disabled={loading} onClick={() => { setMlStep(4); runResearchModel(); }}>{loading ? "Analyzing..." : "Get Insights →"}</button>
+                  </div>
+                </div>
+              )}
+
+              {mlStep === 4 && loading && (
+                <div className="ml-wizard-step">
+                  <div className="loading-state">
+                    <div className="hero-icon rotating">✦</div>
+                    <h2>Analyzing responses...</h2>
+                  </div>
+                </div>
+              )}
+
+              {mlStep === 4 && !loading && mlResult?.probability !== undefined && (
+                <div className="ml-wizard-step results-step">
+                  <div className="result-header">
+                    <span className="eyebrow">ASSESSMENT RESULT</span>
+                    <h2>Wellbeing Snapshot</h2>
+                    <p className="takeaway-meaning">
+                      {mlResult.signal === "elevated" 
+                        ? "Your recent wellbeing check-in suggests that stress and recovery may be areas worth paying attention to."
+                        : "Your check-in indicates a steady baseline, though it is always good to continue healthy recovery practices."}
+                    </p>
+                  </div>
+                  
+                  <div className="result-factors">
+                    <h3>Key Contributing Factors</h3>
+                    <p>Based on your responses, these areas had the most influence on your result:</p>
+                    <div className="factor-list">
+                      {(mlResult.contributors || []).slice(0, 4).map((item) => (
+                        <div className="factor-item" key={item.feature}>
+                          <span className={`factor-icon ${item.direction === "increases signal" ? "up" : "down"}`}>
+                            {item.direction === "increases signal" ? "↗" : "↘"}
+                          </span>
+                          <span>{item.label}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {mlResult.supportive_response && (
+                    <div className="result-next-steps">
+                      <h3>Practical Next Steps</h3>
+                      <p>{mlResult.supportive_response}</p>
+                    </div>
+                  )}
+
+                  <div className="safety-note">
+                    <small><b>Note:</b> This assessment provides wellbeing insights and is not a clinical diagnosis. It does not determine employment or disciplinary action.</small>
+                  </div>
+                  
+                  <div className="action-row">
+                    <button className="secondary-button" onClick={() => { setMlStep(0); setMlResult(null); }}>Start Over</button>
+                  </div>
+                </div>
+              )}
             </div>}
           </section>
         </main>

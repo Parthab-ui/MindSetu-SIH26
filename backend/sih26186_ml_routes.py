@@ -12,13 +12,13 @@ GEMINI_RESPONSE_BUDGET_SECONDS = 8
 
 
 class SIH26186MLRequest(BaseModel):
-    Q29_Total: float = Field(...)
-    Q12_weapon: float = Field(...)
-    Q13_feltdie: float = Field(...)
-    Q23a_cutdowntime: float = Field(...)
-    Q23b_Accomplished_less: float = Field(...)
-    Q23c_limited_work: float = Field(...)
-    Q23d_difficulty_performing: float = Field(...)
+    Q29_Total: float = Field(..., ge=17, le=85)
+    Q12_weapon: float = Field(..., ge=0, le=1)
+    Q13_feltdie: float = Field(..., ge=0, le=1)
+    Q23a_cutdowntime: float = Field(..., ge=0, le=1)
+    Q23b_Accomplished_less: float = Field(..., ge=0, le=1)
+    Q23c_limited_work: float = Field(..., ge=0, le=1)
+    Q23d_difficulty_performing: float = Field(..., ge=0, le=1)
     generate_response: bool = True
 
 
