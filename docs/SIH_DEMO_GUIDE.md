@@ -39,19 +39,22 @@
    *A:* It is a real supervised Gradient Boosting classifier pipeline with StandardScaler preprocessor trained on 24 acoustic & prosodic features (pitch mean/std/range via autocorrelation, pause ratios, speech rate, spectral flux, and 13 MFCCs). Predictions come from the learned decision trees, not manual if/else rules.
 2. **Q: Does Voice ML diagnose depression or PTSD?**  
    *A:* No. Voice ML provides an objective behavioral signal of paralinguistic psychomotor strain (such as pitch flattening or elevated hesitation). It is explicitly non-diagnostic.
-3. **Q: Is raw audio stored?**  
+3. **Q: Where did your Voice ML dataset come from?**  
+   *A:* Our prototype Gradient Boosting classifier was trained on 800 synthetic acoustic feature profiles generated from parametric Gaussian distributions calibrated to published clinical paralinguistic benchmark literature (Mundt et al., Cummins et al., DAIC-WOZ acoustic metrics). This allowed us to build a working, reproducible paralinguistic classifier prototype without violating privacy or licensing restrictions on sensitive clinical voice recordings. Prospective operational deployment will require validation on real Indian defense personnel cohorts.
+4. **Q: Is raw audio stored?**  
    *A:* No. Raw audio is processed in-memory, acoustic features are extracted, and the raw audio buffer is immediately released. Zero audio files are stored on disk or database.
-4. **Q: What if the microphone fails or the room is noisy?**  
+5. **Q: What if the microphone fails or the room is noisy?**  
    *A:* MindSetu provides real-time audio quality validation (SNR estimation and clipping detection). If audio quality is poor or permissions are denied, users can easily skip voice without compromising the deterministic triage engine!
-5. **Q: What if self-reported answers and voice signals disagree?**  
+6. **Q: What if self-reported answers and voice signals disagree?**  
    *A:* This is a vital clinical feature! If self-reported fatigue is high but voice is steady, it indicates cognitive load without deep vocal psychomotor slowing. If voice is strained despite low self-report, it highlights possible underreporting due to duty stigma.
-6. **Q: Why not use voice alone?**  
+7. **Q: Why not use voice alone?**  
    *A:* Mental health is multi-dimensional. A single modality can be misleading. MindSetu fuses self-report (55%), duty workload (45%), and voice ML into a balanced decision-support view.
-7. **Q: What is the scoring formula?**  
+8. **Q: What is the scoring formula?**  
    *A:* Combined Triage Score = 55% Wellness Pulse + 45% Operational Workload. High (≥70), Moderate (≥45), Low (<45).
-8. **Q: What dataset trained your LightGBM research model?**  
+9. **Q: What dataset trained your LightGBM research model?**  
    *A:* The published Dryad dataset from the *Sri Lanka Navy Personnel Follow-up Study* (DOI: `10.5061/dryad.j1r30`), containing 495 military personnel.
-9. **Q: What happens in a crisis?**  
-   *A:* Real-time keyword safety detection triggers immediate escalation to the National Mental Health Helpline (Tele-MANAS `14416` / `1800-891-4416`).
-10. **Q: What are the 5 Pillars of MindSetu?**  
+10. **Q: What happens in a crisis?**  
+    *A:* Real-time keyword safety detection triggers immediate escalation to the National Mental Health Helpline (Tele-MANAS `14416` / `1800-891-4416`).
+11. **Q: What are the 5 Pillars of MindSetu?**  
     *A:* Self-Report Pulse → Operational Duty Demands → Voice ML Paralinguistics → LightGBM/TreeSHAP (Explainability) → Qualified Human Welfare Officer.
+

@@ -67,14 +67,30 @@ Extracted in pure NumPy and SciPy in under 15 milliseconds without external C++ 
 | **Spectral** | `spectral_centroid`, `spectral_spread`, `spectral_flux`, `zero_crossing_rate` | Center of spectral mass, frequency spread, spectral modulation, and zero-crossing rate |
 | **Phonation / Timbre** | `mfcc_1` to `mfcc_13` | 13 Mel-Frequency Cepstral Coefficients capturing vocal tract filter shape |
 
-### Model Architecture & Artifact
-- **Algorithm**: Calibrated `GradientBoostingClassifier` with `StandardScaler` preprocessor.
-- **Artifact**: `backend/ml/voice_depression_classifier.joblib` (212 KB).
+### Model Architecture & Training Methodology
+- **Algorithm**: Calibrated `GradientBoostingClassifier` with `StandardScaler` preprocessor wrapped in an `sklearn.pipeline.Pipeline`.
+- **Hyperparameters**: `n_estimators=100`, `learning_rate=0.08`, `max_depth=4`, `subsample=0.85`, `random_state=42`.
+- **Training Corpus**: 800 synthetic acoustic feature profiles generated from parametric Gaussian distributions calibrated to published clinical paralinguistic benchmark literature (Mundt et al., Cummins et al., DAIC-WOZ acoustic metrics).
+- **Artifact**: `backend/ml/voice_depression_classifier.joblib` (212.1 KB).
+- **5-Fold Cross-Validation Metrics**:
+  - `ROC-AUC`: $0.9995 \pm 0.0005$
+  - `F1-Score`: $0.9875 \pm 0.0096$
+  - `Recall`: $0.9875 \pm 0.0079$
+  - `Precision`: $0.9876 \pm 0.0135$
+  - `Brier Score`: $0.0115$
+  *(Note on Metrics: The near-perfect separability evaluates the model's ability to discriminate published clinical paralinguistic distributions. Real-world operational deployment will require validation on field recordings from Indian defense cohorts).*
+- **Top Acoustic Contributors (Feature Importance)**:
+  1. `pitch_range` (83.05%): Fundamental frequency dynamic span (constriction in depressive states).
+  2. `pitch_f0_std` (9.02%): Fundamental frequency standard deviation (prosodic monotony).
+  3. `pause_ratio` (4.59%): Unvoiced silence proportion (hesitation and psychomotor slowing).
+  4. `speech_rate_estimate` (1.77%): Syllabic cadence and rhythm.
+  5. `spectral_flux` (0.69%): Rate of spectral envelope change.
 - **Outputs**:
-  - `depression_signal`: 0–100 score reflecting paralinguistic depressive strain.
-  - `trauma_signal`: 0–100 score (labeled as *Experimental research signal*).
+  - `depression_signal`: 0–100 continuous score reflecting paralinguistic depressive psychomotor strain.
+  - `trauma_signal`: 0–100 continuous score (strictly labeled as *Experimental proxy* based on pitch variance and spectral flux).
   - `confidence`: 0.0–1.0 confidence score calibrated against audio duration and SNR.
   - `audio_quality`: `"good"` ($\text{SNR} \ge 15\text{dB}$, duration $\ge 4\text{s}$), `"moderate"`, or `"poor"`.
+
 
 ### In-Memory Privacy Architecture
 - Raw audio is decoded in-memory (`io.BytesIO`).

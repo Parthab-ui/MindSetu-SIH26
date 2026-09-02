@@ -195,7 +195,15 @@ Extracts 24 acoustic & prosodic biomarkers in-memory from raw WAV audio bytes or
   }
   ```
 
+- **HTTP Response Codes**:
+  - `200 OK`: Audio successfully decoded, 24 features extracted, and paralinguistic ML prediction generated.
+  - `400 Bad Request`: Payload missing audio, invalid base64, or data length < 100 bytes.
+  - `413 Payload Too Large`: Audio file exceeds the 10MB maximum upload limit.
+  - `422 Unprocessable Entity`: Recording duration < 1.0s, inaudible/silent recording (RMS < 0.005), or corrupted WAV header.
+  - `500 Internal Server Error`: Internal audio processing or inference failure.
+
 ---
+
 
 ## 5. Explainable Research ML (TreeSHAP) Endpoints
 

@@ -1,138 +1,158 @@
 # MindSetu — SIH 2026 Master Project Context
 
-> Canonical working context for future MindSetu/SIH conversations and mentor preparation.
+> Canonical master context and source of truth for MindSetu evaluation, mentor defense, and technical audits.
 
-## 1. Project identity
+---
 
-- **Project:** MindSetu
-- **SIH:** Smart India Hackathon 2026
-- **Problem Statement:** SIH26186
-- **Theme:** HealthTech / Welfare Technology
-- **Category:** Software
-- **Team:** MANOMITRAS
-- **Goal:** Build a focused AI-assisted personnel welfare-support prototype.
+## 1. Project Identity
 
-## 2. Current repository
+- **Project:** MindSetu (माइंडसेतु)
+- **SIH Edition:** Smart India Hackathon 2026
+- **Problem Statement ID:** SIH26186
+- **Theme:** HealthTech / Personnel Welfare Technology
+- **Category:** Software (Web Application & Multimodal ML Decision Support)
+- **Target User Group:** Uniformed Personnel (Armed Forces, Paramilitary / CAPF, Police, Emergency Response)
+- **Mandate:** AI-assisted personnel welfare screening, operational duty triage, and explainable decision-support aid.
+- **Repository:** `Parthab-ui/MindSetu-SIH26`
+- **Default & Active Branch:** `main`
 
-- **GitHub:** `Parthab-ui/MindSetu`
-- **Default branch:** `main`
-- **Working MVP branch:** `v2`
-- **Frontend:** React 19 + Vite
-- **Backend:** FastAPI + Python
-- **Database:** PostgreSQL via psycopg
-- **AI:** Google Gemini API
-- **Research ML:** LightGBM + SHAP
-- **Frontend API base:** `http://127.0.0.1:8000`
+---
 
-## 3. Product flow
+## 2. Core Technological Stack
 
-1. Person opens MindSetu.
-2. Protected onboarding explains privacy, consent and welfare-only positioning.
-3. An anonymous session is created.
-4. Person completes a six-item wellbeing pulse.
-5. Person provides workload and duty/recovery context.
-6. Backend computes a deterministic welfare triage signal.
-7. The separate SIH26186 research model can produce a research signal.
-8. SHAP explains the research model's contributing features.
-9. Gemini provides supportive communication.
-10. Mood check-ins and human-support pathways remain available.
+- **Frontend Client:** React 19 + Vite (281 KB production bundle, compiling in ~320ms).
+- **Backend API:** FastAPI (Async ASGI, Python 3.11+).
+- **Serverless Production Adapter:** Vercel Serverless Function (`api/index.py`).
+- **Persistence:** PostgreSQL (Neon Lakebase) via connection pool (`psycopg_pool`).
+- **Research ML Engine:** LightGBM classifier with polynomial-time TreeSHAP ($O(TLD^2)$) feature attribution (<15ms latency).
+- **Voice ML Engine:** 24-feature acoustic and prosodic biomarker extractor (NumPy/SciPy) + trained GradientBoostingClassifier (<15ms latency).
+- **Conversational Support:** Google Gemini 3.5 Flash via official Google GenAI SDK (Server-Sent NDJSON streaming) with strict crisis interception and deterministic fallback.
+- **Automated Test Suite:** Pytest (26/26 passing tests across AI self-audit, contracts, scoring math, ML schemas, voice routes, and local e2e lifecycles).
 
-The prototype is for welfare support and triage. It must not diagnose people or make disciplinary/personnel decisions.
+---
 
-## 4. AI design
+## 3. Tri-Signal Multimodal Architecture
 
-MindSetu uses the Google Gemini API for the student/person-facing conversational layer and for supportive communication around structured research-model outputs.
+MindSetu does not rely on a single self-report or subjective survey. It evaluates three complementary modalities:
 
-The architecture separates responsibilities:
-- **LightGBM:** research welfare-signal prediction.
-- **SHAP:** local model explanation.
-- **Gemini:** supportive communication and conversational interaction.
-- **Human:** welfare intervention and professional decision-making.
+```text
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                       MINDSETU MULTIMODAL SIGNALS                           │
+├──────────────────────────┬──────────────────────────────────────────────────┤
+│ Modality                 │ Core Mechanism & Role                            │
+├──────────────────────────┼──────────────────────────────────────────────────┤
+│ 1. Self-Reported Pulse   │ 6 clinically mapped uniformed mental health items │
+│ 2. Operational Workload  │ 7 objective duty parameters (shifts, sleep, tempo) │
+│ 3. Voice Paralinguistics │ 24 acoustic/prosodic biomarkers via GBDT pipeline │
+└──────────────────────────┴──────────────────────────────────────────────────┘
+```
 
-The backend applies a deterministic crisis-language check before normal Gemini generation. Crisis messages receive a safety-priority response instead of being sent to normal generation.
+1. **Self-Reported Wellbeing Pulse:**
+   - Evaluates Depression (exhaustion, cognitive fog, duty burden) and PTSD/Trauma (hypervigilance, emotional detachment, disturbed sleep).
+   - Generates granular subscales: **Depression Symptom Indicator (DSI)** and **PTSD/Trauma Symptom Indicator (TSI)**.
+2. **Operational Duty Context:**
+   - Measures daily duty hours, sleep recovery hours, night watches, leave gap, tempo (1–5), high-pressure assignment status, and unscheduled rotations.
+   - Computes normalized **Operational Workload Index (OSI)**.
+3. **Voice ML Paralinguistic Biomarkers:**
+   - In-memory decoding of audio waveforms via HTML5 `MediaRecorder` / WAV bytes.
+   - Computes 24 acoustic features (dynamic pitch range, $F_0$ variance, pause/hesitation ratio, speech rate cadence, spectral flux, and 13 MFCCs).
+   - Trained `GradientBoostingClassifier` outputs a **Depression-Related Voice Signal** and experimental stress proxy.
+   - **Zero Raw Audio Storage:** Waveform bytes are decoded in RAM and immediately released. Zero audio recordings are stored on disk or database.
 
-## 5. Safety and privacy positioning
+---
 
-Important presentation claims:
-- MindSetu is a **welfare support and triage prototype**, not a diagnostic medical system.
-- Welfare signals are not clinical diagnoses or personnel decisions.
-- The prototype supports anonymous sessions and avoids requiring identity during onboarding.
-- The system contains explicit crisis handling and AI guardrails.
-- A research-model probability is a model score, not the probability that a person has a mental-health condition.
-- Real deployment requires domain validation, institutional governance, stronger privacy/security controls, professional escalation pathways and operational monitoring.
+## 4. Dual-Layer AI Governance & Non-Clinical Mandate
 
-Avoid claiming the prototype is clinically validated, production-ready or a replacement for qualified professionals.
+```text
+┌────────────────────────────────────────────────────────────────────────────┐
+│                       AI RESPONSIBILITY BOUNDARIES                         │
+├──────────────────────────┬─────────────────────────────────────────────────┤
+│ Layer                    │ Explicit System Responsibility                  │
+├──────────────────────────┼─────────────────────────────────────────────────┤
+│ 1. Deterministic Engine  │ Authoritative Welfare Triage (55% Wellness + 45% Workload) │
+│ 2. Voice ML Classifier   │ Objective Paralinguistic Acoustic Biomarker Signal │
+│ 3. LightGBM Classifier   │ Supervised Research Signal & Risk Pattern Analysis │
+│ 4. TreeSHAP Engine       │ Exact Local Feature Attribution (<15 ms)        │
+│ 5. Google Gemini 3.5     │ Streaming Empathetic & Actionable Coping Chat   │
+│ 6. Human Welfare Officer │ Real-World Decision Making & Clinical Support   │
+└──────────────────────────┴─────────────────────────────────────────────────┘
+```
 
-## 6. Current implementation highlights
+> [!IMPORTANT]
+> **Welfare Decision-Support Mandate**: MindSetu is an early welfare screening and decision-support aid. It does **not** provide clinical psychiatric diagnoses, prescribe medications, or make autonomous disciplinary or personnel deployment decisions.
 
-### Frontend
-- React application focused on the SIH26186 welfare workflow.
-- Anonymous session creation.
-- Six-item wellbeing pulse.
-- Workload and duty/recovery form.
-- Explainable research-model view.
-- Gemini AI companion.
-- Mood check-ins and history.
-- Dark/light mode.
-- Loading and error states.
+---
 
-### Backend
-- FastAPI application with security headers and restricted local CORS.
-- UUID-based anonymous sessions.
-- PostgreSQL persistence.
-- Deterministic welfare scoring.
-- Crisis-language handling.
-- Gemini conversational integration.
-- LightGBM + SHAP SIH26186 research layer.
-- Mood endpoints.
+## 5. Flagship User Journey (2–3 Minutes Live Demo)
 
-## 7. Mentor-demo priority
+1. **Context Initialization (`StartScreen.jsx`):**
+   - Click `✦ Field Deployment` preset.
+   - Anonymous session token (UUIDv4) generated without asking for names, service numbers, or phone numbers.
+2. **Specialized Wellbeing Pulse (`WellnessScreen.jsx`):**
+   - Click `⚡ High Strain` preset (or answer 6 crisp 1-sentence questions).
+   - 0–3 scale mapped to normalized score.
+3. **Operational Duty Demands (`WorkloadScreen.jsx`):**
+   - Click `⚔️ Field Deployment` preset.
+   - Configures 14h shift, 4 night duties, 4.5h sleep deficit, weighted into OSI.
+4. **Multimodal Voice Check (`VoiceScreen.jsx`):**
+   - Click `⚡ Strained Audio Sample` (or record live microphone).
+   - In <15ms, extracts 24 acoustic biomarkers (pitch range constriction, pause ratio, speech cadence).
+5. **Multimodal Results Dashboard (`AnalysisScreen.jsx`):**
+   - Numbers-first display: Depression (78%), Trauma (65%), Workload (81%), Voice (78%).
+   - **Multimodal Concordance Card**: Explains signal alignment/divergence.
+   - Structured 3-part takeaway: `WHAT WE SEE`, `NEXT STEP`, `FOLLOW-UP`.
+6. **Explainable TreeSHAP Lab (`ResearchLabModal.jsx`):**
+   - Opens LightGBM research model trained on published Sri Lanka Navy data (Dryad DOI: `10.5061/dryad.j1r30`).
+   - Computes exact TreeSHAP feature attributions in <15ms.
+7. **Longitudinal History & Trends (`MoodScreen.jsx`):**
+   - Logs daily mood rating (1–5).
+   - Displays 7-day recovery trend and chronological assessment milestones.
+8. **Empathetic AI Companion (`ChatScreen.jsx`):**
+   - Real-time streaming coping chat with automatic Tele-MANAS (`14416`) crisis intercept.
 
-For a short SIH mentor demo, prioritize:
-1. **Problem:** welfare concerns can remain hidden until they affect recovery and performance.
-2. **Solution:** MindSetu provides a private first step: wellbeing pulse → workload context → welfare signal → explainability → Gemini support → human intervention.
-3. **Technical explanation:** React/Vite → FastAPI → PostgreSQL + research ML → Gemini API.
-4. **Differentiator:** AI is not the sole decision-maker; deterministic scoring, explainability and human intervention surround it.
+---
 
-## 8. Mentor questions to be ready for
+## 6. Scoring Formulas & Scientific Thresholds
 
-### Why AI?
-AI provides an accessible conversational support layer and helps people articulate what they are experiencing. It is not positioned as a diagnostician.
+### Deterministic Welfare Triage Score
+$$\text{Combined Score} = (0.55 \times \text{Wellness Score}) + (0.45 \times \text{Workload Score})$$
 
-### Why Gemini?
-Gemini provides hosted conversational intelligence while the API key remains server-side behind FastAPI.
+- **High Priority**: $\text{Combined} \ge 70 \lor \text{Wellness} \ge 80 \lor \text{Workload} \ge 85$
+- **Moderate Priority**: $\text{Combined} \ge 45 \lor \text{Wellness} \ge 50 \lor \text{Workload} \ge 60$
+- **Low Priority**: Otherwise.
 
-### What is the ML doing?
-LightGBM produces a research-only signal from the seven trained features; SHAP provides local feature contributions. This research output is separate from the deterministic welfare triage score.
+### Subscale Formulas
+- **Depression Symptom Indicator (DSI)**:
+  $$\text{DSI} = \frac{Q1 (\text{Exhaustion}) + Q4 (\text{Cognitive Fog}) + Q6 (\text{Duty Burden})}{9} \times 100$$
+- **PTSD / Trauma Symptom Indicator (TSI)**:
+  $$\text{TSI} = \frac{Q2 (\text{Hypervigilance}) + Q3 (\text{Detachment}) + Q5 (\text{Disturbed Sleep})}{9} \times 100$$
 
-### What happens in a crisis?
-The backend checks explicit crisis language before normal Gemini generation and returns a safety-priority response directing the person toward immediate professional/emergency support and a trusted person.
+---
 
-### How is privacy handled?
-The prototype uses anonymous session IDs and keeps the Gemini API key server-side. Production requires a stronger privacy and security architecture.
+## 7. Automated Testing & Verification Baseline
 
-### Is this production-ready?
-No. It is a working SIH prototype. Production would require domain validation, governance, security/privacy review, institutional integration, professionally governed escalation, reliability testing and compliance work.
+- **Automated Pytest Suite:** **26 of 26 tests passed** (`.venv\Scripts\python -m pytest backend/tests -v`).
+- **Test Categories:**
+  - `test_ai_self_audit.py` (5 tests): Self-audit contract, structured context injection, prompt-leakage rejection, crisis routing, deterministic fallback.
+  - `test_e2e_local.py` (4 tests): Core health, ML inference + TreeSHAP, deterministic triage math, full session lifecycle (Session → Wellness → Workload → Voice → Analyze → Dashboard → History).
+  - `test_health_contracts.py` (3 tests): Route registration for health, AI audit, and SIH endpoints.
+  - `test_sih26186_logic.py` (3 tests): Wellness bounds, invalid answer rejection, classification boundary conditions.
+  - `test_sih26186_ml_routes.py` (4 tests): Valid ML request, PCL-M bounds (low/high), binary feature validation.
+  - `test_voice_routes.py` (7 tests): Voice health, demo sample generation, multipart WAV analysis, base64 payload analysis, short audio rejection (<1s), 24-feature ordering and consistency, corrupt audio handling.
+- **Frontend Production Build:** Vite v8.2.2 compiles client bundle in **~320ms** (281 KB JS / 43.9 KB CSS, 0 errors, 0 warnings).
 
-## 9. Presentation language
+---
 
-Use:
-- “AI-assisted personnel welfare support”
-- “welfare triage”
-- “risk-aware guidance”
-- “explainable research signal”
-- “human support escalation”
-- “prototype”
-- “privacy-conscious design”
+## 8. SIH Mentor & Judge Defense Positioning
 
-Avoid:
-- “AI therapist”
-- “AI diagnoses depression/anxiety”
-- “100% anonymous” unless deployment guarantees it
-- “clinically proven”
-- “replaces counsellors/doctors”
-- treating a model probability as a clinical probability
+### Q: Why not just use ChatGPT or a generic mental health app?
+> *"Generic chatbots lack operational duty context, have no deterministic safety guarantees, cannot process in-memory voice acoustic biomarkers, and cannot explain tabular clinical features. MindSetu combines structured duty parameters, clinically mapped screening, deterministic triage bounds, and explainable TreeSHAP research models—keeping the conversational AI as a bounded, supportive guidance layer."*
 
-## 10. Working rule
+### Q: Does MindSetu diagnose mental health conditions?
+> *"No. MindSetu is strictly an early welfare screening and decision-support tool. It identifies symptom patterns and operational risk bands. Formal clinical diagnoses and duty fitness evaluations remain strictly human-driven."*
 
-Preserve the focused SIH26186 workflow. Prefer small, testable improvements, conservative safety/privacy claims, and explicit separation between implemented prototype behavior and future production scope.
+### Q: Where did your Voice ML dataset come from?
+> *"Our voice ML model is a prototype Gradient Boosting classifier trained on 800 synthetic acoustic feature profiles calibrated to empirical clinical paralinguistic benchmark distributions (Mundt et al., Cummins et al., DAIC-WOZ). We chose this approach to build a working, reproducible paralinguistic classifier prototype without violating privacy or licensing restrictions on sensitive clinical voice recordings. Prospective deployment requires local validation on Indian defense cohorts."*
+
+### Q: Is raw voice data stored?
+> *"No. Waveforms are processed in-memory and discarded immediately after extracting the 24 acoustic biomarkers. Zero audio files or voice recordings are stored on disk or in the database, and audio is never transmitted to Google or third parties."*
