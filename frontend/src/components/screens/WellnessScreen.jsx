@@ -42,11 +42,12 @@ export const UNIFORMED_WELLNESS_QUESTIONS = [
 ];
 
 const RESPONSE_OPTIONS = [
-  { label: "Never", value: 0, sublabel: "0" },
-  { label: "Some days", value: 1, sublabel: "1" },
-  { label: "Often", value: 2, sublabel: "2" },
-  { label: "Nearly every day", value: 3, sublabel: "3" },
+  { label: "Never", value: 0, sublabel: "No noticeable occurrence" },
+  { label: "A few days", value: 1, sublabel: "Occasional" },
+  { label: "Most days", value: 2, sublabel: "Recurring" },
+  { label: "Nearly every day", value: 3, sublabel: "Persistent" },
 ];
+
 
 const WELLNESS_PRESETS = [
   { label: "Low Baseline", answers: [0, 1, 0, 1, 0, 0] },
@@ -149,23 +150,32 @@ export function WellnessScreen({ answers, setAnswers, onNext, onBack, loading, e
 
               <p className="question-text">{qObj.text}</p>
 
-              <div className="options-grid">
+              <div
+                className="options-grid"
+                role="radiogroup"
+                aria-label={`Rating for question ${qIdx + 1}: ${qObj.text}`}
+              >
                 {RESPONSE_OPTIONS.map((opt) => {
                   const isSelected = answers[qIdx] === opt.value;
                   return (
                     <button
                       key={opt.value}
                       type="button"
-                      className={`option-btn ${isSelected ? "selected" : ""}`}
+                      role="radio"
+                      className={`option-tile ${isSelected ? "selected" : ""}`}
                       onClick={() => handleSelect(qIdx, opt.value)}
                       disabled={loading}
-                      aria-pressed={isSelected}
+                      aria-checked={isSelected}
+                      aria-label={`${opt.label}: ${opt.sublabel}`}
                     >
+                      <span className="option-indicator" aria-hidden="true" />
                       <span className="option-label">{opt.label}</span>
+                      <span className="option-sublabel">{opt.sublabel}</span>
                     </button>
                   );
                 })}
               </div>
+
             </div>
           );
         })}

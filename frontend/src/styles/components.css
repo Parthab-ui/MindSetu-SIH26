@@ -678,49 +678,124 @@ a:focus-visible,
   line-height: 1.45;
 }
 
+/* ── Wellbeing Assessment Option Tiles (Redesigned) ────────────────────────── */
+.options-grid,
 .likert-grid {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  gap: 8px;
+  gap: 10px;
+  margin-top: 14px;
 }
 
+.option-tile,
 .likert-btn {
-  padding: 12px 8px;
-  border-radius: var(--radius-md);
-  font-size: 0.88rem;
-  font-weight: 500;
-  background: var(--bg-input);
-  color: var(--text-secondary);
-  border: 1px solid var(--border-subtle);
-  transition: var(--transition-fast);
-  cursor: pointer;
-  text-align: center;
-  font-family: inherit;
-  min-height: var(--touch-target-min, 44px);
+  position: relative;
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
+  text-align: center;
+  min-height: 54px;
+  padding: 10px 12px;
+  border-radius: var(--radius-md);
+  background: var(--bg-input);
+  border: 1.5px solid var(--border-subtle);
+  color: var(--text-secondary);
+  font-family: var(--font-sans);
+  cursor: pointer;
+  outline: none;
   touch-action: manipulation;
-  line-height: 1.35;
+  user-select: none;
+  transition: all 180ms var(--ease-smooth);
 }
 
-.likert-btn:hover {
-  background: var(--border-subtle);
+.option-tile:hover:not(:disabled),
+.likert-btn:hover:not(:disabled) {
+  background: rgba(20, 184, 166, 0.05);
+  border-color: rgba(20, 184, 166, 0.35);
   color: var(--text-primary);
-  border-color: var(--border-medium);
+  transform: translateY(-1px);
 }
 
-.likert-btn:active {
-  transform: scale(0.98);
+.option-tile:focus-visible,
+.likert-btn:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+  border-color: var(--primary);
 }
 
+.option-tile.selected,
 .likert-btn.selected {
   background: var(--primary-light);
   border-color: var(--primary);
-  color: var(--primary);
-  font-weight: 700;
-  box-shadow: 0 0 14px var(--primary-glow);
+  color: var(--text-primary);
+  box-shadow: 0 0 16px var(--primary-glow), inset 0 0 0 1px rgba(20, 184, 166, 0.35);
 }
+
+.option-tile.selected .option-label,
+.likert-btn.selected .option-label {
+  color: var(--primary-hover);
+  font-weight: 700;
+}
+
+.option-tile.selected .option-sublabel,
+.likert-btn.selected .option-sublabel {
+  color: rgba(45, 212, 191, 0.9);
+  font-weight: 500;
+}
+
+.option-tile:active:not(:disabled),
+.likert-btn:active:not(:disabled) {
+  transform: scale(0.985);
+}
+
+.option-tile:disabled,
+.likert-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.option-label {
+  font-size: 0.88rem;
+  font-weight: 600;
+  line-height: 1.25;
+  transition: color 150ms var(--ease-smooth);
+}
+
+.option-sublabel {
+  font-size: 0.70rem;
+  color: var(--text-muted);
+  font-weight: 400;
+  margin-top: 3px;
+  line-height: 1.2;
+  transition: color 150ms var(--ease-smooth);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+
+/* Subtle corner indicator dot for selected tile */
+.option-indicator {
+  position: absolute;
+  top: 7px;
+  right: 9px;
+  width: 6px;
+  height: 6px;
+  border-radius: var(--radius-full);
+  background: var(--primary);
+  box-shadow: 0 0 6px var(--primary);
+  opacity: 0;
+  transform: scale(0.4);
+  transition: all 180ms var(--ease-spring);
+}
+
+.option-tile.selected .option-indicator,
+.likert-btn.selected .option-indicator {
+  opacity: 1;
+  transform: scale(1);
+}
+
 
 /* ── Form Controls & Sliders ─────────────────────────────────── */
 .form-section {
@@ -2191,10 +2266,12 @@ a:focus-visible,
     grid-template-columns: 1fr;
     gap: 12px;
   }
-  .likert-grid {
+  .likert-grid,
+  .options-grid {
     grid-template-columns: repeat(2, 1fr);
     gap: 8px;
   }
+
   .triage-hero-card {
     padding: 22px 18px;
     gap: 16px;
@@ -2349,10 +2426,12 @@ a:focus-visible,
     overflow: hidden;
     text-overflow: ellipsis;
   }
-  .likert-grid {
+  .likert-grid,
+  .options-grid {
     grid-template-columns: 1fr;
     gap: 6px;
   }
+
   .mood-cards-row {
     grid-template-columns: repeat(3, 1fr);
     gap: 6px;
