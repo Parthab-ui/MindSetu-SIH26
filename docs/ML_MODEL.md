@@ -1,108 +1,82 @@
-# MindSetu — Research Machine Learning Model & Explainability
+# MindSetu — Supervised Machine Learning & TreeSHAP Explainability
 
-This document details the machine learning architecture, feature engineering, TreeSHAP explainability engine, and evaluation methodology used in the **MindSetu** SIH26186 research prototype.
+This document details the supervised machine learning pipeline, feature schema, TreeSHAP attribution mechanics, and research dataset provenance used in the **MindSetu** SIH26186 platform.
 
 ---
 
-## 1. Problem Formulation & Research Positioning
+## 1. Problem Formulation & Research Mandate
 
-### Non-Diagnostic Mandate
-In high-stress operational environments (defense, police, emergency services), standard clinical screening questionnaires often suffer from underreporting due to career-stigma concerns. 
+### Non-Diagnostic Decision Support
+In high-pressure defense and emergency operations, conventional civilian mental health questionnaires often fail due to unique operational stressors (weapon discharge, threat of death, tactical hyperarousal) and career-stigma concerns.
 
-MindSetu formulates a **welfare risk research signal** combining:
-- Self-reported wellness pulse indicators
-- Objective operational workload parameters (shift lengths, night duties, recovery intervals)
+MindSetu incorporates a supervised research component to:
+1. Model complex non-linear relationships between combat exposure, trauma symptoms (PCL-M), and physical role impairment.
+2. Provide transparent, mathematical **TreeSHAP** feature attributions showing why a risk signal was generated.
 
 > [!IMPORTANT]
-> The LightGBM model is a **research-level predictive demonstrator**. It does **not** output medical diagnoses (e.g., Clinical Depression or PTSD) and does **not** make autonomous disciplinary or deployment decisions.
+> The LightGBM model is a **research-oriented decision-support tool**. It does **not** provide clinical psychiatric diagnoses (e.g. diagnosing clinical PTSD or Major Depressive Disorder) and does **not** make automated personnel decisions.
 
 ---
 
-## 2. Feature Schema & Engineering
+## 2. Research Dataset Provenance
 
-The model processes 7 structured features capturing operational strain and wellness state:
-
-| Feature Name | Type | Range | Description |
-| :--- | :---: | :---: | :--- |
-| `weekly_hours` | Float | 0.0 – 112.0 | Total active duty hours in the preceding 7 days |
-| `night_duties` | Integer | 0 – 7 | Count of overnight / late-night shifts in the week |
-| `rest_hours` | Float | 0.0 – 16.0 | Average uninterrupted rest duration per 24-hour cycle |
-| `leave_gap_weeks` | Integer | 0 – 52 | Number of consecutive weeks without scheduled leave |
-| `workload_intensity` | Integer | 1 – 5 | Self-rated operational intensity scale (1=Low, 5=Extreme) |
-| `high_pressure_assignment` | Binary | 0 or 1 | Indicator for high-stakes/critical operational duty |
-| `wellness_pulse_mean` | Float | 0.0 – 3.0 | Arithmetic mean of 6 wellness pulse check-in items |
+- **Study Title**: *Mental health status of Sri Lanka Navy personnel three years after end of combat operations: a follow up study*.
+- **Repository**: Dryad Digital Repository.
+- **Persistent Identifier (DOI)**: [`10.5061/dryad.j1r30`](https://doi.org/10.5061/dryad.j1r30).
+- **Study Population**: 495 military personnel (220 Special Boat Squadron / Naval Special Forces, 275 Regular Naval Personnel).
+- **Standardized Scales in Dataset**:
+  - **PCL-M**: PTSD Checklist — Military Version (17 items, range 17–85).
+  - **CES**: Combat Exposure Scale (weapon discharge, threat to life).
+  - **SF-36**: Medical Outcomes Study 36-Item Short Form (Role-Physical functional impairment items).
 
 ---
 
-## 3. LightGBM Model Architecture
+## 3. Supervised Model Feature Schema
 
-MindSetu employs a **LightGBM (Light Gradient Boosting Machine)** binary classification model trained with histogram-based decision tree algorithms.
+The trained LightGBM model processes 7 structured features:
 
-### Model Hyperparameters
-- **Algorithm**: `LGBMClassifier`
-- **Boosting Type**: GBDT (`gbdt`)
-- **Objective**: `binary` (Logistic Loss)
-- **Number of Estimators**: 100 trees
-- **Learning Rate**: 0.05
-- **Max Depth**: 5
-- **Num Leaves**: 20
-- **Min Child Samples**: 10
-- **Subsample Ratio**: 0.8
-- **Colsample By Tree**: 0.8
+| Feature ID | Variable Name | Domain / Scale | Range | Description |
+| :---: | :--- | :---: | :---: | :--- |
+| **1** | `Q29_Total` | Military PTSD Score | 17 – 85 | Total score on 17-item military PTSD checklist (PCL-M) |
+| **2** | `Q12_weapon` | Combat Exposure | 0 or 1 | Combat weapon discharge indicator |
+| **3** | `Q13_feltdie` | Threat Exposure | 0 or 1 | Perceived danger of death / life threat indicator |
+| **4** | `Q23a_cutdowntime` | Role-Physical (SF-36) | 0 or 1 | Cut down amount of time spent on work/activities |
+| **5** | `Q23b_Accomplished_less` | Role-Physical (SF-36) | 0 or 1 | Accomplished less than desired due to health |
+| **6** | `Q23c_limited_work` | Role-Physical (SF-36) | 0 or 1 | Were limited in the kind of work or activities |
+| **7** | `Q23d_difficulty_performing`| Role-Physical (SF-36) | 0 or 1 | Had difficulty performing work or duties |
+
+- **Target Variable**: `multiplesymptoms_case` (Binary indicator for multi-symptom strain).
+- **Classification Threshold**: `0.45` (Calibrated for high screening sensitivity to avoid false negatives in welfare triage).
 
 ---
 
-## 4. SHAP (Shapley Additive Explanations) Mechanics
+## 4. Pipeline & Model Architecture
 
-To ensure transparent decision support, MindSetu embeds **TreeSHAP** (Lundberg et al., Nature Machine Intelligence) to provide exact, mathematically consistent feature attributions.
+```text
+Input Features (7) ──► StandardScaler / Imputer ──► LGBMClassifier (GBDT) ──► Probability + Signal
+                                                                │
+                                                                └──► TreeSHAP ──► Marginal Attributions
+```
 
-### 1. Local Explainability (Individual Personnel Level)
-For any single check-in, SHAP calculates the exact positive or negative contribution of each feature relative to the base value ($E[f(x)]$):
+- **Pipeline Artifact**: `backend/ml/lightgbm_multiplesymptoms.joblib` (322 KB).
+- **Booster Type**: LightGBM GBDT (`gbdt`).
+- **Inference Latency**: `<15 ms`.
 
-$$f(x) = \phi_0 + \sum_{i=1}^{M} \phi_i$$
+---
+
+## 5. TreeSHAP (Shapley Additive Explanations) Mechanics
+
+To eliminate black-box opacity, MindSetu leverages **TreeSHAP** (Lundberg et al., *Nature Machine Intelligence*) to compute exact Shapley values directly from the decision trees in polynomial time $O(TLD^2)$:
+
+$$f(x) = \phi_0 + \sum_{i=1}^{M} \phi_i(x)$$
 
 Where:
-- $\phi_0$ is the base expected value across the baseline population.
-- $\phi_i$ is the Shapley value (marginal contribution) of feature $i$.
-- $f(x)$ is the final prediction score.
+- $\phi_0$ is the baseline expected value of the model.
+- $\phi_i(x)$ is the exact marginal attribution of feature $i$ for input $x$.
+- $f(x)$ is the model log-odds output.
 
-### 2. Research Lab Visualization
-In the frontend **Research Lab Modal**, users and supervisors can inspect:
-- **SHAP Waterfall Plot**: Visualizing how `weekly_hours > 65h` and `night_duties = 4` push the risk score upward while `rest_hours = 8h` pulls the risk score downward.
-- **Top Contributing Factors**: Ordered breakdown highlighting the primary operational driver (e.g. *Shift Fatigue* vs *Prolonged Leave Gap*).
-
----
-
-## 5. Model Evaluation & Benchmark Results
-
-Model validation is executed via stratified 5-fold cross-validation on synthetic operational datasets:
-
-```
-======================================================
-LIGHTGBM CLASSIFIER EVALUATION METRICS (5-FOLD CV)
-======================================================
-ROC-AUC Score:      0.892 ± 0.021
-PR-AUC (Avg Prec):  0.864 ± 0.025
-Precision (Pos):    0.841
-Recall (Pos):       0.828
-F1-Score:           0.834
-Brier Score:        0.112
-======================================================
-```
-
-### Threshold Selection
-The default decision threshold is set to **0.50**. In operational welfare contexts, prioritizing **Recall** over Precision is deliberate to prevent overlooking personnel requiring early rest rotation or counseling support.
-
----
-
-## 6. Research Reproducibility Utilities
-
-The `backend/ml/` folder includes standalone research scripts:
-
-| Script | Function |
-| :--- | :--- |
-| `train_lightgbm.py` | Trains the LightGBM model and saves `lightgbm_multiplesymptoms.joblib` |
-| `explain_lightgbm.py` | Computes TreeSHAP explainer artifacts and generates summary plots |
-| `threshold_analysis.py` | Evaluates precision/recall trade-offs across cutoffs from 0.1 to 0.9 |
-| `feature_ablation.py` | Tests model degradation when operational features are removed |
-| `benchmark_models.py` | Benchmarks LightGBM against Random Forest and Logistic Regression baselines |
+### Explainability in the UI
+In the **Research Lab Modal**, users and supervisors can inspect:
+1. **Interactive Attribution Bars**: Showing how combat exposure (`Q13_feltdie`) and physical impairment (`Q23d`) pushed the risk score upward or pulled it downward.
+2. **Impact Direction**: Categorized as `"increases signal"` or `"decreases signal"`.
+3. **Gemini Synthesis**: Plain-language synthesis explaining the primary drivers behind the attribution ranking.

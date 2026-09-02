@@ -1,90 +1,55 @@
-# MindSetu — SIH 2026 Jury & Mentor Demonstration Guide
-
-This guide provides a structured, high-impact demonstration script and jury defense strategy for **Problem Statement SIH26186** (Personnel Welfare Support & Triage).
+# MindSetu — SIH 2026 Presentation, Demo & Judge Defense Guide
 
 ---
 
-## 1. Demo Tracks: Timing & Pacing
+## 1. Quick Pitches
 
-```
-┌──────────────────────────────────────┬──────────────────────────────────────┐
-│ TRACK A: 3-MINUTE LIGHTNING PITCH    │ TRACK B: 7-MINUTE FULL EVALUATION    │
-├──────────────────────────────────────┼──────────────────────────────────────┤
-│ 0:00 - Problem & Mandate (30s)       │ 0:00 - Operational Problem Context   │
-│ 0:30 - Guided Check-In (45s)         │ 1:00 - Anonymous Protected Session   │
-│ 1:15 - Triage & SHAP XAI (45s)       │ 2:00 - Wellness & Duty Context Flow  │
-│ 2:00 - Gemini Streaming Companion (30s)│ 3:15 - Deterministic Triage Breakdown │
-│ 2:30 - Safety & HITL Wrap-up (30s)   │ 4:15 - Research Lab & SHAP XAI Modal │
-│                                      │ 5:15 - Modern Gemini AI Companion    │
-│                                      │ 6:15 - Crisis Escalation & Hotlines  │
-│                                      │ 7:00 - Safety, Privacy & Governance  │
-└──────────────────────────────────────┴──────────────────────────────────────┘
-```
+### 30-Second Elevator Pitch
+> *"Uniformed personnel in defense, paramilitary, and police services operate under severe pressures—tactical hypervigilance, critical incident trauma, and night watch sleep disruption—yet often avoid seeking help due to career stigma.  
+> **MindSetu** solves this with a purpose-built mental health screening and decision-support platform. By combining a clinically mapped screening matrix with objective duty context, MindSetu calculates deterministic triage priority alongside supervised LightGBM and TreeSHAP feature attributions. It converts operational strain into tailored recovery pathways and longitudinal follow-up, ensuring personnel receive timely support before acute strain escalates into career-ending burnout."*
+
+### 60-Second Pitch
+> *"Every day, thousands of defense and emergency personnel transition between high-threat field duties and routine base rotations. Standard mental health questionnaires ask generic questions about office stress, completely missing tactical hypervigilance, trauma flashbacks, and night watch circadian disruption.  
+> **MindSetu** is built specifically for uniformed personnel.  
+> **First**, it captures operational context: service branch, field postings, shift hours, and sleep deficits.  
+> **Second**, it screens for Depression, PTSD/Trauma, and duty burden across a 6-item clinically mapped matrix.  
+> **Third**, it runs a dual-layer intelligence engine: a deterministic triage formula (55% Wellness + 45% Workload) providing predictable safety boundaries, paired with a supervised LightGBM model trained on military research data that computes exact TreeSHAP feature attributions in under 15 milliseconds.  
+> **Finally**, it delivers tailored tactical decompression protocols, longitudinal tracking, and an empathetic AI companion with strict safety guardrails. MindSetu empowers personnel to seek support early while keeping sessions completely anonymous and protected."*
 
 ---
 
-## 2. Stage-by-Stage Live Walkthrough
+## 2. The 3-Minute Live Demonstration Script
 
-### Step 1: Start Protected Session (`StartScreen.jsx`)
-- **Action**: Click *"Begin Protected Check-In"* after confirming anonymous consent.
-- **Talking Point**:
-  > *"In operational forces, personnel hesitate to seek help due to perceived career stigma. MindSetu starts with an anonymous, confidential session where no PII or military IDs are stored."*
-
-### Step 2: 6-Question Wellness Pulse (`WellnessScreen.jsx`)
-- **Action**: Select responses reflecting moderate sleep fatigue and pacing stress.
-- **Talking Point**:
-  > *"Rather than intimidating clinical depression forms, MindSetu uses a 6-item validated wellness pulse capturing energy, recovery, and daily mood."*
-
-### Step 3: Operational Workload Context (`WorkloadScreen.jsx`)
-- **Action**: Input sample values:
-  - Weekly Duty Hours: `68`
-  - Night Duties in Past Week: `4`
-  - Average Unbroken Rest: `5.5 hrs`
-  - Consecutive Weeks without Leave: `16`
-- **Talking Point**:
-  > *"Wellness cannot be understood in a vacuum. MindSetu contextualizes mental wellbeing with real operational drivers: shift fatigue, night duty frequency, and prolonged deployment without leave."*
-
-### Step 4: Deterministic Welfare Triage Dashboard (`AnalysisScreen.jsx`)
-- **Action**: Show the **Combined Score (68.9 - Moderate Risk)** and primary driver breakdown.
-- **Talking Point**:
-  > *"Risk scoring is strictly deterministic: 55% wellness + 45% workload. It is not an unverified AI guess. The system highlights actionable recovery recommendations tailored to duty fatigue."*
-
-### Step 5: Research Lab & Explainability Modal (`ResearchLabModal.jsx`)
-- **Action**: Click *"Open Research Lab"*, display the LightGBM probability and SHAP Waterfall chart.
-- **Talking Point**:
-  > *"For research and institutional analysis, we pair LightGBM with TreeSHAP. When a jury asks 'Why was this flagged?', SHAP explicitly shows that 68h weekly duty and 4 night shifts contributed +0.46 to the risk prediction."*
-
-### Step 6: MindSetu AI Companion (`ChatScreen.jsx`)
-- **Action**: Click the suggestion card: *"What are practical ways to manage sleep recovery during night shifts?"*
-- **Talking Point**:
-  > *"MindSetu uses Google Gemini 2.5 Flash via real-time streaming NDJSON for empathetic, structured coaching. Notice the integrated pill composer, thinking pulse, and editorial list formatting."*
+| Timing | Screen | Action | Spoken Script |
+| :---: | :--- | :--- | :--- |
+| **0:00 - 0:30** | **Home → Context** | Click *Start Protected Session* → Click `✦ Field Patrol / Operations` preset | *"Welcome to MindSetu. Sessions are initialized with anonymous UUIDs—no service numbers or biometrics stored. We capture service branch and operational environment context directly."* |
+| **0:30 - 1:00** | **Wellbeing Pulse** | Click `⚡ High Trauma & Depressive Strain` preset → Click *Continue* | *"Our 6 screening questions evaluate operational exhaustion, tactical hypervigilance, emotional numbing, decision fatigue, trauma intrusion, and duty burden."* |
+| **1:00 - 1:30** | **Workload Demands** | Click `⚔️ Forward Field Deployment` preset → Click *Generate Summary* | *"We combine self-reported symptoms with objective duty demands—14h shifts, 4 night duties, and sleep deficit—weighted into an Operational Workload Index."* |
+| **1:30 - 2:15** | **Results Dashboard** | Scroll to DSI, TSI, OSI gauges & Action Pathways | *"In under a second, MindSetu computes our multi-dimensional breakdown: the Depression Symptom Indicator (DSI), PTSD/Trauma Symptom Indicator (TSI), and tailored tactical recovery pathways."* |
+| **2:15 - 2:45** | **TreeSHAP Lab** | Click *Explainable ML Research Lab 🔬* → Click `⚡ Special Forces Active Combat` | *"For technical decision-support, our LightGBM model trained on military research data (DOI 10.5061/dryad.j1r30) computes exact TreeSHAP feature attributions in <15ms."* |
+| **2:45 - 3:00** | **History & Trends** | Click *Record Daily Mood* → Click *Assessment History* tab | *"Finally, personnel can track recovery milestones chronologically over time. MindSetu transforms operational signals into timely human support."* |
 
 ---
 
-## 3. High-Probability Jury Q&A Matrix
+## 3. Top 10 Judge Defense Answers
 
-### Q1: *"Is MindSetu attempting to diagnose mental health conditions?"*
-**Answer**:
-> *"No, absolutely not. MindSetu is strictly a supportive personnel welfare triage prototype. It triages operational stress and duty fatigue, providing recovery coaching and connecting personnel to human welfare counselors. It never issues psychiatric diagnoses or prescribes medications."*
-
-### Q2: *"Why use both Deterministic scoring AND LightGBM?"*
-**Answer**:
-> *"Deterministic scoring guarantees that risk tiering is 100% predictable, safe, and transparent for operational decisions. LightGBM and SHAP provide a research layer to discover complex non-linear interactions across large operational datasets and explain them transparently."*
-
-### Q3: *"How do you prevent Gemini from hallucinating or giving dangerous advice?"*
-**Answer**:
-> *"We employ a 3-layer safety system: (1) System prompt boundary instructions forbidding medical advice; (2) An automated AI Self-Audit regression suite in testing; (3) A regex crisis interception layer that catches self-harm language and immediately displays Tele-MANAS (14416) and KIRAN (1800-599-0019) emergency lines."*
-
-### Q4: *"How will this work in remote border outposts with poor internet?"*
-**Answer**:
-> *"The deterministic scoring engine and LightGBM inference run locally on the edge device or intranet server without needing external internet. Only the conversational Gemini companion requires API access, and when offline, the system seamlessly falls back to pre-validated deterministic coping strategies."*
-
----
-
-## 4. Pre-Demo Verification Checklist
-
-- [ ] Backend is running on `http://127.0.0.1:8000` (`uvicorn main:app --reload`).
-- [ ] Frontend is running on `http://localhost:5173` (`npm run dev`).
-- [ ] Verify health endpoints: `/api/health`, `/api/gemini/health`, `/api/sih26186/ml/health`.
-- [ ] Run `pytest backend/tests` (all 15 tests passing).
-- [ ] Run `npm run build` in `frontend` (0 errors).
+1. **Q: Why specifically uniformed personnel?**  
+   *A:* Uniformed personnel experience high-threat operational trauma, night watch circadian disruption, and severe help-seeking stigma due to fear of fitness-for-duty consequences. Generic civilian tools do not capture this reality.
+2. **Q: Does MindSetu diagnose mental illnesses?**  
+   *A:* No. MindSetu is explicitly an early welfare-support and triage decision-aid. Formal diagnoses and fitness decisions remain strictly human-driven.
+3. **Q: What is the difference between DSI and TSI?**  
+   *A:* DSI measures affective exhaustion, decision fatigue, and perceived duty burden. TSI measures trauma hyperarousal, emotional detachment, and intrusive duty memories.
+4. **Q: Where did your ML training data come from?**  
+   *A:* The published Dryad dataset from the *Sri Lanka Navy Personnel Follow-up Study* (DOI: `10.5061/dryad.j1r30`), containing 495 military personnel across Special Forces and Regular units.
+5. **Q: Why LightGBM and TreeSHAP?**  
+   *A:* Tabular psychological data performs best with decision-tree ensembles. TreeSHAP provides exact, polynomial-time Shapley values directly from the tree structure.
+6. **Q: What is the scoring formula?**  
+   *A:* Combined Score = 55% Wellness Pulse + 45% Operational Workload. High (≥70), Moderate (≥45), Low (<45).
+7. **Q: How is user privacy protected?**  
+   *A:* Completely pseudonymous UUID session tokens. Zero names, service numbers, or biometrics are stored.
+8. **Q: What happens in a crisis?**  
+   *A:* Real-time keyword safety detection triggers immediate escalation to the National Mental Health Helpline (Tele-MANAS `14416` / `1800-891-4416`).
+9. **Q: How does the system handle AI timeouts?**  
+   *A:* All LLM calls have an 8-second timeout budget with automatic fallback to pre-compiled deterministic coping text.
+10. **Q: What are the 4 Pillars of MindSetu?**  
+    *A:* LightGBM (Research ML) → TreeSHAP (Explainability) → Gemini (Supportive AI) → Human Welfare Officer (Decision).
