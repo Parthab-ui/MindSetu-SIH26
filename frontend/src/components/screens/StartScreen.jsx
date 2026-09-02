@@ -16,10 +16,10 @@ const OPERATIONAL_ENVIRONMENTS = [
 ];
 
 const ROLE_PRESETS = [
-  { label: "Field Patrol / Operations", branch: "Armed Forces (Army / Navy / Air Force)", env: "Forward Field Operations / High-Threat Zone", role: "Field Operations Personnel", unit: "Sector Unit Bravo" },
-  { label: "High-Alert Watch Rotation", branch: "Paramilitary & CAPF (CRPF / BSF / CISF / ITBP / SSB)", env: "Tactical Watch & Base Shift Rotation", role: "Tactical Watch Officer", unit: "CAPF Rapid Wing" },
-  { label: "Post-Deployment Unit", branch: "Armed Forces (Army / Navy / Air Force)", env: "Post-Deployment / Routine Reintegration", role: "Reintegrating Service Member", unit: "3rd Battalion Support" },
-  { label: "Disaster / Emergency Lead", branch: "Emergency & Disaster Response (NDRF / SDRF)", env: "Forward Field Operations / High-Threat Zone", role: "Disaster Response Specialist", unit: "NDRF Response Unit 7" },
+  { label: "Field Deployment", branch: "Armed Forces (Army / Navy / Air Force)", env: "Forward Field Operations / High-Threat Zone", role: "Field Operations Personnel", unit: "Sector Unit Bravo" },
+  { label: "Watch Rotation", branch: "Paramilitary & CAPF (CRPF / BSF / CISF / ITBP / SSB)", env: "Tactical Watch & Base Shift Rotation", role: "Tactical Watch Officer", unit: "CAPF Rapid Wing" },
+  { label: "Base Support", branch: "Armed Forces (Army / Navy / Air Force)", env: "Post-Deployment / Routine Reintegration", role: "Reintegrating Service Member", unit: "3rd Battalion Support" },
+  { label: "Emergency Lead", branch: "Emergency & Disaster Response (NDRF / SDRF)", env: "Forward Field Operations / High-Threat Zone", role: "Disaster Response Specialist", unit: "NDRF Response Unit 7" },
 ];
 
 export function StartScreen({ onStartSession, onCancel, loading, error }) {
@@ -40,11 +40,11 @@ export function StartScreen({ onStartSession, onCancel, loading, error }) {
   function handleSubmit(e) {
     e.preventDefault();
     if (!role.trim()) {
-      setLocalError("Please specify a role or designation to provide operational context.");
+      setLocalError("Please enter a role or designation.");
       return;
     }
     if (!consent) {
-      setLocalError("Please confirm consent to begin the confidential check-in.");
+      setLocalError("Consent is required to begin.");
       return;
     }
     setLocalError("");
@@ -60,18 +60,18 @@ export function StartScreen({ onStartSession, onCancel, loading, error }) {
 
   return (
     <div className="page-container narrow">
-      <div style={{ marginBottom: "28px", animation: "slideUp 280ms cubic-bezier(0.2,0.8,0.2,1) both" }}>
-        <span className="eyebrow">STEP 01 · PROTECTED INITIALIZATION</span>
-        <h1 className="page-title">Operational Context & Service Profile</h1>
+      <div style={{ marginBottom: "20px", animation: "slideUp 280ms cubic-bezier(0.2,0.8,0.2,1) both" }}>
+        <span className="eyebrow">STEP 01 · CONTEXT</span>
+        <h1 className="page-title">Service Context</h1>
         <p className="page-subtitle">
-          Provide contextual service details to personalize your mental health screening. Sessions are anonymous and protected from service records.
+          Anonymous session. Not linked to personnel records.
         </p>
       </div>
 
-      {/* Quick Context Presets */}
-      <div className="preset-container" style={{ marginBottom: "20px" }}>
-        <span style={{ fontSize: "0.78rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", color: "var(--text-secondary)", display: "block", marginBottom: "8px" }}>
-          Quick Demo Presets:
+      {/* Quick Setup Presets */}
+      <div className="preset-container" style={{ marginBottom: "16px" }}>
+        <span style={{ fontSize: "0.75rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em", color: "var(--text-muted)", display: "block", marginBottom: "6px" }}>
+          Quick Setup:
         </span>
         <div style={{ display: "flex", flexWrap: "wrap", gap: "8px" }}>
           {ROLE_PRESETS.map((p, idx) => (
@@ -90,9 +90,9 @@ export function StartScreen({ onStartSession, onCancel, loading, error }) {
       </div>
 
       <div className="card card-elevated" style={{ animation: "slideUp 340ms cubic-bezier(0.2,0.8,0.2,1) both" }}>
-        <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
+        <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
           <div className="input-field">
-            <label htmlFor="branch-select">Service Branch / Category</label>
+            <label htmlFor="branch-select">Service</label>
             <select
               id="branch-select"
               className="select-input"
@@ -107,7 +107,7 @@ export function StartScreen({ onStartSession, onCancel, loading, error }) {
           </div>
 
           <div className="input-field">
-            <label htmlFor="env-select">Current Operational Environment</label>
+            <label htmlFor="env-select">Current Setting</label>
             <select
               id="env-select"
               className="select-input"
@@ -122,12 +122,12 @@ export function StartScreen({ onStartSession, onCancel, loading, error }) {
           </div>
 
           <div className="input-field">
-            <label htmlFor="role-input">Role / Functional Designation</label>
+            <label htmlFor="role-input">Role / Designation</label>
             <input
               id="role-input"
               type="text"
               className="text-input"
-              placeholder="e.g. Field Operations Personnel / Watch Officer"
+              placeholder="e.g. Field Operations Personnel"
               value={role}
               onChange={(e) => setRole(e.target.value)}
               disabled={loading}
@@ -136,58 +136,54 @@ export function StartScreen({ onStartSession, onCancel, loading, error }) {
           </div>
 
           <div className="input-field">
-            <label htmlFor="unit-input">Unit / Sector Reference (Optional demo label)</label>
+            <label htmlFor="unit-input">Unit (Optional)</label>
             <input
               id="unit-input"
               type="text"
               className="text-input"
-              placeholder="e.g. Sector Unit Bravo / Response Wing"
+              placeholder="e.g. Sector Unit Bravo"
               value={unit}
               onChange={(e) => setUnit(e.target.value)}
               disabled={loading}
             />
           </div>
 
-          <label
-            htmlFor="consent-check"
-            style={{
-              display: "flex",
-              alignItems: "flex-start",
-              gap: "12px",
-              cursor: "pointer",
-              padding: "16px",
-              background: "var(--bg-input)",
-              borderRadius: "var(--radius-md)",
-              border: "1px solid var(--border-subtle)",
-              transition: "border-color var(--transition-fast)",
-            }}
-          >
+          {/* Consent Checkbox */}
+          <div style={{ display: "flex", alignItems: "flex-start", gap: "10px", marginTop: "4px" }}>
             <input
-              id="consent-check"
               type="checkbox"
-              style={{ marginTop: "3px", width: "18px", height: "18px", accentColor: "var(--primary)", cursor: "pointer" }}
+              id="consent-check"
               checked={consent}
               onChange={(e) => setConsent(e.target.checked)}
-              disabled={loading}
-              aria-label="I understand this session is anonymous, confidential, and used strictly for supportive welfare triage."
+              style={{ width: "16px", height: "16px", marginTop: "2px", accentColor: "var(--primary)" }}
             />
-            <span style={{ fontSize: "0.88rem", color: "var(--text-secondary)", lineHeight: "1.5" }}>
-              <strong>Confidentiality Assurance:</strong> I understand this session is strictly anonymous, protected by a temporary session token, and used solely for proactive welfare support. It does not affect fitness records or service logs.
-            </span>
-          </label>
+            <label htmlFor="consent-check" style={{ fontSize: "0.80rem", color: "var(--text-secondary)", cursor: "pointer", margin: 0 }}>
+              I agree to proceed with this anonymous check-in.
+            </label>
+          </div>
 
           {activeError && (
-            <div className="inline-error" role="alert">
+            <div className="error-alert" role="alert">
               {activeError}
             </div>
           )}
 
-          <div className="screen-actions-wrap">
-            <button type="button" className="btn btn-ghost" onClick={onCancel} disabled={loading}>
-              ← Back
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: "8px" }}>
+            <button
+              type="button"
+              className="btn btn-ghost"
+              onClick={onCancel}
+              disabled={loading}
+            >
+              ← Cancel
             </button>
-            <button type="submit" className="btn btn-primary" disabled={loading}>
-              {loading ? "Starting Protected Session..." : "Continue to Wellbeing Pulse →"}
+            <button
+              id="start-submit-btn"
+              type="submit"
+              className="btn btn-primary"
+              disabled={loading}
+            >
+              {loading ? "Starting…" : "Continue →"}
             </button>
           </div>
         </form>

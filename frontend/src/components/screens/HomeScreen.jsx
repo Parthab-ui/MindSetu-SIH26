@@ -3,100 +3,104 @@ export function HomeScreen({ onStart }) {
     {
       num: "01",
       name: "LightGBM",
-      role: "Supervised Research Model",
-      desc: "Trained on military personnel research data to predict multi-symptom strain from operational exposure.",
+      role: "Supervised Research",
+      desc: "Trained on military research data for multi-symptom strain analysis.",
     },
     {
       num: "02",
       name: "TreeSHAP",
-      role: "Model Explainability",
-      desc: "Provides exact, mathematical feature attribution for every trauma, stress, and physical role input.",
+      role: "Explainability",
+      desc: "Exact mathematical attribution for every operational input.",
     },
     {
       num: "03",
       name: "Gemini",
-      role: "Supportive AI Companion",
-      desc: "Synthesizes multi-turn recovery pacing and tactical decompression guidance with strict safety guardrails.",
+      role: "Supportive AI",
+      desc: "Empathetic recovery and tactical decompression guidance.",
     },
     {
       num: "04",
       name: "Human Officer",
-      role: "Welfare Intervention",
-      desc: "All welfare decisions, duty adjustments, and formal referrals remain strictly human-driven.",
+      role: "Welfare Decision",
+      desc: "Welfare actions and clinical support remain strictly human-led.",
     },
   ];
 
   const differentiators = [
     {
       icon: "🎯",
-      title: "Purpose-Built for Uniformed Personnel",
-      desc: "Screens for operational exhaustion, tactical hypervigilance, and critical incident trauma rather than generic workplace stress.",
+      title: "Uniformed Context",
+      desc: "Screens for operational exhaustion, hypervigilance, and duty strain.",
     },
     {
       icon: "🧠",
-      title: "Depression & PTSD/Trauma Dimensions",
-      desc: "Separates affective depressive fatigue from tactical hyperarousal and intrusive recall for granular support triage.",
+      title: "Depression & Trauma",
+      desc: "Separates affective fatigue from trauma arousal and intrusion.",
     },
     {
-      icon: "⚖️",
-      title: "Objective Duty & Recovery Balancing",
-      desc: "Integrates shift duration, sleep deficit, night watches, and leave intervals to evaluate cumulative duty burden.",
+      icon: "🎙️",
+      title: "Voice Paralinguistics",
+      desc: "In-memory acoustic ML signals with zero audio stored.",
     },
     {
       icon: "🔒",
-      title: "Protected & Non-Stigmatizing",
-      desc: "Protected anonymous sessions with zero personnel identifiers stored, removing fear of career consequences.",
+      title: "Anonymous & Private",
+      desc: "Protected sessions with zero service numbers or personnel records.",
     },
   ];
 
   return (
     <div className="page-container">
       <div className="hero-grid">
-        {/* Left — Hero Copy */}
+        {/* Left — Hero */}
         <div style={{ animation: "slideUp 400ms cubic-bezier(0.2,0.8,0.2,1) both" }}>
-          <span className="eyebrow">SIH26186 · UNIFORMED PERSONNEL WELFARE SUPPORT</span>
+          <span className="eyebrow">SIH26186 · PERSONNEL WELFARE SUPPORT</span>
           <h1
             className="page-title"
-            style={{ fontSize: "clamp(2.3rem, 4.5vw, 3.8rem)", marginBottom: "20px", lineHeight: 1.1 }}
+            style={{ fontSize: "clamp(2.3rem, 4.5vw, 3.6rem)", marginBottom: "16px", lineHeight: 1.15 }}
           >
-            Specialized Welfare Triage.
-            <br />
-            <span style={{ color: "var(--primary)" }}>Built for Service Contexts.</span>
+            Support for your <br />
+            <span style={{ color: "var(--primary)" }}>wellbeing.</span>
           </h1>
           <p
             className="page-subtitle"
-            style={{ fontSize: "1.08rem", maxWidth: "580px", marginBottom: "32px", lineHeight: "1.6" }}
+            style={{ fontSize: "1.05rem", maxWidth: "560px", marginBottom: "24px", lineHeight: "1.6" }}
           >
-            MindSetu is a dedicated digital mental health screening and decision-support platform designed around the operational, trauma, shift work, and reintegration realities experienced by armed forces, paramilitary, police, and emergency personnel.
+            Confidential screening and multimodal decision support built for armed forces, paramilitary, police, and emergency personnel.
           </p>
 
-          <button
-            id="home-start-btn"
-            className="btn btn-primary"
-            style={{ padding: "15px 32px", fontSize: "1.02rem", marginBottom: "32px" }}
-            onClick={onStart}
-          >
-            Start Protected Session →
-          </button>
+          <div style={{ display: "flex", gap: "12px", alignItems: "center", marginBottom: "28px" }}>
+            <button
+              id="home-start-btn"
+              className="btn btn-primary"
+              style={{ padding: "14px 28px", fontSize: "1rem" }}
+              onClick={onStart}
+            >
+              Start Check-In →
+            </button>
+            <span style={{ fontSize: "0.82rem", color: "var(--text-muted)" }}>
+              Private • Secure • Anonymous
+            </span>
+          </div>
 
           {/* Differentiator Highlights */}
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: "14px", marginTop: "12px" }}>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: "12px", marginTop: "12px" }}>
             {differentiators.map((d, i) => (
               <div
                 key={i}
                 className="card card-enter"
                 style={{
-                  padding: "16px",
+                  padding: "14px 16px",
                   background: "var(--bg-surface-elevated)",
                   border: "1px solid var(--border-subtle)",
                   animationDelay: `${300 + i * 50}ms`,
                 }}
               >
                 <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "4px" }}>
-                  <span style={{ fontSize: "1.2rem" }}>{d.icon}</span>
-                  <strong style={{ fontSize: "0.92rem", color: "var(--text-primary)" }}>{d.title}</strong>
+                  <span style={{ fontSize: "1.15rem" }}>{d.icon}</span>
+                  <strong style={{ fontSize: "0.90rem", color: "var(--text-primary)" }}>{d.title}</strong>
                 </div>
-                <p style={{ margin: 0, fontSize: "0.82rem", color: "var(--text-secondary)", lineHeight: "1.5" }}>
+                <p style={{ margin: 0, fontSize: "0.80rem", color: "var(--text-secondary)", lineHeight: "1.4" }}>
                   {d.desc}
                 </p>
               </div>
@@ -109,7 +113,7 @@ export function HomeScreen({ onStart }) {
           <div
             className="card card-elevated"
             style={{
-              padding: "30px",
+              padding: "26px",
               background: "var(--bg-surface-card)",
               backdropFilter: "blur(20px)",
             }}
@@ -117,53 +121,50 @@ export function HomeScreen({ onStart }) {
             <span className="eyebrow">FOUR-PILLAR ARCHITECTURE</span>
             <h2
               style={{
-                fontSize: "1.28rem",
-                fontWeight: 700,
-                margin: "6px 0 22px",
-                color: "var(--text-primary)",
+                fontSize: "1.20rem",
+                fontWeight: 800,
+                marginTop: "4px",
+                marginBottom: "16px",
+                letterSpacing: "-0.01em",
               }}
             >
-              Clear Responsibilities at Every Layer
+              AI-Assisted Welfare System
             </h2>
 
-            <div style={{ display: "flex", flexDirection: "column", gap: "0" }}>
-              {pillars.map((p) => (
-                <div key={p.num} className="pillar-row">
-                  <span className="pillar-num">{p.num}</span>
+            <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+              {pillars.map((p, i) => (
+                <div
+                  key={i}
+                  style={{
+                    display: "flex",
+                    gap: "12px",
+                    alignItems: "flex-start",
+                    padding: "10px 12px",
+                    background: "var(--bg-surface-elevated)",
+                    borderRadius: "var(--radius-md)",
+                    border: "1px solid var(--border-subtle)",
+                  }}
+                >
+                  <span
+                    style={{
+                      fontFamily: "var(--font-mono)",
+                      fontSize: "0.75rem",
+                      fontWeight: 800,
+                      color: "var(--primary)",
+                      background: "rgba(16, 185, 129, 0.1)",
+                      padding: "2px 6px",
+                      borderRadius: "4px",
+                      marginTop: "2px",
+                    }}
+                  >
+                    {p.num}
+                  </span>
                   <div>
-                    <div
-                      style={{
-                        display: "flex",
-                        justifyContent: "space-between",
-                        alignItems: "baseline",
-                        flexWrap: "wrap",
-                        gap: "4px",
-                        marginBottom: "4px",
-                      }}
-                    >
-                      <strong style={{ fontSize: "0.96rem", color: "var(--text-primary)" }}>
-                        {p.name}
-                      </strong>
-                      <span
-                        style={{
-                          fontSize: "0.70rem",
-                          color: "var(--text-muted)",
-                          textTransform: "uppercase",
-                          letterSpacing: "0.06em",
-                          fontWeight: 700,
-                        }}
-                      >
-                        {p.role}
-                      </span>
+                    <div style={{ display: "flex", alignItems: "baseline", gap: "6px" }}>
+                      <strong style={{ fontSize: "0.88rem" }}>{p.name}</strong>
+                      <span style={{ fontSize: "0.74rem", color: "var(--text-muted)" }}>({p.role})</span>
                     </div>
-                    <p
-                      style={{
-                        margin: 0,
-                        fontSize: "0.84rem",
-                        color: "var(--text-secondary)",
-                        lineHeight: "1.5",
-                      }}
-                    >
+                    <p style={{ margin: "2px 0 0", fontSize: "0.78rem", color: "var(--text-secondary)", lineHeight: "1.35" }}>
                       {p.desc}
                     </p>
                   </div>
@@ -171,12 +172,22 @@ export function HomeScreen({ onStart }) {
               ))}
             </div>
 
-            <div style={{ marginTop: "24px", padding: "12px 16px", background: "var(--bg-input)", borderRadius: "var(--radius-md)", border: "1px solid var(--border-subtle)" }}>
-              <span style={{ fontSize: "0.76rem", color: "var(--text-muted)", fontWeight: 600, display: "block" }}>
-                🔒 ETHICAL PROTOCOL
-              </span>
-              <p style={{ margin: "4px 0 0", fontSize: "0.82rem", color: "var(--text-secondary)", lineHeight: "1.5" }}>
-                MindSetu is a welfare triage aid. It never makes automatic personnel decisions, determines fitness ratings, or replaces medical clinicians.
+            {/* Non-Diagnostic Boundary Notice */}
+            <div
+              style={{
+                marginTop: "16px",
+                padding: "10px 12px",
+                background: "rgba(59, 130, 246, 0.08)",
+                border: "1px solid rgba(59, 130, 246, 0.25)",
+                borderRadius: "var(--radius-md)",
+                display: "flex",
+                gap: "8px",
+                alignItems: "center",
+              }}
+            >
+              <span style={{ fontSize: "0.95rem" }}>🛡️</span>
+              <p style={{ margin: 0, fontSize: "0.74rem", color: "var(--text-secondary)", lineHeight: "1.35" }}>
+                <strong>Non-Diagnostic Aid:</strong> Screening and decision support only. Clinical diagnoses and personnel decisions are human-led.
               </p>
             </div>
           </div>

@@ -33,8 +33,7 @@ export function AnalysisScreen({
 }) {
   const level = String(analysis?.risk_level || "unknown").toLowerCase();
 
-
-  // Compute subscale clinical indicators if answers exist
+  // Compute subscales
   const validAnswers = Array.isArray(answers) && answers.length === 6 && answers.every((a) => a !== null);
   
   // Depression Subscale: Q1 (Exhaustion), Q4 (Cognitive Fog), Q6 (Duty Burden)
@@ -44,7 +43,7 @@ export function AnalysisScreen({
     ? Math.round(analysis.wellness_score * 0.95)
     : null;
 
-  // PTSD / Trauma Subscale: Q2 (Hypervigilance), Q3 (Detachment/Irritability), Q5 (Intrusive Recall)
+  // PTSD / Trauma Subscale: Q2 (Hypervigilance), Q3 (Detachment), Q5 (Disturbed Sleep)
   const traumaScore = validAnswers
     ? Math.round(((answers[1] + answers[2] + answers[4]) / 9) * 100)
     : analysis?.wellness_score !== undefined
@@ -57,44 +56,40 @@ export function AnalysisScreen({
   const traumaLevel =
     traumaScore === null ? "low" : traumaScore >= 70 ? "high" : traumaScore >= 40 ? "moderate" : "low";
 
-  // Plain language interpretations
+  // Concise interpretations
   const heroSubtitle =
     level === "high"
-      ? "Your check-in suggests significant cumulative operational strain and fatigue. Prioritising recovery time and connecting with a unit welfare officer or support specialist is strongly recommended."
+      ? "Elevated operational strain and fatigue. Prioritising recovery time and connecting with support is recommended."
       : level === "moderate"
-      ? "You are experiencing early indicators of operational fatigue or stress buildup. A proactive recovery check-in and duty pacing adjustments will help prevent escalation."
+      ? "Moderate duty strain buildup. Proactive rest adjustments will help prevent escalation."
       : level === "low"
-      ? "Your current check-in indicators reflect steady operational resilience and manageable strain. Maintain healthy rest rhythms and unit peer support."
-      : "Complete the check-in to generate your personalised wellbeing summary.";
+      ? "Steady operational resilience. Maintain healthy rest rhythms and peer check-in habits."
+      : "Complete the check-in to generate your wellbeing summary.";
 
   const whatWeAreSeeing =
     level === "high"
-      ? "Both duty intensity and reported distress signals (fatigue, hypervigilance, or sleep disruption) are elevated, indicating urgent need for recovery buffers."
+      ? "Elevated duty demands and fatigue signals indicate need for recovery buffers."
       : level === "moderate"
-      ? "Duty demands or stress indicators are accumulating, though core functional capacity remains steady."
-      : "Current duty demands and mental health responses are within a balanced, sustainable range.";
+      ? "Duty demands are accumulating; core capacity remains steady."
+      : "Duty demands and wellbeing responses are within a balanced range.";
 
   const whatYouCanDo =
     analysis?.recommendation ||
     (level === "high"
-      ? "Protect at least 7–8 hours of recovery sleep, practice tactical decompression, and consider a confidential check-in with a welfare specialist."
+      ? "Protect 7–8 hours of recovery sleep, practice decompression, and consider support check-in."
       : level === "moderate"
-      ? "Schedule protected rest blocks after high-tempo shifts, stay hydrated, and discuss duty pacing with your squad lead."
-      : "Continue your current rest rhythms and peer check-in habits.");
+      ? "Schedule protected rest blocks after high-tempo shifts and stay hydrated."
+      : "Continue your current rest rhythms and peer habits.");
 
   const whenToCheckAgain =
     level === "high"
-      ? "Check in again within 24–48 hours, or sooner if operational pressures escalate."
+      ? "Check in again within 24–48 hours."
       : level === "moderate"
-      ? "Check in again in 3–5 days to monitor your recovery trajectory."
-      : "Check in again in 1–2 weeks, or after any major deployment or shift rotation.";
+      ? "Check in again in 3–5 days."
+      : "Check in again in 1–2 weeks.";
 
   const wellnessVal = analysis?.wellness_score ?? null;
   const workloadVal = analysis?.workload_score ?? null;
-  const combinedVal = analysis?.combined_score ?? null;
-
-  const wellnessLevel =
-    wellnessVal === null ? "low" : wellnessVal >= 80 ? "high" : wellnessVal >= 50 ? "moderate" : "low";
 
   const workloadLevel =
     workloadVal === null ? "low" : workloadVal >= 85 ? "high" : workloadVal >= 60 ? "moderate" : "low";
@@ -102,22 +97,22 @@ export function AnalysisScreen({
   return (
     <div className="page-container">
       {/* Page Heading */}
-      <div style={{ marginBottom: "28px", animation: "slideUp 280ms cubic-bezier(0.2,0.8,0.2,1) both" }}>
-        <span className="eyebrow">STEP 04 · CONFIDENTIAL WELFARE SUMMARY</span>
-        <h1 className="page-title">Operational Wellbeing & Support Summary</h1>
+      <div style={{ marginBottom: "20px", animation: "slideUp 280ms cubic-bezier(0.2,0.8,0.2,1) both" }}>
+        <span className="eyebrow">CONFIDENTIAL SUMMARY</span>
+        <h1 className="page-title">Wellbeing Summary</h1>
         <p className="page-subtitle">
-          A confidential multi-dimensional assessment evaluating Depression indicators, PTSD/Trauma strain, and Duty Workload.
+          Multi-dimensional assessment evaluating Depression, Trauma strain, and Duty Workload.
         </p>
       </div>
 
-      {/* Layer 1 Hero Takeaway Card */}
+      {/* Hero Takeaway Card */}
       <div className={`triage-hero-card ${level}`}>
         <div className="triage-header-row">
           <div className="triage-title-group">
             <span className="eyebrow" style={{ color: "var(--text-secondary)" }}>
-              CURRENT WELFARE SIGNAL
+              CURRENT SIGNAL
             </span>
-            <h2>{level.charAt(0).toUpperCase() + level.slice(1)} Priority Welfare Signal</h2>
+            <h2>{level.charAt(0).toUpperCase() + level.slice(1)} Priority</h2>
           </div>
           <Badge level={level}>{level.toUpperCase()} PRIORITY</Badge>
         </div>
@@ -127,15 +122,15 @@ export function AnalysisScreen({
         {/* Structured 3-Part Takeaway */}
         <div className="triage-breakdown-grid">
           <div className="triage-breakdown-box">
-            <span className="breakdown-label">WHAT WE'RE SEEING</span>
+            <span className="breakdown-label">WHAT WE SEE</span>
             <p className="breakdown-text">{whatWeAreSeeing}</p>
           </div>
           <div className="triage-breakdown-box">
-            <span className="breakdown-label">WHAT YOU CAN DO NOW</span>
+            <span className="breakdown-label">NEXT STEP</span>
             <p className="breakdown-text">{whatYouCanDo}</p>
           </div>
           <div className="triage-breakdown-box">
-            <span className="breakdown-label">WHEN TO CHECK AGAIN</span>
+            <span className="breakdown-label">FOLLOW-UP</span>
             <p className="breakdown-text">{whenToCheckAgain}</p>
           </div>
         </div>
@@ -143,59 +138,40 @@ export function AnalysisScreen({
         {/* Action Buttons */}
         <div className="triage-actions-wrap">
           <button id="analysis-chat-btn" className="btn btn-primary" onClick={onNavigateToChat}>
-            Talk with MindSetu AI Companion →
+            Talk to AI Companion →
           </button>
           <button className="btn btn-secondary" onClick={onNavigateToMood}>
-            Record Daily Mood & Trends
+            Record Mood
           </button>
           <button
             className="btn btn-research-trigger"
             onClick={onOpenResearchModal}
             title="Open Explainable ML Research Lab (LightGBM + TreeSHAP)"
           >
-            <span className="research-btn-primary">Explore How AI Reached This Result</span>
-            <span className="research-btn-secondary">Explainable ML Research Lab 🔬</span>
+            <span className="research-btn-primary">Why this result?</span>
+            <span className="research-btn-secondary">Explainable ML Lab 🔬</span>
           </button>
         </div>
       </div>
 
-      {/* Flagship Section: Clinical & Operational Symptom Breakdown */}
-      <div style={{ marginTop: "32px", marginBottom: "16px" }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
-          <div>
-            <span className="eyebrow">DIAGNOSTIC CONTEXT · CLINICAL SUBSCALE INDICATORS</span>
-            <h2 style={{ fontSize: "1.35rem", fontWeight: 800, margin: "4px 0 6px" }}>
-              Depression & PTSD/Trauma Dimensional Breakdown
-            </h2>
-            <p style={{ fontSize: "0.85rem", color: "var(--text-secondary)", margin: 0 }}>
-              Evaluates targeted psychological symptom clusters to provide granular, non-stigmatizing insights.
-            </p>
-          </div>
-          <InfoTooltip
-            title="Clinical Subscale Mapping"
-            text="The 6 screening items map directly into Depression (exhaustion, cognitive fog, duty burden) and PTSD/Trauma (hypervigilance, detachment, intrusive recall) dimensions for personnel triage."
-            techDetail="Depression Subscale: (Q1 + Q4 + Q6)/9 × 100. PTSD Subscale: (Q2 + Q3 + Q5)/9 × 100. Operational Stress: Computed from duty hours, night shifts, and sleep deficit."
-            label="Learn about clinical subscales"
-          />
-        </div>
+      {/* Metrics Section */}
+      <div style={{ marginTop: "24px", marginBottom: "12px" }}>
+        <span className="eyebrow">KEY INDICATORS</span>
+        <h2 style={{ fontSize: "1.25rem", fontWeight: 800, margin: "2px 0 4px" }}>
+          Dimensional Breakdown
+        </h2>
       </div>
 
       <div className="metrics-grid">
-        {/* Metric 1: Depression Symptom Indicator */}
+        {/* Metric 1: Depression */}
         <div className="metric-card">
           <div className="metric-card-top">
             <div className="metric-card-title-wrap">
-              <span className="metric-card-label">Depression Indicators</span>
+              <span className="metric-card-label">Depression</span>
               <span className="metric-card-badge" style={{ background: "rgba(59, 130, 246, 0.15)", color: "var(--accent-blue)" }}>
-                Affective & Cognitive
+                Affective & Focus
               </span>
             </div>
-            <InfoTooltip
-              title="Depression Dimension"
-              text="Assesses persistent exhaustion, cognitive slowing in operational tasks, and feelings of duty burden or isolation."
-              techDetail="Derived from items Q1 (Operational Exhaustion), Q4 (Cognitive Focus/Decision Fatigue), and Q6 (Duty Burden / Help-Seeking Stigma)."
-              label="Information about Depression Indicators"
-            />
           </div>
 
           <div className="metric-value-row">
@@ -207,42 +183,24 @@ export function AnalysisScreen({
             {depressionScore === null
               ? "Pending check-in"
               : depressionScore >= 70
-              ? "Elevated depressive fatigue and cognitive load. Structured rest and welfare consultation recommended."
+              ? "Elevated fatigue and cognitive load. Structured rest recommended."
               : depressionScore >= 40
-              ? "Mild to moderate energy drain; manageable with active pacing and sleep recovery."
-              : "Low depressive indicator; steady cognitive clarity and emotional motivation."}
+              ? "Mild to moderate energy drain; manageable with active pacing."
+              : "Low depressive indicator; steady cognitive clarity."}
           </p>
 
           {depressionScore !== null && <ScoreBar value={depressionScore} level={depressionLevel} label="Depression Indicator" />}
-
-          <details className="score-disclosure">
-            <summary>Clinical Subscale Details</summary>
-            <div className="score-disclosure-content">
-              <p>Key indicators measured:</p>
-              <ul>
-                <li>Operational Exhaustion & Energy Depletion</li>
-                <li>Decision Fatigue & Mental Focus</li>
-                <li>Duty Isolation & Help-Seeking Barrier</li>
-              </ul>
-            </div>
-          </details>
         </div>
 
-        {/* Metric 2: PTSD / Trauma Symptom Indicator */}
+        {/* Metric 2: PTSD / Trauma */}
         <div className="metric-card">
           <div className="metric-card-top">
             <div className="metric-card-title-wrap">
-              <span className="metric-card-label">PTSD & Trauma Indicators</span>
+              <span className="metric-card-label">Trauma & Arousal</span>
               <span className="metric-card-badge" style={{ background: "rgba(245, 158, 11, 0.15)", color: "var(--warning)" }}>
-                Arousal & Intrusion
+                Arousal & Sleep
               </span>
             </div>
-            <InfoTooltip
-              title="PTSD & Trauma Dimension"
-              text="Assesses tactical hypervigilance (difficulty dropping guard off-duty), emotional detachment, and intrusive memories or sleep disturbance from critical incidents."
-              techDetail="Derived from items Q2 (Tactical Hypervigilance), Q3 (Emotional Detachment/Irritability), and Q5 (Intrusive Recall & Night Disruption)."
-              label="Information about PTSD & Trauma Indicators"
-            />
           </div>
 
           <div className="metric-value-row">
@@ -254,42 +212,24 @@ export function AnalysisScreen({
             {traumaScore === null
               ? "Pending check-in"
               : traumaScore >= 70
-              ? "Elevated hyperarousal and intrusive recall signals. Trauma-informed welfare support advised."
+              ? "Elevated hyperarousal and sleep disruption signals."
               : traumaScore >= 40
-              ? "Moderate tactical alert retention; grounding and off-duty decompression recommended."
-              : "Low trauma strain; effective transition between duty alert and off-duty rest."}
+              ? "Moderate alert retention; grounding recommended."
+              : "Low trauma strain; steady recovery."}
           </p>
 
-          {traumaScore !== null && <ScoreBar value={traumaScore} level={traumaLevel} label="PTSD & Trauma Indicator" />}
-
-          <details className="score-disclosure">
-            <summary>Clinical Subscale Details</summary>
-            <div className="score-disclosure-content">
-              <p>Key indicators measured:</p>
-              <ul>
-                <li>Tactical Hypervigilance & Decompression</li>
-                <li>Emotional Numbing & Irritability</li>
-                <li>Intrusive Duty Memories & Night Disruption</li>
-              </ul>
-            </div>
-          </details>
+          {traumaScore !== null && <ScoreBar value={traumaScore} level={traumaLevel} label="Trauma Indicator" />}
         </div>
 
-        {/* Metric 3: Duty & Workload Index */}
+        {/* Metric 3: Duty Workload */}
         <div className="metric-card">
           <div className="metric-card-top">
             <div className="metric-card-title-wrap">
-              <span className="metric-card-label">Operational Workload Index</span>
+              <span className="metric-card-label">Duty Workload</span>
               <span className="metric-card-badge" style={{ background: "rgba(16, 185, 129, 0.15)", color: "var(--success)" }}>
-                Duty Context
+                Operational
               </span>
             </div>
-            <InfoTooltip
-              title="Duty Workload Index"
-              text="Measures cumulative operational pressure from shift length, sleep recovery deficit, night shifts, and leave intervals."
-              techDetail="Weighted formula: Shift hours (25%) + Night duties (15%) + Sleep deficit (15%) + Leave gap (10%) + Intensity (20%) + High-risk duty (10%) + Shift changes (5%)."
-              label="Information about Duty Workload"
-            />
           </div>
 
           <div className="metric-value-row">
@@ -301,202 +241,100 @@ export function AnalysisScreen({
             {workloadVal === null
               ? "Pending check-in"
               : workloadVal >= 85
-              ? "High operational demand with severe sleep deficit. Immediate rest buffer needed."
+              ? "High operational demand with sleep deficit. Rest needed."
               : workloadVal >= 60
-              ? "Moderate operational tempo; protect uninterrupted sleep hours."
-              : "Sustainable duty schedule with adequate recovery time."}
+              ? "Moderate tempo; protect sleep hours."
+              : "Sustainable schedule with adequate recovery."}
           </p>
 
-          {analysis && <ScoreBar value={workloadVal} level={workloadLevel} label="Operational Workload score" />}
-
-          <details className="score-disclosure">
-            <summary>Operational Factors</summary>
-            <div className="score-disclosure-content">
-              <p>Combines 7 operational parameters:</p>
-              <ul>
-                <li>Duty shift duration & night duties</li>
-                <li>Rest & sleep hours deficit (below 8 hrs)</li>
-                <li>Days since dedicated leave & tempo rating</li>
-                <li>High-risk / emergency assignment status</li>
-              </ul>
-            </div>
-          </details>
+          {analysis && <ScoreBar value={workloadVal} level={workloadLevel} label="Workload score" />}
         </div>
       </div>
 
-      {/* Multimodal Decision Support & Voice Paralinguistics */}
+      {/* Multimodal Box */}
       {voiceResult ? (
-        <div className="card" style={{ marginTop: "28px", border: "1px solid var(--border-medium)", background: "var(--bg-surface-elevated)" }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-              <span style={{ fontSize: "1.5rem" }}>🎙️</span>
-              <div>
-                <span className="eyebrow" style={{ color: "var(--primary)" }}>MULTIMODAL DECISION-SUPPORT</span>
-                <h3 style={{ fontSize: "1.15rem", fontWeight: 800, margin: 0 }}>
-                  Speech Paralinguistics vs. Self-Reported Signals
-                </h3>
-              </div>
+        <div className="card" style={{ marginTop: "24px", border: "1px solid var(--border-medium)", background: "var(--bg-surface-elevated)" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "12px" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+              <span style={{ fontSize: "1.3rem" }}>🎙️</span>
+              <h3 style={{ fontSize: "1.05rem", fontWeight: 800, margin: 0 }}>
+                Multimodal Comparison
+              </h3>
             </div>
-            <span
-              className="badge"
-              style={{
-                background: voiceResult.audio_quality === "good" ? "rgba(16, 185, 129, 0.15)" : "rgba(245, 158, 11, 0.15)",
-                color: voiceResult.audio_quality === "good" ? "#10b981" : "#f59e0b",
-                border: "1px solid currentColor",
-              }}
-            >
-              Voice Quality: {voiceResult.audio_quality?.toUpperCase()} · Confidence {Math.round((voiceResult.confidence || 0.8) * 100)}%
+            <span className="badge" style={{ fontSize: "0.72rem" }}>
+              Voice Quality: {voiceResult.audio_quality?.toUpperCase()}
             </span>
           </div>
 
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: 16, marginBottom: 16 }}>
-            {/* Depression Cross-Modal Compare */}
-            <div style={{ padding: "14px 16px", background: "var(--bg-input)", borderRadius: "var(--radius-md)", border: "1px solid var(--border-subtle)" }}>
-              <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }}>
-                <span style={{ fontSize: "0.82rem", fontWeight: 700, textTransform: "uppercase" }}>Depressive Strain</span>
-                <span className="dimension-badge">Cross-Modal</span>
-              </div>
-              <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.85rem", marginBottom: 4 }}>
-                <span style={{ color: "var(--text-secondary)" }}>Self-Reported Indicator (DSI):</span>
-                <strong style={{ color: depressionScore >= 70 ? "#ef4444" : "#10b981" }}>{depressionScore}%</strong>
-              </div>
-              <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.85rem" }}>
-                <span style={{ color: "var(--text-secondary)" }}>Voice-Derived Signal (ML):</span>
-                <strong style={{ color: voiceResult.depression_signal >= 70 ? "#ef4444" : "#10b981" }}>{voiceResult.depression_signal}%</strong>
-              </div>
-            </div>
-
-            {/* Trauma Cross-Modal Compare */}
-            <div style={{ padding: "14px 16px", background: "var(--bg-input)", borderRadius: "var(--radius-md)", border: "1px solid var(--border-subtle)" }}>
-              <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }}>
-                <span style={{ fontSize: "0.82rem", fontWeight: 700, textTransform: "uppercase" }}>Hyperarousal & Trauma</span>
-                <span className="dimension-badge" style={{ background: "rgba(245, 158, 11, 0.15)", color: "var(--warning)" }}>Proxy</span>
-              </div>
-              <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.85rem", marginBottom: 4 }}>
-                <span style={{ color: "var(--text-secondary)" }}>Self-Reported Indicator (TSI):</span>
-                <strong style={{ color: traumaScore >= 70 ? "#ef4444" : "#10b981" }}>{traumaScore}%</strong>
-              </div>
-              <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.85rem" }}>
-                <span style={{ color: "var(--text-secondary)" }}>Voice Stress Signal:</span>
-                <strong>{voiceResult.trauma_signal}%</strong>
-              </div>
-            </div>
-          </div>
-
-          {/* Concordance / Disagreement Narrative */}
-          <div style={{ padding: "12px 14px", background: "var(--bg-surface)", borderRadius: "var(--radius-md)", border: "1px solid var(--border-subtle)", marginBottom: 12 }}>
-            <span style={{ fontSize: "0.78rem", fontWeight: 700, textTransform: "uppercase", color: "var(--text-muted)", display: "block", marginBottom: 4 }}>
-              Multimodal Concordance Analysis:
-            </span>
-            <p style={{ fontSize: "0.85rem", color: "var(--text-primary)", margin: 0, lineHeight: 1.5 }}>
-              {Math.abs((depressionScore || 50) - (voiceResult.depression_signal || 50)) <= 20
-                ? "Cross-Modal Concordance: Self-reported mental health indicators and vocal acoustic biomarkers align closely, providing reinforced decision support."
-                : (depressionScore || 50) > (voiceResult.depression_signal || 50)
-                ? "Modal Divergence: Self-reported fatigue is elevated while vocal prosody reflects steady phonation. This suggests subjective mental load or operational strain without deep vocal psychomotor slowing."
-                : "Modal Divergence: Speech acoustic markers (pitch flattening / hesitation) indicate latent fatigue despite lower self-reported scores. Consider proactive rest monitoring."}
-            </p>
-          </div>
-
-          {/* Top Acoustic Features */}
-          {voiceResult.top_acoustic_contributors && voiceResult.top_acoustic_contributors.length > 0 && (
-            <div>
-              <span style={{ fontSize: "0.75rem", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase", display: "block", marginBottom: 6 }}>
-                Extracted Acoustic Biomarkers:
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: "12px", marginBottom: "12px" }}>
+            <div style={{ padding: "10px 14px", background: "var(--bg-input)", borderRadius: "var(--radius-sm)" }}>
+              <span style={{ fontSize: "0.74rem", fontWeight: 700, textTransform: "uppercase", display: "block", marginBottom: "4px" }}>
+                Depression
               </span>
-              <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
-                {voiceResult.top_acoustic_contributors.map((c, idx) => (
-                  <span key={idx} className="dimension-badge" style={{ fontSize: "0.75rem" }}>
-                    {c.label}: {typeof c.measured_value === "number" ? c.measured_value.toFixed(2) : c.measured_value} ({c.direction})
-                  </span>
-                ))}
+              <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.85rem" }}>
+                <span>Self-Report: <strong>{depressionScore}%</strong></span>
+                <span>Voice ML: <strong>{voiceResult.depression_signal}%</strong></span>
               </div>
             </div>
-          )}
+
+            <div style={{ padding: "10px 14px", background: "var(--bg-input)", borderRadius: "var(--radius-sm)" }}>
+              <span style={{ fontSize: "0.74rem", fontWeight: 700, textTransform: "uppercase", display: "block", marginBottom: "4px" }}>
+                Trauma & Stress
+              </span>
+              <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.85rem" }}>
+                <span>Self-Report: <strong>{traumaScore}%</strong></span>
+                <span>Voice Proxy: <strong>{voiceResult.trauma_signal}%</strong></span>
+              </div>
+            </div>
+          </div>
+
+          <p style={{ fontSize: "0.82rem", color: "var(--text-secondary)", margin: 0, lineHeight: 1.4 }}>
+            {Math.abs((depressionScore || 50) - (voiceResult.depression_signal || 50)) <= 20
+              ? "Signals align: Both self-reported responses and vocal paralinguistics reflect consistent levels."
+              : (depressionScore || 50) > (voiceResult.depression_signal || 50)
+              ? "Signals differ: Self-reported fatigue is elevated while vocal prosody remains steady."
+              : "Signals differ: Speech acoustic markers show hesitation despite lower self-reported scores."}
+          </p>
         </div>
       ) : null}
 
-
-      {/* Multi-Dimensional Tailored Action Pathways */}
-      <div style={{ marginTop: "32px", marginBottom: "16px" }}>
-        <span className="eyebrow">ACTIONABLE WELFARE SUPPORT</span>
-        <h2 style={{ fontSize: "1.35rem", fontWeight: 800, margin: "4px 0 6px" }}>
-          Tailored Operational Recovery Pathways
+      {/* Recovery Pathways */}
+      <div style={{ marginTop: "24px", marginBottom: "12px" }}>
+        <span className="eyebrow">RECOVERY</span>
+        <h2 style={{ fontSize: "1.25rem", fontWeight: 800, margin: "2px 0 4px" }}>
+          Tailored Recovery Pathways
         </h2>
       </div>
 
       <div className="context-grid">
-        {/* Pathway 1: Tactical Decompression (Trauma/PTSD) */}
         <div className="card card-enter">
-          <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "6px" }}>
-            <span style={{ fontSize: "1.3rem" }}>🧘‍♂️</span>
-            <span className="eyebrow" style={{ margin: 0, color: "var(--accent)" }}>TACTICAL DECOMPRESSION</span>
+          <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "4px" }}>
+            <span style={{ fontSize: "1.2rem" }}>🧘‍♂️</span>
+            <strong style={{ fontSize: "0.92rem" }}>Tactical Decompression</strong>
           </div>
-          <h3 style={{ fontSize: "1.05rem", fontWeight: 700, margin: "4px 0 8px" }}>
-            Post-Duty Down-Regulation & Grounding
-          </h3>
-          <p style={{ fontSize: "0.85rem", color: "var(--text-secondary)", lineHeight: "1.6", margin: 0 }}>
-            {traumaScore && traumaScore >= 50
-              ? "Incorporate 10 minutes of box-breathing (4s inhale, 4s hold, 4s exhale, 4s hold) immediately after shift handover to signal the nervous system to disengage from high-threat vigilance."
-              : "Maintain clear transitional routines between duty watch and personal rest to sustain long-term operational resilience."}
+          <p style={{ fontSize: "0.82rem", color: "var(--text-secondary)", lineHeight: "1.5", margin: 0 }}>
+            Practice 10 minutes of box-breathing (4s in, 4s hold, 4s out, 4s hold) post-duty to help disengage high-threat alertness.
           </p>
         </div>
 
-        {/* Pathway 2: Sleep & Energy Architecture (Depression) */}
-        <div className="card card-enter" style={{ animationDelay: "60ms" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "6px" }}>
-            <span style={{ fontSize: "1.3rem" }}>🌙</span>
-            <span className="eyebrow" style={{ margin: 0, color: "var(--primary)" }}>REST & SLEEP ARCHITECTURE</span>
+        <div className="card card-enter">
+          <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "4px" }}>
+            <span style={{ fontSize: "1.2rem" }}>🌙</span>
+            <strong style={{ fontSize: "0.92rem" }}>Sleep Architecture</strong>
           </div>
-          <h3 style={{ fontSize: "1.05rem", fontWeight: 700, margin: "4px 0 8px" }}>
-            Restorative Sleep Buffering
-          </h3>
-          <p style={{ fontSize: "0.85rem", color: "var(--text-secondary)", lineHeight: "1.6", margin: 0 }}>
-            {depressionScore && depressionScore >= 50
-              ? "Prioritise dark, quiet sleep blocks with minimal screen exposure before bed. Split rest into anchor sleep periods if continuous 8 hours is constrained by shift rotations."
-              : "Keep consistent sleep and hydration habits, particularly following overnight watch rotations."}
+          <p style={{ fontSize: "0.82rem", color: "var(--text-secondary)", lineHeight: "1.5", margin: 0 }}>
+            Protect an uninterrupted 7-hour rest window post-watch and minimize blue light exposure during recovery periods.
           </p>
         </div>
 
-        {/* Pathway 3: Peer & Welfare Connection */}
-        <div className="card card-enter" style={{ animationDelay: "120ms" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "6px" }}>
-            <span style={{ fontSize: "1.3rem" }}>🤝</span>
-            <span className="eyebrow" style={{ margin: 0, color: "var(--success)" }}>PEER & WELFARE CHANNEL</span>
+        <div className="card card-enter">
+          <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "4px" }}>
+            <span style={{ fontSize: "1.2rem" }}>👥</span>
+            <strong style={{ fontSize: "0.92rem" }}>Peer & Welfare Support</strong>
           </div>
-          <h3 style={{ fontSize: "1.05rem", fontWeight: 700, margin: "4px 0 8px" }}>
-            Confidential Human Support
-          </h3>
-          <p style={{ fontSize: "0.85rem", color: "var(--text-secondary)", lineHeight: "1.6", margin: 0 }}>
-            {level === "high"
-              ? "Connecting with a trusted buddy, unit medical officer, or welfare counselor provides an objective, confidential sounding board. Early check-ins protect your career longevity and mission readiness."
-              : "Check in with your squad mates regularly. Mutual debriefing after demanding shifts strengthens unit cohesion."}
+          <p style={{ fontSize: "0.82rem", color: "var(--text-secondary)", lineHeight: "1.5", margin: 0 }}>
+            Conduct a confidential check-in with your unit welfare officer or squad buddy to discuss duty pacing.
           </p>
-        </div>
-      </div>
-
-      {/* Verified Crisis & Confidential Escalation Banner */}
-      <div className="card card-elevated" style={{ marginTop: "32px", border: "1px solid var(--border-medium)", background: "var(--bg-surface-card)" }}>
-        <div style={{ display: "flex", alignItems: "flex-start", gap: "14px", flexWrap: "wrap" }}>
-          <span style={{ fontSize: "1.6rem" }}>🛡️</span>
-          <div style={{ flex: 1 }}>
-            <h3 style={{ fontSize: "1.05rem", fontWeight: 800, margin: "0 0 4px" }}>
-              Verified Confidential Welfare & Emergency Support Channels
-            </h3>
-            <p style={{ fontSize: "0.84rem", color: "var(--text-secondary)", margin: "0 0 12px", lineHeight: "1.5" }}>
-              If you or a colleague are experiencing severe distress, overwhelming thoughts, or critical duty strain, free and confidential support is available 24/7.
-            </p>
-            <div style={{ display: "flex", flexWrap: "wrap", gap: "10px" }}>
-              <div className="helpline-badge">
-                <strong>Tele-MANAS (Govt of India):</strong> <span>14416</span> or <span>1800-891-4416</span> (24/7 Toll-free)
-              </div>
-              <div className="helpline-badge">
-                <strong>Vandrevala Foundation:</strong> <span>9999 666 555</span> (24/7 Confidential Crisis Support)
-              </div>
-              <div className="helpline-badge">
-                <strong>Unit Support:</strong> Contact Unit Medical Officer / Designated Welfare Representative
-              </div>
-            </div>
-          </div>
         </div>
       </div>
     </div>

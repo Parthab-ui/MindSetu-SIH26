@@ -5,32 +5,33 @@ const SUGGESTION_CARDS = [
   {
     id: "tactical-decompression",
     title: "Tactical Decompression",
-    subtitle: "Stepping down from high-alert state",
-    prompt: "I feel hyper-alert and find it difficult to step down or 'switch off' my guard after returning from duty.",
-    tag: "PTSD / Arousal",
+    subtitle: "Stepping down off-duty",
+    prompt: "How can I decompress and step down my guard after duty?",
+    tag: "Decompression",
   },
   {
     id: "sleep-recovery",
-    title: "Night Watch Sleep Recovery",
-    subtitle: "Circadian pacing & sleep architecture",
-    prompt: "What are practical ways to manage sleep recovery and counter circadian disruption during frequent night watches?",
-    tag: "Recovery",
+    title: "Night Watch Sleep",
+    subtitle: "Circadian sleep recovery",
+    prompt: "What are practical ways to manage sleep after night watch?",
+    tag: "Sleep",
   },
   {
     id: "cognitive-fatigue",
-    title: "Operational Mental Fatigue",
-    subtitle: "Decision fatigue & cognitive clarity",
-    prompt: "I'm experiencing persistent mental fatigue making it harder to concentrate on duty tasks. What can I do today?",
-    tag: "Depression / Focus",
+    title: "Mental Focus",
+    subtitle: "Managing duty fatigue",
+    prompt: "How do I manage mental fatigue and decision strain today?",
+    tag: "Focus",
   },
   {
     id: "stigma-barriers",
-    title: "Navigating Support Without Stigma",
-    subtitle: "Confidential unit check-in guidance",
-    prompt: "How can I talk to a unit welfare officer or squad lead about duty pacing without feeling like I'm letting my team down?",
-    tag: "Welfare & Stigma",
+    title: "Seeking Support",
+    subtitle: "Unit check-in guidance",
+    prompt: "How can I speak to a unit welfare officer about duty pacing?",
+    tag: "Support",
   },
 ];
+
 
 
 /* Custom SVG Icons */
@@ -478,7 +479,7 @@ export function ChatScreen({
               ref={textareaRef}
               id={inputId}
               className="composer-textarea"
-              placeholder="Ask anything about your workload, sleep, or recovery…"
+              placeholder="Ask about recovery, sleep, or duty pacing…"
               value={inputMessage}
               onChange={handleInput}
               onKeyDown={handleKeyDown}
@@ -514,9 +515,10 @@ export function ChatScreen({
 
       {/* Safety & Crisis Helpline Disclaimer */}
       <p className="chat-safety-disclaimer">
-        MindSetu AI is an assistive welfare companion, not a clinical or crisis service. In an emergency, contact Tele-MANAS&nbsp;<strong>14416</strong> or KIRAN&nbsp;<strong>1800-599-0019</strong>.
+        MindSetu AI provides supportive coping steps. For emergencies, contact Tele-MANAS&nbsp;<strong>14416</strong> (24/7).
       </p>
     </div>
   );
 }
+
 

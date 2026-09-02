@@ -13,7 +13,6 @@ export function VoiceScreen({ sessionId, onNext, onBack, voiceResult, setVoiceRe
   const audioChunksRef = useRef([]);
   const timerIntervalRef = useRef(null);
 
-  // Clean up audio URL on unmount
   useEffect(() => {
     return () => {
       if (audioUrl) URL.revokeObjectURL(audioUrl);
@@ -42,9 +41,7 @@ export function VoiceScreen({ sessionId, onNext, onBack, voiceResult, setVoiceRe
         const blob = new Blob(audioChunksRef.current, { type: mediaRecorder.mimeType || "audio/wav" });
         setAudioBlob(blob);
         setAudioUrl(URL.createObjectURL(blob));
-        // Stop all tracks to release mic
         stream.getTracks().forEach((track) => track.stop());
-        // Automatically analyze recorded voice
         await analyzeRecordedBlob(blob);
       };
 
@@ -63,7 +60,7 @@ export function VoiceScreen({ sessionId, onNext, onBack, voiceResult, setVoiceRe
       }, 1000);
     } catch (err) {
       console.warn("Microphone access failed:", err);
-      setMicError("Microphone access was denied or is unavailable. You can use a demo sample below or skip this step.");
+      setMicError("Microphone access is needed for live recording. Use demo sample or skip.");
     }
   }
 
@@ -79,7 +76,6 @@ export function VoiceScreen({ sessionId, onNext, onBack, voiceResult, setVoiceRe
     setLocalProcessing(true);
     if (setError) setError("");
     try {
-      // Convert to base64
       const reader = new FileReader();
       reader.readAsDataURL(blob);
       reader.onloadend = async () => {
@@ -120,77 +116,44 @@ export function VoiceScreen({ sessionId, onNext, onBack, voiceResult, setVoiceRe
   };
 
   return (
-    <div className="page-container">
-      {/* Stepper Header */}
-      <div className="stepper-header" role="navigation" aria-label="Progress">
-        <div className="stepper-tab completed">
-          <span className="step-num">✓</span>
-          <span>1. Profile</span>
-        </div>
-        <div className="stepper-tab completed">
-          <span className="step-num">✓</span>
-          <span>2. Wellbeing</span>
-        </div>
-        <div className="stepper-tab completed">
-          <span className="step-num">✓</span>
-          <span>3. Duty Context</span>
-        </div>
-        <div className="stepper-tab active" aria-current="step">
-          <span className="step-num">4</span>
-          <span>4. Voice Check</span>
-        </div>
+    <div className="page-container narrow">
+      <div style={{ marginBottom: "18px", animation: "slideUp 280ms cubic-bezier(0.2,0.8,0.2,1) both" }}>
+        <span className="eyebrow">STEP 04 · VOICE ML</span>
+        <h1 className="page-title">Voice Check</h1>
+        <p className="page-subtitle">
+          Optional speech check for objective paralinguistic signals.
+        </p>
       </div>
 
-      <div className="card" style={{ maxWidth: 740, margin: "0 auto" }}>
-        <div className="card-header" style={{ marginBottom: 18 }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            <span style={{ fontSize: "1.6rem" }}>🎙️</span>
-            <div>
-              <h2 style={{ fontSize: "1.3rem", fontWeight: 700, margin: 0 }}>
-                Multimodal Voice Check (Optional ML Signal)
-              </h2>
-              <p style={{ margin: "4px 0 0", fontSize: "0.86rem", color: "var(--text-secondary)" }}>
-                Speech paralinguistics provide an objective behavioral signal alongside your self-reported pulse.
-              </p>
-            </div>
-          </div>
-        </div>
-
-        {/* Operational Context Prompt */}
+      <div className="card card-elevated" style={{ animation: "slideUp 340ms cubic-bezier(0.2,0.8,0.2,1) both" }}>
+        {/* Prompt */}
         <div
           style={{
-            padding: "16px 18px",
+            padding: "12px 14px",
             background: "var(--bg-input)",
-            borderLeft: "4px solid var(--primary)",
+            borderLeft: "3px solid var(--primary)",
             borderRadius: "var(--radius-md)",
-            marginBottom: 20,
+            marginBottom: "16px",
           }}
         >
-          <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 6 }}>
-            <span className="dimension-badge">Operational Voice Reflection</span>
-            <span style={{ fontSize: "0.75rem", color: "var(--text-muted)" }}>Target: 30–45s Speech</span>
-          </div>
-          <p style={{ margin: 0, fontSize: "0.95rem", fontWeight: 600, color: "var(--text-primary)", lineHeight: 1.5 }}>
-            "Briefly describe how your recent duty period has affected your energy, sleep, concentration, or ability to decompress off-duty."
+          <span style={{ fontSize: "0.72rem", fontWeight: 700, textTransform: "uppercase", color: "var(--text-muted)", display: "block", marginBottom: "4px" }}>
+            Reflection prompt (30–45 sec):
+          </span>
+          <p style={{ margin: 0, fontSize: "0.90rem", fontWeight: 600, color: "var(--text-primary)", lineHeight: 1.4 }}>
+            "How has your recent duty period affected your energy, sleep, or focus?"
           </p>
         </div>
 
-        {/* 1-Click Demo Voice Presets for Presentations */}
-        <div className="preset-container" style={{ marginBottom: 20 }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 8 }}>
-            <span style={{ fontSize: "0.9rem" }}>⚡</span>
-            <span style={{ fontSize: "0.80rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em", color: "var(--text-muted)" }}>
-              SIH Judge Demonstration Voice Samples:
-            </span>
-          </div>
-          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+        {/* Demo Presets */}
+        <div className="preset-container" style={{ marginBottom: "16px" }}>
+          <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
             <button
               type="button"
               className="preset-chip-btn"
               onClick={() => handleLoadDemoSample("strained")}
               disabled={isRecording || localProcessing}
             >
-              <span>⚡</span> Strained Shift Audio (Monotone / Hesitation)
+              ⚡ Strained Audio Sample
             </button>
             <button
               type="button"
@@ -198,7 +161,7 @@ export function VoiceScreen({ sessionId, onNext, onBack, voiceResult, setVoiceRe
               onClick={() => handleLoadDemoSample("resilient")}
               disabled={isRecording || localProcessing}
             >
-              <span>🌿</span> Resilient Baseline Audio (Animated / Rhythmic)
+              🌿 Resilient Audio Sample
             </button>
           </div>
         </div>
@@ -207,36 +170,20 @@ export function VoiceScreen({ sessionId, onNext, onBack, voiceResult, setVoiceRe
         <div
           style={{
             textAlign: "center",
-            padding: "24px 20px",
+            padding: "20px 16px",
             background: "var(--bg-surface-elevated)",
             border: "1px solid var(--border-subtle)",
             borderRadius: "var(--radius-lg)",
-            marginBottom: 20,
+            marginBottom: "16px",
           }}
         >
           {isRecording ? (
             <div>
-              <div
-                style={{
-                  display: "inline-flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  width: 80,
-                  height: 80,
-                  borderRadius: "50%",
-                  background: "rgba(239, 68, 68, 0.15)",
-                  border: "2px solid #ef4444",
-                  animation: "pulseSpark 1.2s infinite ease-in-out",
-                  marginBottom: 12,
-                }}
-              >
-                <span style={{ fontSize: "2rem" }}>🎙️</span>
+              <div style={{ fontSize: "1.4rem", fontWeight: 800, color: "#ef4444", marginBottom: "4px" }}>
+                Listening… {formatTime(recordingSeconds)}
               </div>
-              <div style={{ fontSize: "1.4rem", fontWeight: 800, color: "#ef4444", marginBottom: 6 }}>
-                Recording… {formatTime(recordingSeconds)}
-              </div>
-              <p style={{ fontSize: "0.84rem", color: "var(--text-muted)", marginBottom: 14 }}>
-                Speak naturally about your duty load and energy. Maximum 45 seconds.
+              <p style={{ fontSize: "0.80rem", color: "var(--text-muted)", marginBottom: "12px" }}>
+                Speak naturally about your duty load.
               </p>
               <button
                 type="button"
@@ -244,7 +191,7 @@ export function VoiceScreen({ sessionId, onNext, onBack, voiceResult, setVoiceRe
                 onClick={stopRecording}
                 style={{ background: "#ef4444", borderColor: "#ef4444" }}
               >
-                ⏹ Stop & Analyze Speech
+                ⏹ Stop & Analyze
               </button>
             </div>
           ) : (
@@ -254,119 +201,88 @@ export function VoiceScreen({ sessionId, onNext, onBack, voiceResult, setVoiceRe
                 className="btn btn-primary"
                 onClick={startRecording}
                 disabled={localProcessing}
-                style={{ padding: "12px 28px", fontSize: "1rem" }}
+                style={{ padding: "12px 24px", fontSize: "0.95rem" }}
               >
                 🎙️ {audioUrl ? "Record Again" : "Start Live Voice Check"}
               </button>
-              <p style={{ fontSize: "0.80rem", color: "var(--text-muted)", marginTop: 10, marginBottom: 0 }}>
-                Requires microphone permission. Audio is processed in memory and never stored.
-              </p>
             </div>
           )}
 
           {micError && (
-            <div style={{ marginTop: 12, padding: "8px 12px", background: "rgba(239, 68, 68, 0.1)", border: "1px solid #ef4444", borderRadius: "var(--radius-md)", fontSize: "0.82rem", color: "#ef4444" }}>
+            <div style={{ marginTop: "10px", padding: "8px 10px", background: "rgba(239, 68, 68, 0.1)", border: "1px solid #ef4444", borderRadius: "var(--radius-md)", fontSize: "0.78rem", color: "#ef4444" }}>
               {micError}
             </div>
           )}
         </div>
 
-        {/* Local Processing State */}
+        {/* Processing State */}
         {localProcessing && (
-          <div style={{ textAlign: "center", padding: 16 }}>
-            <div className="spinner-ring" style={{ margin: "0 auto 10px" }} />
-            <p style={{ fontSize: "0.9rem", color: "var(--text-secondary)", margin: 0 }}>
-              Extracting acoustic features & running paralinguistic ML classifier…
+          <div style={{ textAlign: "center", padding: "12px" }}>
+            <div className="spinner-ring" style={{ margin: "0 auto 8px" }} />
+            <p style={{ fontSize: "0.85rem", color: "var(--text-secondary)", margin: 0 }}>
+              Analyzing voice…
             </p>
           </div>
         )}
 
-        {/* Voice Analysis Result Card */}
+        {/* Result Card */}
         {voiceResult && !localProcessing && (
           <div
             style={{
-              padding: 16,
+              padding: "14px",
               background: "var(--bg-input)",
               border: "1px solid var(--border-medium)",
-              borderRadius: "var(--radius-lg)",
-              marginBottom: 20,
+              borderRadius: "var(--radius-md)",
+              marginBottom: "16px",
             }}
           >
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                <span style={{ fontSize: "1.2rem" }}>✅</span>
-                <span style={{ fontWeight: 700, fontSize: "0.95rem" }}>Speech Paralinguistics Extracted</span>
-              </div>
-              <span
-                className="badge"
-                style={{
-                  background: voiceResult.audio_quality === "good" ? "rgba(16, 185, 129, 0.15)" : "rgba(245, 158, 11, 0.15)",
-                  color: voiceResult.audio_quality === "good" ? "#10b981" : "#f59e0b",
-                  border: "1px solid currentColor",
-                }}
-              >
-                Quality: {voiceResult.audio_quality?.toUpperCase()} (Confidence {Math.round((voiceResult.confidence || 0.8) * 100)}%)
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px" }}>
+              <strong style={{ fontSize: "0.88rem" }}>Voice Signal Ready</strong>
+              <span className="badge" style={{ fontSize: "0.72rem" }}>
+                Quality: {voiceResult.audio_quality?.toUpperCase()}
               </span>
             </div>
 
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 10 }}>
-              <div style={{ padding: "10px 12px", background: "var(--bg-surface)", borderRadius: "var(--radius-md)", border: "1px solid var(--border-subtle)" }}>
-                <div style={{ fontSize: "0.75rem", color: "var(--text-muted)", textTransform: "uppercase" }}>Depressive Voice Signal</div>
-                <div style={{ fontSize: "1.4rem", fontWeight: 800, color: voiceResult.depression_signal >= 70 ? "#ef4444" : (voiceResult.depression_signal >= 45 ? "#f59e0b" : "#10b981") }}>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px", marginBottom: "8px" }}>
+              <div style={{ padding: "8px 10px", background: "var(--bg-surface)", borderRadius: "var(--radius-sm)" }}>
+                <span style={{ fontSize: "0.72rem", color: "var(--text-muted)", display: "block" }}>Depression Signal</span>
+                <strong style={{ fontSize: "1.2rem", color: voiceResult.depression_signal >= 70 ? "#ef4444" : "#10b981" }}>
                   {voiceResult.depression_signal}%
-                </div>
+                </strong>
               </div>
-              <div style={{ padding: "10px 12px", background: "var(--bg-surface)", borderRadius: "var(--radius-md)", border: "1px solid var(--border-subtle)" }}>
-                <div style={{ fontSize: "0.75rem", color: "var(--text-muted)", textTransform: "uppercase" }}>Acoustic Stress Proxy</div>
-                <div style={{ fontSize: "1.4rem", fontWeight: 800, color: "var(--primary)" }}>
-                  {voiceResult.trauma_signal}% <span style={{ fontSize: "0.70rem", fontWeight: 500, color: "var(--text-muted)" }}>(Experimental)</span>
-                </div>
+              <div style={{ padding: "8px 10px", background: "var(--bg-surface)", borderRadius: "var(--radius-sm)" }}>
+                <span style={{ fontSize: "0.72rem", color: "var(--text-muted)", display: "block" }}>Acoustic Stress</span>
+                <strong style={{ fontSize: "1.2rem", color: "var(--primary)" }}>
+                  {voiceResult.trauma_signal}%
+                </strong>
               </div>
             </div>
 
-            <p style={{ fontSize: "0.82rem", color: "var(--text-secondary)", margin: "0 0 10px", lineHeight: 1.4 }}>
-              <strong>Interpretation:</strong> {voiceResult.signal_interpretation}
+            <p style={{ fontSize: "0.80rem", color: "var(--text-secondary)", margin: 0, lineHeight: 1.35 }}>
+              {voiceResult.signal_interpretation}
             </p>
-
-            {voiceResult.top_acoustic_contributors && voiceResult.top_acoustic_contributors.length > 0 && (
-              <div>
-                <div style={{ fontSize: "0.75rem", fontWeight: 700, color: "var(--text-muted)", marginBottom: 6, textTransform: "uppercase" }}>
-                  Primary Acoustic Biomarkers:
-                </div>
-                <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
-                  {voiceResult.top_acoustic_contributors.slice(0, 3).map((c, idx) => (
-                    <span key={idx} className="dimension-badge" style={{ fontSize: "0.72rem" }}>
-                      {c.label} ({c.direction})
-                    </span>
-                  ))}
-                </div>
-              </div>
-            )}
           </div>
         )}
 
-        {/* Privacy Note */}
-        <div style={{ padding: "10px 14px", background: "var(--bg-input)", borderRadius: "var(--radius-md)", fontSize: "0.78rem", color: "var(--text-muted)", display: "flex", alignItems: "center", gap: 8, marginBottom: 20 }}>
+        {/* Privacy badge */}
+        <div style={{ padding: "8px 12px", background: "var(--bg-input)", borderRadius: "var(--radius-sm)", fontSize: "0.76rem", color: "var(--text-muted)", display: "flex", alignItems: "center", gap: "6px", marginBottom: "16px" }}>
           <span>🔒</span>
-          <span>
-            <strong>Zero Raw Audio Stored:</strong> Audio waveforms are processed in-memory and immediately discarded after acoustic feature extraction.
-          </span>
+          <span>In-memory analysis. Audio is not saved.</span>
         </div>
 
-        {/* Navigation Buttons */}
+        {/* Actions */}
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
           <button type="button" className="btn btn-ghost" onClick={onBack} disabled={isRecording || localProcessing}>
-            ← Back to Duty Context
+            ← Back
           </button>
-          <div style={{ display: "flex", gap: 10 }}>
+          <div style={{ display: "flex", gap: "8px" }}>
             <button
               type="button"
               className="btn btn-ghost"
               onClick={onNext}
               disabled={isRecording || localProcessing}
-              title="Proceed to analysis without voice ML input"
             >
-              Skip Voice Check
+              Skip
             </button>
             <button
               type="button"
@@ -374,7 +290,7 @@ export function VoiceScreen({ sessionId, onNext, onBack, voiceResult, setVoiceRe
               onClick={onNext}
               disabled={isRecording || localProcessing}
             >
-              Generate Multimodal Summary →
+              View Summary →
             </button>
           </div>
         </div>

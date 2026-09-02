@@ -3,7 +3,7 @@ import { InfoTooltip } from "../common/InfoTooltip";
 
 const OPERATIONAL_DUTY_PRESETS = [
   {
-    label: "Forward Field Deployment",
+    label: "Field Deployment",
     icon: "⚔️",
     data: {
       duty_hours: 14,
@@ -16,7 +16,7 @@ const OPERATIONAL_DUTY_PRESETS = [
     },
   },
   {
-    label: "High-Intensity Watch Rotation",
+    label: "Watch Rotation",
     icon: "🚨",
     data: {
       duty_hours: 12,
@@ -29,7 +29,7 @@ const OPERATIONAL_DUTY_PRESETS = [
     },
   },
   {
-    label: "Routine Base & Recovery Pacing",
+    label: "Base Recovery",
     icon: "🛡️",
     data: {
       duty_hours: 8,
@@ -42,7 +42,7 @@ const OPERATIONAL_DUTY_PRESETS = [
     },
   },
   {
-    label: "Post-Deployment Reintegration",
+    label: "Reintegration",
     icon: "🔄",
     data: {
       duty_hours: 9,
@@ -70,28 +70,25 @@ export function WorkloadScreen({ workload, setWorkload, onAnalyze, onBack, loadi
 
   return (
     <div className="page-container narrow">
-      <div style={{ marginBottom: "24px", animation: "slideUp 280ms cubic-bezier(0.2,0.8,0.2,1) both" }}>
+      <div style={{ marginBottom: "18px", animation: "slideUp 280ms cubic-bezier(0.2,0.8,0.2,1) both" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
           <div>
-            <span className="eyebrow">STEP 03 · OPERATIONAL & RECOVERY CONTEXT</span>
-            <h1 className="page-title">Duty Demands & Sleep Recovery</h1>
+            <span className="eyebrow">STEP 03 · DUTY CONTEXT</span>
+            <h1 className="page-title">Duty Demands</h1>
           </div>
           <InfoTooltip
-            title="Operational Context Scoring Architecture"
-            text="Duty hours, shift rotations, and sleep deficit provide objective context to your self-reported stress, ensuring recommendations address root duty pressures."
-            techDetail="Factors: Shift Duration (25%), Night Watches (15%), Rest Deficit (15%), Days Since Leave (10%), Workload Tempo (20%), High-Pressure Task (10%), Schedule Changes (5%). Max Score = 100."
-            label="Learn why operational context is needed"
+            title="Duty Context Scoring"
+            text="Integrates shift duration, sleep deficit, night watches, and leave intervals to evaluate cumulative duty burden."
+            techDetail="Factors: Shift Hours (25%), Night Shifts (15%), Sleep Deficit (15%), Leave Gap (10%), Tempo (20%), High-Risk Duty (10%), Changes (5%). Max = 100."
+            label="Information about Duty Context Scoring"
           />
         </div>
         <p className="page-subtitle">
-          Capturing operational realities enables MindSetu to separate transient fatigue from sustained trauma or burnout risk.
+          Objective shift demands and sleep recovery.
         </p>
 
         {/* Operational Presets */}
-        <div className="preset-container" style={{ margin: "14px 0" }}>
-          <span style={{ fontSize: "0.78rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", color: "var(--text-secondary)", display: "block", marginBottom: "6px" }}>
-            Operational Scenario Presets:
-          </span>
+        <div className="preset-container" style={{ margin: "10px 0 14px" }}>
           <div style={{ display: "flex", flexWrap: "wrap", gap: "8px" }}>
             {OPERATIONAL_DUTY_PRESETS.map((preset, idx) => (
               <button
@@ -109,11 +106,11 @@ export function WorkloadScreen({ workload, setWorkload, onAnalyze, onBack, loadi
         </div>
       </div>
 
-      <div className="card card-elevated" style={{ display: "flex", flexDirection: "column", gap: "24px", animation: "slideUp 340ms cubic-bezier(0.2,0.8,0.2,1) both" }}>
+      <div className="card card-elevated" style={{ display: "flex", flexDirection: "column", gap: "20px", animation: "slideUp 340ms cubic-bezier(0.2,0.8,0.2,1) both" }}>
         <div className="form-section">
           <SliderField
-            label="Duty Hours / Day"
-            helper="Typical active duty or shift duration per 24-hour cycle"
+            label="Daily Duty Hours"
+            helper="Active duty per 24-hour cycle"
             value={workload.duty_hours}
             min={0}
             max={24}
@@ -122,8 +119,8 @@ export function WorkloadScreen({ workload, setWorkload, onAnalyze, onBack, loadi
           />
 
           <SliderField
-            label="Rest & Sleep Hours / Day"
-            helper="Dedicated uninterrupted recovery and sleep time"
+            label="Daily Sleep Hours"
+            helper="Uninterrupted sleep recovery"
             value={workload.rest_hours}
             min={0}
             max={24}
@@ -132,8 +129,8 @@ export function WorkloadScreen({ workload, setWorkload, onAnalyze, onBack, loadi
           />
 
           <SliderField
-            label="Night Duties / Past 2 Weeks"
-            helper="Overnight watch shifts or nighttime tactical deployments"
+            label="Night Shifts (Past 2 Wks)"
+            helper="Overnight watch shifts"
             value={workload.night_duties}
             min={0}
             max={14}
@@ -142,73 +139,81 @@ export function WorkloadScreen({ workload, setWorkload, onAnalyze, onBack, loadi
           />
 
           <SliderField
-            label="Days Since Last Dedicated Leave"
-            helper="Consecutive days on active duty without formal leave or rest block"
+            label="Days Since Leave"
+            helper="Days since last off-duty leave"
             value={workload.days_since_leave}
             min={0}
-            max={90}
+            max={180}
             unit="days"
             onChange={(val) => updateField("days_since_leave", val)}
           />
 
           <SliderField
-            label="Unplanned Duty Schedule Changes"
-            helper="Short-notice shift reassignments or emergency rotations in past 7 days"
+            label="Duty Intensity Tempo"
+            helper="1 = Low Tempo, 5 = Peak Operational Alert"
+            value={workload.workload_level}
+            min={1}
+            max={5}
+            unit="/ 5"
+            onChange={(val) => updateField("workload_level", val)}
+          />
+
+          <SliderField
+            label="Schedule Changes (Past 2 Wks)"
+            helper="Unscheduled duty rotations"
             value={workload.duty_change_frequency}
             min={0}
-            max={7}
-            unit="times"
+            max={10}
+            unit="changes"
             onChange={(val) => updateField("duty_change_frequency", val)}
           />
 
-          <div className="input-field">
-            <label htmlFor="intensity-select">Operational Intensity / Tempo</label>
-            <select
-              id="intensity-select"
-              className="select-input"
-              value={workload.workload_level}
-              onChange={(e) => updateField("workload_level", Number(e.target.value))}
+          {/* High-Risk Assignment Toggle */}
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 14px", background: "var(--bg-input)", borderRadius: "var(--radius-md)", border: "1px solid var(--border-subtle)" }}>
+            <div>
+              <strong style={{ fontSize: "0.88rem", display: "block", color: "var(--text-primary)" }}>
+                High-Risk Assignment
+              </strong>
+              <span style={{ fontSize: "0.76rem", color: "var(--text-muted)" }}>
+                Active field operations or high-threat area
+              </span>
+            </div>
+            <button
+              type="button"
+              className={`btn ${workload.high_pressure_assignment ? "btn-primary" : "btn-secondary"}`}
+              style={{ padding: "6px 16px", fontSize: "0.84rem" }}
+              onClick={() => updateField("high_pressure_assignment", !workload.high_pressure_assignment)}
+              disabled={loading}
+              aria-pressed={workload.high_pressure_assignment}
             >
-              <option value={1}>1 · Very Light / Low-demand maintenance</option>
-              <option value={2}>2 · Light / Routine steady pacing</option>
-              <option value={3}>3 · Moderate Load / Standard active duty tempo</option>
-              <option value={4}>4 · Heavy Demand / High operational tempo</option>
-              <option value={5}>5 · Critical / Maximum sustained tactical exertion</option>
-            </select>
+              {workload.high_pressure_assignment ? "Yes" : "No"}
+            </button>
           </div>
         </div>
 
-        <label htmlFor="high-pressure-check" className="toggle-switch-row">
-          <div>
-            <strong style={{ display: "block", fontSize: "0.95rem", color: "var(--text-primary)" }}>
-              High-Risk / Critical Incident Duty
-            </strong>
-            <span style={{ fontSize: "0.82rem", color: "var(--text-secondary)" }}>
-              Check if currently handling emergency response, high-threat operations, or critical incident assignments
-            </span>
-          </div>
-          <input
-            id="high-pressure-check"
-            type="checkbox"
-            style={{ width: "20px", height: "20px", accentColor: "var(--primary)", cursor: "pointer" }}
-            checked={workload.high_pressure_assignment}
-            onChange={(e) => updateField("high_pressure_assignment", e.target.checked)}
-            aria-label="High-Risk or Critical Incident Duty Assignment"
-          />
-        </label>
-
         {error && (
-          <div className="inline-error" role="alert">
+          <div className="error-alert" role="alert">
             {error}
           </div>
         )}
 
-        <div className="screen-actions-wrap">
-          <button type="button" className="btn btn-ghost" onClick={onBack} disabled={loading}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <button
+            type="button"
+            className="btn btn-ghost"
+            onClick={onBack}
+            disabled={loading}
+          >
             ← Back
           </button>
-          <button type="button" className="btn btn-primary" onClick={onAnalyze} disabled={loading}>
-            {loading ? "Generating Analysis..." : "Generate Welfare Summary →"}
+          <button
+            id="workload-submit-btn"
+            type="button"
+            className="btn btn-primary"
+            onClick={onAnalyze}
+            disabled={loading}
+          >
+            {loading ? "Analyzing…" : "Continue to Voice Check →"}
           </button>
         </div>
       </div>

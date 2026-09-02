@@ -4,54 +4,54 @@ import { InfoTooltip } from "../common/InfoTooltip";
 
 export const UNIFORMED_WELLNESS_QUESTIONS = [
   {
-    domain: "Operational Energy (Depression Dimension)",
-    tag: "Depressive Fatigue",
-    text: "Persistent physical or mental exhaustion that remains heavy even after designated rest blocks between duties.",
-    subtext: "Evaluates persistent low energy, physical depletion, and chronic duty fatigue.",
+    domain: "Depression Dimension",
+    tag: "Exhaustion",
+    text: "Feeling physically or mentally drained even after rest periods?",
+    subtext: "Evaluates persistent low energy and duty fatigue.",
   },
   {
-    domain: "Tactical Hyperarousal (PTSD Dimension)",
+    domain: "PTSD Dimension",
     tag: "Hypervigilance",
-    text: "Difficulty stepping down from a high-alert or 'on-guard' mindset when returning off-duty or attempting to rest.",
-    subtext: "Captures inability to decompress, hyper-alertness, and lingering duty vigilance.",
+    text: "Difficulty switching off or stepping down your guard off-duty?",
+    subtext: "Captures inability to decompress and lingering duty alert.",
   },
   {
-    domain: "Emotional Regulation (PTSD / Trauma Response)",
-    tag: "Emotional Numbing",
-    text: "Feeling emotionally disconnected from peers or family, or experiencing sudden irritability under routine daily demands.",
-    subtext: "Evaluates emotional detachment, withdrawal from support networks, and affective strain.",
+    domain: "PTSD Dimension",
+    tag: "Detachment",
+    text: "Feeling emotionally disconnected from peers or family?",
+    subtext: "Evaluates emotional detachment and withdrawal from support.",
   },
   {
-    domain: "Cognitive Clarity (Depression Dimension)",
-    tag: "Cognitive Fog",
-    text: "Mental fatigue making it noticeably harder to maintain operational concentration, situational clarity, or make routine duty decisions.",
-    subtext: "Assesses cognitive slowing, focus disruption, and decision fatigue in operational tasks.",
+    domain: "Depression Dimension",
+    tag: "Focus & Fog",
+    text: "Hard to concentrate or make routine duty decisions?",
+    subtext: "Assesses cognitive fatigue and decision strain.",
   },
   {
-    domain: "Trauma Intrusion (PTSD Dimension)",
-    tag: "Intrusive Recall",
-    text: "Troubling recollections, vivid dreams, or disturbed sleep connected to stressful operational incidents or critical duty events.",
-    subtext: "Screens for operational incident distress, intrusive memories, and nocturnal disruption.",
+    domain: "PTSD Dimension",
+    tag: "Disturbed Sleep",
+    text: "Duty memories or incident thoughts disturbing sleep?",
+    subtext: "Screens for operational incident distress and sleep disruption.",
   },
   {
-    domain: "Service Stigma & Burden (Depression / Help-Seeking)",
+    domain: "Depression Dimension",
     tag: "Duty Burden",
-    text: "Feeling overwhelmed by accumulated duty demands while feeling pressured to conceal personal strain to avoid appearing compromised.",
-    subtext: "Captures service-related isolation, perceived burden, and help-seeking hesitation.",
+    text: "Feeling overwhelmed while feeling pressured to push through?",
+    subtext: "Captures accumulated duty burden and help-seeking hesitation.",
   },
 ];
 
 const RESPONSE_OPTIONS = [
-  { label: "Never", value: 0, sublabel: "No impact" },
-  { label: "Some days", value: 1, sublabel: "Mild / Occasional" },
-  { label: "Often", value: 2, sublabel: "Moderate / Regular" },
-  { label: "Nearly every day", value: 3, sublabel: "Elevated / Persistent" },
+  { label: "Never", value: 0, sublabel: "0" },
+  { label: "Some days", value: 1, sublabel: "1" },
+  { label: "Often", value: 2, sublabel: "2" },
+  { label: "Nearly every day", value: 3, sublabel: "3" },
 ];
 
 const WELLNESS_PRESETS = [
-  { label: "Low Concern (Baseline)", answers: [0, 1, 0, 1, 0, 0] },
-  { label: "Moderate Operational Strain", answers: [2, 2, 1, 2, 1, 1] },
-  { label: "High Trauma & Depressive Strain", answers: [3, 3, 2, 3, 3, 2] },
+  { label: "Low Baseline", answers: [0, 1, 0, 1, 0, 0] },
+  { label: "Moderate Strain", answers: [2, 2, 1, 2, 1, 1] },
+  { label: "High Strain", answers: [3, 3, 2, 3, 3, 2] },
 ];
 
 export function WellnessScreen({ answers, setAnswers, onNext, onBack, loading, error }) {
@@ -76,7 +76,7 @@ export function WellnessScreen({ answers, setAnswers, onNext, onBack, loading, e
 
   function handleContinue() {
     if (answers.some((a) => a === null)) {
-      setLocalError("Please answer all 6 questions to complete your wellbeing pulse.");
+      setLocalError("Please answer all 6 questions to continue.");
       return;
     }
     setLocalError("");
@@ -87,28 +87,25 @@ export function WellnessScreen({ answers, setAnswers, onNext, onBack, loading, e
 
   return (
     <div className="page-container narrow">
-      <div style={{ marginBottom: "20px", animation: "slideUp 280ms cubic-bezier(0.2,0.8,0.2,1) both" }}>
+      <div style={{ marginBottom: "18px", animation: "slideUp 280ms cubic-bezier(0.2,0.8,0.2,1) both" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
           <div>
-            <span className="eyebrow">STEP 02 · SPECIALIZED WELLBEING PULSE</span>
-            <h1 className="page-title">Uniformed Personnel Mental Health Screening</h1>
+            <span className="eyebrow">STEP 02 · WELLBEING</span>
+            <h1 className="page-title">Wellbeing Check-In</h1>
           </div>
           <InfoTooltip
-            title="Uniformed Personnel Assessment Matrix"
-            text="These 6 clinically contextualized questions evaluate Depression (anhedonia, exhaustion, cognitive fog) and PTSD/Trauma (hypervigilance, emotional numbing, intrusive recall) in operational service contexts."
-            techDetail="Scored 0–3 per question (Total 0–18). Deterministic formula: Stress Score = (Sum / 18) × 100. Subscale metrics for Depression and PTSD are computed transparently."
-            label="Information about Uniformed Personnel Assessment"
+            title="Wellbeing Screening"
+            text="Evaluates Depression (exhaustion, fog, burden) and PTSD (hypervigilance, detachment, intrusion) in operational contexts."
+            techDetail="6 items (0–3). Stress Score = (Sum / 18) × 100."
+            label="Information about Wellbeing Screening"
           />
         </div>
         <p className="page-subtitle">
-          Over the past 2–4 weeks, how often have you experienced the following operational and personal strain indicators?
+          How often have you felt these over the past 2–4 weeks?
         </p>
 
         {/* Quick Demo Presets */}
-        <div className="preset-container" style={{ margin: "14px 0" }}>
-          <span style={{ fontSize: "0.78rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", color: "var(--text-secondary)", display: "block", marginBottom: "6px" }}>
-            Demo Score Presets:
-          </span>
+        <div className="preset-container" style={{ margin: "10px 0 14px" }}>
           <div style={{ display: "flex", flexWrap: "wrap", gap: "8px" }}>
             {WELLNESS_PRESETS.map((p, idx) => (
               <button
@@ -127,10 +124,10 @@ export function WellnessScreen({ answers, setAnswers, onNext, onBack, loading, e
 
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "6px" }}>
           <span style={{ fontSize: "0.78rem", color: "var(--text-secondary)", fontWeight: 600 }}>
-            {answeredCount} of {UNIFORMED_WELLNESS_QUESTIONS.length} answered
+            {answeredCount} / {UNIFORMED_WELLNESS_QUESTIONS.length} answered
           </span>
           <span style={{ fontSize: "0.78rem", color: "var(--text-muted)" }}>
-            {progressPercent}% complete
+            {progressPercent}%
           </span>
         </div>
         <ProgressBar percent={progressPercent} />
@@ -138,62 +135,65 @@ export function WellnessScreen({ answers, setAnswers, onNext, onBack, loading, e
 
       <div className="question-list">
         {UNIFORMED_WELLNESS_QUESTIONS.map((qObj, qIdx) => {
-          const selectedValue = answers[qIdx];
-          const questionId = `wellness-q-${qIdx}`;
+          const isAnswered = answers[qIdx] !== null;
           return (
-            <fieldset
+            <div
               key={qIdx}
-              className="question-card"
-              style={{ animationDelay: `${qIdx * 40}ms`, border: "1px solid var(--border-subtle)", margin: 0 }}
-              aria-labelledby={questionId}
+              className={`question-card ${isAnswered ? "answered" : ""}`}
+              style={{ animationDelay: `${qIdx * 40}ms` }}
             >
-              <legend className="sr-only">Question {qIdx + 1} of {UNIFORMED_WELLNESS_QUESTIONS.length}</legend>
-              <div className="question-header" style={{ display: "flex", flexDirection: "column", gap: "6px", alignItems: "flex-start" }}>
-                <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                  <div className="question-num" aria-hidden="true">{String(qIdx + 1).padStart(2, "0")}</div>
-                  <span className="dimension-badge">{qObj.tag}</span>
-                  <span style={{ fontSize: "0.75rem", color: "var(--text-muted)", fontWeight: 500 }}>{qObj.domain}</span>
-                </div>
-                <h2 id={questionId} className="question-text" style={{ fontSize: "1rem", margin: "4px 0 2px" }}>
-                  {qObj.text}
-                </h2>
-                <p style={{ fontSize: "0.80rem", color: "var(--text-secondary)", margin: 0 }}>
-                  {qObj.subtext}
-                </p>
+              <div className="question-header">
+                <span className="question-num">0{qIdx + 1}</span>
+                <span className="dimension-badge">{qObj.tag}</span>
               </div>
 
-              <div className="likert-grid" role="radiogroup" aria-labelledby={questionId} style={{ marginTop: "12px" }}>
-                {RESPONSE_OPTIONS.map((opt) => (
-                  <button
-                    key={opt.value}
-                    type="button"
-                    className={`likert-btn ${selectedValue === opt.value ? "selected" : ""}`}
-                    onClick={() => handleSelect(qIdx, opt.value)}
-                    aria-pressed={selectedValue === opt.value}
-                    aria-label={`Question ${qIdx + 1}: ${qObj.text} — ${opt.label}`}
-                  >
-                    <span style={{ fontWeight: 600 }}>{opt.label}</span>
-                    <span style={{ fontSize: "0.72rem", opacity: 0.8, display: "block" }}>{opt.sublabel}</span>
-                  </button>
-                ))}
+              <p className="question-text">{qObj.text}</p>
+
+              <div className="options-grid">
+                {RESPONSE_OPTIONS.map((opt) => {
+                  const isSelected = answers[qIdx] === opt.value;
+                  return (
+                    <button
+                      key={opt.value}
+                      type="button"
+                      className={`option-btn ${isSelected ? "selected" : ""}`}
+                      onClick={() => handleSelect(qIdx, opt.value)}
+                      disabled={loading}
+                      aria-pressed={isSelected}
+                    >
+                      <span className="option-label">{opt.label}</span>
+                    </button>
+                  );
+                })}
               </div>
-            </fieldset>
+            </div>
           );
         })}
       </div>
 
       {activeError && (
-        <div className="inline-error" style={{ marginTop: "20px" }} role="alert">
+        <div className="error-alert" role="alert" style={{ marginTop: "16px" }}>
           {activeError}
         </div>
       )}
 
-      <div className="screen-actions-wrap">
-        <button type="button" className="btn btn-ghost" onClick={onBack} disabled={loading}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: "24px" }}>
+        <button
+          type="button"
+          className="btn btn-ghost"
+          onClick={onBack}
+          disabled={loading}
+        >
           ← Back
         </button>
-        <button type="button" className="btn btn-primary" onClick={handleContinue} disabled={loading}>
-          {loading ? "Recording..." : "Continue to Duty & Recovery Context →"}
+        <button
+          id="wellness-submit-btn"
+          type="button"
+          className="btn btn-primary"
+          onClick={handleContinue}
+          disabled={loading}
+        >
+          {loading ? "Saving…" : "Continue →"}
         </button>
       </div>
     </div>
