@@ -4,7 +4,7 @@ from concurrent.futures import ThreadPoolExecutor, TimeoutError as FuturesTimeou
 from fastapi import HTTPException
 from pydantic import BaseModel, Field
 
-from ml.inference import FEATURES, MODEL_PATH, THRESHOLD, predict
+from ml.inference import FEATURES, MODEL_PATH, THRESHOLD, OPENMP_STATUS, predict
 from ml.gemini_service import generate_supportive_response
 
 
@@ -65,6 +65,7 @@ def register_ml_routes(app):
             "research_only": True,
             "model_present": model_present,
             "model_path": str(MODEL_PATH),
+            "openmp_status": OPENMP_STATUS,
         }
 
     @app.post("/api/sih26186/ml/predict")
@@ -79,7 +80,7 @@ def register_ml_routes(app):
         except ValueError as exc:
             raise HTTPException(status_code=400, detail=str(exc))
         except Exception as exc:
-            raise HTTPException(status_code=500, detail=f"ML inference failed: {type(exc).__name__}")
+            raise HTTPException(status_code=500, detail=f"ML inference failed: {type(exc).__name__}: {str(exc)}")
 
     @app.post("/api/sih26186/ml/analyze")
     def ml_analyze(request: SIH26186MLRequest):

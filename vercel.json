@@ -1,13 +1,17 @@
 {
-  "outputDirectory": "frontend/dist",
+  "buildCommand": "npm run build",
   "rewrites": [
     {
       "source": "/api/(.*)",
-      "destination": "/api/index.py"
+      "destination": "/api/index.py?__path__=/api/$1"
     },
     {
-      "source": "/((?!api/).*)",
-      "destination": "/index.html"
+      "source": "/assets/(.*)",
+      "destination": "/api/index.py?__path__=/assets/$1"
+    },
+    {
+      "source": "/((?!api|assets).*)",
+      "destination": "/api/index.py?__path__=/$1"
     }
   ]
 }

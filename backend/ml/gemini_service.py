@@ -4,7 +4,7 @@ import time
 from google import genai
 from google.genai import types
 
-MODEL = os.getenv("GEMINI_MODEL", "gemini-2.5-flash")
+MODEL = os.getenv("GEMINI_MODEL", "gemini-3.6-flash")
 TIMEOUT_MS = int(os.getenv("GEMINI_TIMEOUT_MS", "20000"))
 MAX_ATTEMPTS = 3
 RETRY_DELAY_SECONDS = 0.8

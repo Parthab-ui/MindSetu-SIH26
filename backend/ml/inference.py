@@ -1,12 +1,39 @@
-"""Production inference wrapper for the validated LightGBM research baseline."""
+import os
+import sys
+import glob
+import ctypes
 from functools import lru_cache
 from pathlib import Path
-import os
 import joblib
 import numpy as np
 import pandas as pd
 
 BASE = Path(__file__).resolve().parent
+
+def _ensure_openmp():
+    errs = []
+    if sys.platform.startswith("linux"):
+        lib_dir = str(BASE)
+        cur_ld = os.environ.get("LD_LIBRARY_PATH", "")
+        if lib_dir not in cur_ld:
+            os.environ["LD_LIBRARY_PATH"] = f"{lib_dir}:{cur_ld}"
+        local_gomp = BASE / "libgomp.so.1"
+        if local_gomp.exists():
+            try:
+                ctypes.CDLL(str(local_gomp), mode=ctypes.RTLD_GLOBAL)
+                return "loaded_local"
+            except Exception as e:
+                errs.append(f"local: {e}")
+        for p in glob.glob(os.path.join(sys.prefix, "**", "*libs", "libgomp*.so*"), recursive=True):
+            try:
+                ctypes.CDLL(p, mode=ctypes.RTLD_GLOBAL)
+                return f"loaded_site: {p}"
+            except Exception as e:
+                errs.append(f"{p}: {e}")
+    return f"failed: {errs}"
+
+OPENMP_STATUS = _ensure_openmp()
+
 MODEL_PATH = Path(os.getenv("SIH26186_ML_MODEL", str(BASE / "lightgbm_multiplesymptoms.joblib")))
 THRESHOLD = float(os.getenv("SIH26186_ML_THRESHOLD", "0.45"))
 FEATURES = ["Q29_Total", "Q12_weapon", "Q13_feltdie", "Q23a_cutdowntime", "Q23b_Accomplished_less", "Q23c_limited_work", "Q23d_difficulty_performing"]
@@ -22,9 +49,15 @@ def _load():
 
 def _shap_values(pipe, row):
     try:
+        pre = pipe.named_steps["preprocess"]
+        model = pipe.named_steps["model"]
+        transformed = pre.transform(row)
+        names = pre.get_feature_names_out()
+        if hasattr(model, "booster_"):
+            contribs = model.booster_.predict(transformed, pred_contrib=True)
+            vals = contribs[0, :-1]
+            return sorted(zip(names, vals), key=lambda x: abs(float(x[1])), reverse=True)
         import shap
-        pre = pipe.named_steps["preprocess"]; model = pipe.named_steps["model"]
-        transformed = pre.transform(row); names = pre.get_feature_names_out()
         values = shap.TreeExplainer(model).shap_values(transformed)
         if isinstance(values, list): values = values[1]
         vals = np.asarray(values)[0]

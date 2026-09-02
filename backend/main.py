@@ -20,7 +20,7 @@ ENV_PATH = Path(__file__).resolve().parent / ".env"
 load_dotenv(dotenv_path=ENV_PATH)
 
 GEMINI_API_KEY = (os.getenv("GEMINI_API_KEY") or "").strip()
-GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-3.7-flash")
+GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-3.6-flash")
 GEMINI_TOTAL_TIMEOUT_SECONDS = min(max(float(os.getenv("GEMINI_TOTAL_TIMEOUT_SECONDS", "15")), 5.0), 30.0)
 MAX_CHAT_LENGTH = 4000
 MAX_MOOD_NOTE_LENGTH = 1000
@@ -361,6 +361,11 @@ def generate_gemini_response(message: str, history=None, wellbeing_context=None)
 
 @app.get("/")
 def root():
+    frontend_dist = Path(__file__).resolve().parent.parent / "frontend" / "dist"
+    index_html = frontend_dist / "index.html"
+    if index_html.is_file():
+        from starlette.responses import FileResponse
+        return FileResponse(index_html)
     return {"message": "MindSetu API is running", "status": "success", "ai_model": GEMINI_MODEL}
 
 
