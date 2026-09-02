@@ -344,6 +344,35 @@ def sih26186_dashboard(session_id: uuid.UUID):
         "recommendation": row[4], "created_at": row[5].isoformat(),
     }
 
+
+@app.get("/api/sih26186/history/{session_id}")
+def sih26186_history(session_id: uuid.UUID):
+    _require_session(session_id)
+    with get_connection() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                SELECT id, wellness_score, workload_score, combined_score, risk_level, recommendation, created_at
+                FROM sih26186_analysis WHERE session_id = %s ORDER BY created_at DESC LIMIT 20
+                """,
+                (session_id,),
+            )
+            rows = cur.fetchall()
+    history = [
+        {
+            "id": str(row[0]),
+            "wellness_score": float(row[1]),
+            "workload_score": float(row[2]),
+            "combined_score": float(row[3]),
+            "risk_level": row[4],
+            "recommendation": row[5],
+            "created_at": row[6].isoformat(),
+        }
+        for row in rows
+    ]
+    return {"history": history, "count": len(history)}
+
+
 from sih26186_ml_routes import register_ml_routes
 register_ml_routes(app)
 

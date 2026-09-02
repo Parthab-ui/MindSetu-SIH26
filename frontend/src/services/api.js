@@ -90,6 +90,11 @@ export const api = {
     return request(`/api/sih26186/dashboard/${sessionId}`);
   },
 
+  async getAssessmentHistory(sessionId) {
+    return request(`/api/sih26186/history/${sessionId}`);
+  },
+
+
   // Explainable ML Research Assessment
   async runMLAnalyze(mlData) {
     return request("/api/sih26186/ml/analyze", {

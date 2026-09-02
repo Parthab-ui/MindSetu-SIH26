@@ -1,36 +1,119 @@
 import { SliderField } from "../common/SliderField";
 import { InfoTooltip } from "../common/InfoTooltip";
 
+const OPERATIONAL_DUTY_PRESETS = [
+  {
+    label: "Forward Field Deployment",
+    icon: "⚔️",
+    data: {
+      duty_hours: 14,
+      night_duties: 4,
+      rest_hours: 4.5,
+      days_since_leave: 45,
+      workload_level: 5,
+      high_pressure_assignment: true,
+      duty_change_frequency: 4,
+    },
+  },
+  {
+    label: "High-Intensity Watch Rotation",
+    icon: "🚨",
+    data: {
+      duty_hours: 12,
+      night_duties: 6,
+      rest_hours: 5.5,
+      days_since_leave: 21,
+      workload_level: 4,
+      high_pressure_assignment: true,
+      duty_change_frequency: 3,
+    },
+  },
+  {
+    label: "Routine Base & Recovery Pacing",
+    icon: "🛡️",
+    data: {
+      duty_hours: 8,
+      night_duties: 1,
+      rest_hours: 7.5,
+      days_since_leave: 7,
+      workload_level: 2,
+      high_pressure_assignment: false,
+      duty_change_frequency: 0,
+    },
+  },
+  {
+    label: "Post-Deployment Reintegration",
+    icon: "🔄",
+    data: {
+      duty_hours: 9,
+      night_duties: 2,
+      rest_hours: 6.0,
+      days_since_leave: 30,
+      workload_level: 3,
+      high_pressure_assignment: false,
+      duty_change_frequency: 2,
+    },
+  },
+];
+
 export function WorkloadScreen({ workload, setWorkload, onAnalyze, onBack, loading, error }) {
   function updateField(key, value) {
     setWorkload((prev) => ({ ...prev, [key]: value }));
   }
 
+  function handleApplyPreset(presetData) {
+    setWorkload((prev) => ({
+      ...prev,
+      ...presetData,
+    }));
+  }
+
   return (
     <div className="page-container narrow">
-      <div style={{ marginBottom: "28px", animation: "slideUp 280ms cubic-bezier(0.2,0.8,0.2,1) both" }}>
+      <div style={{ marginBottom: "24px", animation: "slideUp 280ms cubic-bezier(0.2,0.8,0.2,1) both" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
           <div>
-            <span className="eyebrow">STEP 03 · OPERATIONAL CONTEXT</span>
-            <h1 className="page-title">Duty & Recovery Context</h1>
+            <span className="eyebrow">STEP 03 · OPERATIONAL & RECOVERY CONTEXT</span>
+            <h1 className="page-title">Duty Demands & Sleep Recovery</h1>
           </div>
           <InfoTooltip
-            title="Why Operational Context Matters"
-            text="Duty hours, shift changes, and sleep recovery provide objective context to your self-reported stress, helping generate accurate recovery guidance."
-            techDetail="Factors: Duty hours (25%), Night duties (15%), Rest deficit (15%), Leave gap (10%), Intensity (20%), High-pressure (10%), Shift changes (5%)."
+            title="Operational Context Scoring Architecture"
+            text="Duty hours, shift rotations, and sleep deficit provide objective context to your self-reported stress, ensuring recommendations address root duty pressures."
+            techDetail="Factors: Shift Duration (25%), Night Watches (15%), Rest Deficit (15%), Days Since Leave (10%), Workload Tempo (20%), High-Pressure Task (10%), Schedule Changes (5%). Max Score = 100."
             label="Learn why operational context is needed"
           />
         </div>
         <p className="page-subtitle">
-          Operational factors provide vital context to your wellbeing summary without influencing service records.
+          Capturing operational realities enables MindSetu to separate transient fatigue from sustained trauma or burnout risk.
         </p>
+
+        {/* Operational Presets */}
+        <div className="preset-container" style={{ margin: "14px 0" }}>
+          <span style={{ fontSize: "0.78rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", color: "var(--text-secondary)", display: "block", marginBottom: "6px" }}>
+            Operational Scenario Presets:
+          </span>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: "8px" }}>
+            {OPERATIONAL_DUTY_PRESETS.map((preset, idx) => (
+              <button
+                key={idx}
+                type="button"
+                className="preset-chip-btn"
+                onClick={() => handleApplyPreset(preset.data)}
+                disabled={loading}
+                title={`Apply scenario: ${preset.label}`}
+              >
+                <span>{preset.icon}</span> {preset.label}
+              </button>
+            ))}
+          </div>
+        </div>
       </div>
 
       <div className="card card-elevated" style={{ display: "flex", flexDirection: "column", gap: "24px", animation: "slideUp 340ms cubic-bezier(0.2,0.8,0.2,1) both" }}>
         <div className="form-section">
           <SliderField
             label="Duty Hours / Day"
-            helper="Typical shift or active duty duration per day"
+            helper="Typical active duty or shift duration per 24-hour cycle"
             value={workload.duty_hours}
             min={0}
             max={24}
@@ -40,7 +123,7 @@ export function WorkloadScreen({ workload, setWorkload, onAnalyze, onBack, loadi
 
           <SliderField
             label="Rest & Sleep Hours / Day"
-            helper="Dedicated recovery and uninterrupted sleep time"
+            helper="Dedicated uninterrupted recovery and sleep time"
             value={workload.rest_hours}
             min={0}
             max={24}
@@ -49,8 +132,8 @@ export function WorkloadScreen({ workload, setWorkload, onAnalyze, onBack, loadi
           />
 
           <SliderField
-            label="Night Shifts / Recent Period"
-            helper="Overnight deployments or watch duties in past 2 weeks"
+            label="Night Duties / Past 2 Weeks"
+            helper="Overnight watch shifts or nighttime tactical deployments"
             value={workload.night_duties}
             min={0}
             max={14}
@@ -59,8 +142,8 @@ export function WorkloadScreen({ workload, setWorkload, onAnalyze, onBack, loadi
           />
 
           <SliderField
-            label="Days Since Last Leave / Rest"
-            helper="Consecutive days on duty without dedicated rest block"
+            label="Days Since Last Dedicated Leave"
+            helper="Consecutive days on active duty without formal leave or rest block"
             value={workload.days_since_leave}
             min={0}
             max={90}
@@ -69,8 +152,8 @@ export function WorkloadScreen({ workload, setWorkload, onAnalyze, onBack, loadi
           />
 
           <SliderField
-            label="Duty Schedule Changes"
-            helper="Unplanned shift rotations or short-notice assignment changes"
+            label="Unplanned Duty Schedule Changes"
+            helper="Short-notice shift reassignments or emergency rotations in past 7 days"
             value={workload.duty_change_frequency}
             min={0}
             max={7}
@@ -79,18 +162,18 @@ export function WorkloadScreen({ workload, setWorkload, onAnalyze, onBack, loadi
           />
 
           <div className="input-field">
-            <label htmlFor="intensity-select">Workload Intensity Rating</label>
+            <label htmlFor="intensity-select">Operational Intensity / Tempo</label>
             <select
               id="intensity-select"
               className="select-input"
               value={workload.workload_level}
               onChange={(e) => updateField("workload_level", Number(e.target.value))}
             >
-              <option value={1}>1 · Very Light / Manageable demand</option>
-              <option value={2}>2 · Light / Routine steady demand</option>
-              <option value={3}>3 · Moderate Load / Steady tempo</option>
-              <option value={4}>4 · Heavy Demand / High tempo</option>
-              <option value={5}>5 · Critical / Maximum sustained effort</option>
+              <option value={1}>1 · Very Light / Low-demand maintenance</option>
+              <option value={2}>2 · Light / Routine steady pacing</option>
+              <option value={3}>3 · Moderate Load / Standard active duty tempo</option>
+              <option value={4}>4 · Heavy Demand / High operational tempo</option>
+              <option value={5}>5 · Critical / Maximum sustained tactical exertion</option>
             </select>
           </div>
         </div>
@@ -98,10 +181,10 @@ export function WorkloadScreen({ workload, setWorkload, onAnalyze, onBack, loadi
         <label htmlFor="high-pressure-check" className="toggle-switch-row">
           <div>
             <strong style={{ display: "block", fontSize: "0.95rem", color: "var(--text-primary)" }}>
-              High-Pressure / Emergency Duty
+              High-Risk / Critical Incident Duty
             </strong>
             <span style={{ fontSize: "0.82rem", color: "var(--text-secondary)" }}>
-              Check if currently handling emergency response, high-risk assignments, or time-critical duties
+              Check if currently handling emergency response, high-threat operations, or critical incident assignments
             </span>
           </div>
           <input
@@ -110,10 +193,9 @@ export function WorkloadScreen({ workload, setWorkload, onAnalyze, onBack, loadi
             style={{ width: "20px", height: "20px", accentColor: "var(--primary)", cursor: "pointer" }}
             checked={workload.high_pressure_assignment}
             onChange={(e) => updateField("high_pressure_assignment", e.target.checked)}
-            aria-label="High-Pressure or Emergency Duty Assignment"
+            aria-label="High-Risk or Critical Incident Duty Assignment"
           />
         </label>
-
 
         {error && (
           <div className="inline-error" role="alert">
@@ -126,7 +208,7 @@ export function WorkloadScreen({ workload, setWorkload, onAnalyze, onBack, loadi
             ← Back
           </button>
           <button type="button" className="btn btn-primary" onClick={onAnalyze} disabled={loading}>
-            {loading ? "Generating Analysis..." : "Generate Wellbeing Summary →"}
+            {loading ? "Generating Analysis..." : "Generate Welfare Summary →"}
           </button>
         </div>
       </div>

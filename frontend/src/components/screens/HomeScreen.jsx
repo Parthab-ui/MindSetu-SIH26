@@ -4,33 +4,49 @@ export function HomeScreen({ onStart }) {
       num: "01",
       name: "LightGBM",
       role: "Supervised Research Model",
-      desc: "Computes welfare-risk indicators from duty and wellbeing signals.",
+      desc: "Trained on military personnel research data to predict multi-symptom strain from operational exposure.",
     },
     {
       num: "02",
-      name: "SHAP",
+      name: "TreeSHAP",
       role: "Model Explainability",
-      desc: "Highlights the exact contributing factors behind each research signal.",
+      desc: "Provides exact, mathematical feature attribution for every trauma, stress, and physical role input.",
     },
     {
       num: "03",
       name: "Gemini",
-      role: "Supportive AI Layer",
-      desc: "Translates findings into empathetic, practical recovery guidance.",
+      role: "Supportive AI Companion",
+      desc: "Synthesizes multi-turn recovery pacing and tactical decompression guidance with strict safety guardrails.",
     },
     {
       num: "04",
-      name: "Human",
-      role: "Welfare Decision",
-      desc: "All welfare interventions and decisions remain strictly human-driven.",
+      name: "Human Officer",
+      role: "Welfare Intervention",
+      desc: "All welfare decisions, duty adjustments, and formal referrals remain strictly human-driven.",
     },
   ];
 
-  const trustItems = [
-    { icon: "🔒", text: "Anonymous sessions — no personal IDs stored" },
-    { icon: "⚡", text: "Real-time AI companion powered by Gemini" },
-    { icon: "🔬", text: "Explainable ML with SHAP factor analysis" },
-    { icon: "🛡", text: "Human welfare officer always in the loop" },
+  const differentiators = [
+    {
+      icon: "🎯",
+      title: "Purpose-Built for Uniformed Personnel",
+      desc: "Screens for operational exhaustion, tactical hypervigilance, and critical incident trauma rather than generic workplace stress.",
+    },
+    {
+      icon: "🧠",
+      title: "Depression & PTSD/Trauma Dimensions",
+      desc: "Separates affective depressive fatigue from tactical hyperarousal and intrusive recall for granular support triage.",
+    },
+    {
+      icon: "⚖️",
+      title: "Objective Duty & Recovery Balancing",
+      desc: "Integrates shift duration, sleep deficit, night watches, and leave intervals to evaluate cumulative duty burden.",
+    },
+    {
+      icon: "🔒",
+      title: "Protected & Non-Stigmatizing",
+      desc: "Protected anonymous sessions with zero personnel identifiers stored, removing fear of career consequences.",
+    },
   ];
 
   return (
@@ -38,22 +54,20 @@ export function HomeScreen({ onStart }) {
       <div className="hero-grid">
         {/* Left — Hero Copy */}
         <div style={{ animation: "slideUp 400ms cubic-bezier(0.2,0.8,0.2,1) both" }}>
-          <span className="eyebrow">SIH26186 · PERSONNEL WELFARE SUPPORT</span>
+          <span className="eyebrow">SIH26186 · UNIFORMED PERSONNEL WELFARE SUPPORT</span>
           <h1
             className="page-title"
             style={{ fontSize: "clamp(2.3rem, 4.5vw, 3.8rem)", marginBottom: "20px", lineHeight: 1.1 }}
           >
-            Understand what matters.
+            Specialized Welfare Triage.
             <br />
-            <span style={{ color: "var(--primary)" }}>Choose support earlier.</span>
+            <span style={{ color: "var(--primary)" }}>Built for Service Contexts.</span>
           </h1>
           <p
             className="page-subtitle"
-            style={{ fontSize: "1.1rem", maxWidth: "580px", marginBottom: "36px" }}
+            style={{ fontSize: "1.08rem", maxWidth: "580px", marginBottom: "32px", lineHeight: "1.6" }}
           >
-            MindSetu provides a calm, confidential space for personnel to complete a
-            brief wellbeing pulse, contextualise operational strain, and access
-            structured, actionable welfare guidance.
+            MindSetu is a dedicated digital mental health screening and decision-support platform designed around the operational, trauma, shift work, and reintegration realities experienced by armed forces, paramilitary, police, and emergency personnel.
           </p>
 
           <button
@@ -62,21 +76,29 @@ export function HomeScreen({ onStart }) {
             style={{ padding: "15px 32px", fontSize: "1.02rem", marginBottom: "32px" }}
             onClick={onStart}
           >
-            Start a Protected Session →
+            Start Protected Session →
           </button>
 
-          {/* Trust chips */}
-          <div className="trust-grid">
-            {trustItems.map((item, i) => (
+          {/* Differentiator Highlights */}
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: "14px", marginTop: "12px" }}>
+            {differentiators.map((d, i) => (
               <div
                 key={i}
-                className="trust-card"
+                className="card card-enter"
                 style={{
-                  animation: `slideUp ${360 + i * 60}ms cubic-bezier(0.2,0.8,0.2,1) both`,
+                  padding: "16px",
+                  background: "var(--bg-surface-elevated)",
+                  border: "1px solid var(--border-subtle)",
+                  animationDelay: `${300 + i * 50}ms`,
                 }}
               >
-                <span className="trust-icon">{item.icon}</span>
-                <span className="trust-text">{item.text}</span>
+                <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "4px" }}>
+                  <span style={{ fontSize: "1.2rem" }}>{d.icon}</span>
+                  <strong style={{ fontSize: "0.92rem", color: "var(--text-primary)" }}>{d.title}</strong>
+                </div>
+                <p style={{ margin: 0, fontSize: "0.82rem", color: "var(--text-secondary)", lineHeight: "1.5" }}>
+                  {d.desc}
+                </p>
               </div>
             ))}
           </div>
@@ -92,7 +114,7 @@ export function HomeScreen({ onStart }) {
               backdropFilter: "blur(20px)",
             }}
           >
-            <span className="eyebrow">SYSTEM ARCHITECTURE</span>
+            <span className="eyebrow">FOUR-PILLAR ARCHITECTURE</span>
             <h2
               style={{
                 fontSize: "1.28rem",
@@ -149,18 +171,13 @@ export function HomeScreen({ onStart }) {
               ))}
             </div>
 
-            <div
-              style={{
-                marginTop: "20px",
-                paddingTop: "18px",
-                borderTop: "1px solid var(--border-subtle)",
-                fontSize: "0.78rem",
-                color: "var(--text-muted)",
-                lineHeight: "1.5",
-              }}
-            >
-              🔒 <strong>Research prototype.</strong> MindSetu generates welfare-support signals, not clinical
-              diagnoses or disciplinary recommendations.
+            <div style={{ marginTop: "24px", padding: "12px 16px", background: "var(--bg-input)", borderRadius: "var(--radius-md)", border: "1px solid var(--border-subtle)" }}>
+              <span style={{ fontSize: "0.76rem", color: "var(--text-muted)", fontWeight: 600, display: "block" }}>
+                🔒 ETHICAL PROTOCOL
+              </span>
+              <p style={{ margin: "4px 0 0", fontSize: "0.82rem", color: "var(--text-secondary)", lineHeight: "1.5" }}>
+                MindSetu is a welfare triage aid. It never makes automatic personnel decisions, determines fitness ratings, or replaces medical clinicians.
+              </p>
             </div>
           </div>
         </div>

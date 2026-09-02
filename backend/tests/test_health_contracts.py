@@ -23,6 +23,11 @@ def test_sih_routes_registered():
         "/api/sih26186/wellness",
         "/api/sih26186/workload",
         "/api/sih26186/analyze/{session_id}",
+        "/api/sih26186/dashboard/{session_id}",
+        "/api/sih26186/history/{session_id}",
         "/api/sih26186/ml/health",
+        "/api/sih26186/ml/predict",
+        "/api/sih26186/ml/analyze",
     ):
         assert path in routes
+

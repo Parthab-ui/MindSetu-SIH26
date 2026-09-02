@@ -3,34 +3,35 @@ import { CrisisBanner } from "../common/CrisisBanner";
 
 const SUGGESTION_CARDS = [
   {
-    id: "workload",
-    title: "Decompress After Duty",
-    subtitle: "Workload pacing & switching off",
-    prompt: "I feel overwhelmed by my workload and cannot switch off after duty.",
-    tag: "Workload",
+    id: "tactical-decompression",
+    title: "Tactical Decompression",
+    subtitle: "Stepping down from high-alert state",
+    prompt: "I feel hyper-alert and find it difficult to step down or 'switch off' my guard after returning from duty.",
+    tag: "PTSD / Arousal",
   },
   {
-    id: "sleep",
-    title: "Shift Sleep & Recovery",
-    subtitle: "Rest cycles & night duty fatigue",
-    prompt: "What are practical ways to manage sleep recovery during night shifts?",
+    id: "sleep-recovery",
+    title: "Night Watch Sleep Recovery",
+    subtitle: "Circadian pacing & sleep architecture",
+    prompt: "What are practical ways to manage sleep recovery and counter circadian disruption during frequent night watches?",
     tag: "Recovery",
   },
   {
-    id: "boundaries",
-    title: "Operational Boundaries",
-    subtitle: "Duty pressure & realistic limits",
-    prompt: "How can I set realistic boundaries when duty pressure is continuous?",
-    tag: "Boundaries",
+    id: "cognitive-fatigue",
+    title: "Operational Mental Fatigue",
+    subtitle: "Decision fatigue & cognitive clarity",
+    prompt: "I'm experiencing persistent mental fatigue making it harder to concentrate on duty tasks. What can I do today?",
+    tag: "Depression / Focus",
   },
   {
-    id: "action-plan",
-    title: "Daily Action Step",
-    subtitle: "One practical step for today",
-    prompt: "Help me organize one practical, actionable recovery step for today.",
-    tag: "Action",
+    id: "stigma-barriers",
+    title: "Navigating Support Without Stigma",
+    subtitle: "Confidential unit check-in guidance",
+    prompt: "How can I talk to a unit welfare officer or squad lead about duty pacing without feeling like I'm letting my team down?",
+    tag: "Welfare & Stigma",
   },
 ];
+
 
 /* Custom SVG Icons */
 function SparkIcon({ size = 18, className = "" }) {

@@ -31,6 +31,7 @@ export default function App() {
     duty_change_frequency: 1,
   });
   const [analysis, setAnalysis] = useState(null);
+  const [assessmentHistory, setAssessmentHistory] = useState([]);
 
   // ML Lab State
   const [isResearchModalOpen, setIsResearchModalOpen] = useState(false);
@@ -75,6 +76,7 @@ export default function App() {
     setSessionId(null);
     setAnswers(Array(6).fill(null));
     setAnalysis(null);
+    setAssessmentHistory([]);
     setChatMessages([]);
     setSelectedMood(null);
     setMoodNote("");
@@ -122,6 +124,15 @@ export default function App() {
       await api.submitWorkload(sessionId, { role, unit, ...workload });
       const result = await api.runAnalysis(sessionId);
       setAnalysis(result);
+
+      // Refresh assessment history
+      try {
+        const histRes = await api.getAssessmentHistory(sessionId);
+        setAssessmentHistory(histRes.history || []);
+      } catch {
+        // Non-fatal
+      }
+
       setScreen("analysis");
     } catch (err) {
       setError(err.message);
@@ -229,6 +240,8 @@ export default function App() {
       setMoodHistory(hist.history || []);
       const trend = await api.getMoodTrend();
       setMoodTrend(trend.trend || []);
+      const assessHist = await api.getAssessmentHistory(sessionId);
+      setAssessmentHistory(assessHist.history || []);
       setMoodNote("");
       setSelectedMood(null);
     } catch (err) {
@@ -307,6 +320,8 @@ export default function App() {
         {screen === "analysis" && (
           <AnalysisScreen
             analysis={analysis}
+            answers={answers}
+            workload={workload}
             onNavigateToChat={() => setScreen("chat")}
             onNavigateToMood={() => setScreen("mood")}
             onOpenResearchModal={() => setIsResearchModalOpen(true)}
@@ -334,6 +349,7 @@ export default function App() {
             onSaveMood={handleSaveMood}
             moodHistory={moodHistory}
             moodTrend={moodTrend}
+            assessmentHistory={assessmentHistory}
             loading={loading}
           />
         )}

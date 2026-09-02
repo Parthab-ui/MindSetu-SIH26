@@ -21,3 +21,8 @@ def test_classification_boundaries():
     assert _classify(20, 20)[1] == "low"
     assert _classify(55, 20)[1] == "moderate"
     assert _classify(90, 10)[1] == "high"
+    # Combined threshold >= 70
+    assert _classify(75, 65)[1] == "high"
+    # Combined threshold >= 45
+    assert _classify(40, 55)[1] == "moderate"
+
