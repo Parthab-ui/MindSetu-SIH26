@@ -10,7 +10,8 @@ from fastapi.testclient import TestClient
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from sih26186_server import app
-from ml.voice_inference import generate_synthetic_demo_wav, analyze_voice_recording
+from ml.voice_inference import generate_synthetic_demo_wav, analyze_voice_recording, load_voice_model
+from ml.voice_feature_extractor import ACOUSTIC_FEATURE_NAMES, extract_acoustic_features, decode_wav_bytes
 
 client = TestClient(app)
 
@@ -69,7 +70,6 @@ def test_voice_analyze_with_base64_payload():
 
 
 def test_voice_analyze_rejects_empty_or_too_short():
-    # Construct 0.2 second WAV (too short)
     bio = io.BytesIO()
     with wave.open(bio, "wb") as wf:
         wf.setnchannels(1)
@@ -81,3 +81,26 @@ def test_voice_analyze_rejects_empty_or_too_short():
     files = {"audio": ("short.wav", short_wav, "audio/wav")}
     res = client.post("/api/sih26186/voice/analyze", files=files)
     assert res.status_code == 422
+
+
+def test_voice_feature_consistency_and_ordering():
+    wav_bytes = generate_synthetic_demo_wav("resilient")
+    audio, sr = decode_wav_bytes(wav_bytes)
+    feats, diagnostics = extract_acoustic_features(audio, sr)
+    
+    assert len(feats) == len(ACOUSTIC_FEATURE_NAMES)
+    for name in ACOUSTIC_FEATURE_NAMES:
+        assert name in feats
+        assert isinstance(feats[name], (float, int))
+        
+    bundle = load_voice_model()
+    assert bundle["features"] == ACOUSTIC_FEATURE_NAMES
+
+
+def test_voice_corrupted_audio_rejection():
+    corrupt_bytes = b"NOT_A_REAL_WAV_FILE_HEADER_DATA_12345" * 10
+    files = {"audio": ("corrupt.wav", corrupt_bytes, "audio/wav")}
+    res = client.post("/api/sih26186/voice/analyze", files=files)
+    assert res.status_code in (400, 422)
+    assert "detail" in res.json() or "error" in res.json()
+

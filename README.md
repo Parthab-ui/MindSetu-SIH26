@@ -1,6 +1,7 @@
 # MindSetu — Multimodal Personnel Welfare Support Platform (SIH26186)
 
-[![Build & Tests](https://img.shields.io/badge/pytest-24%20passed-success)](backend/tests)
+[![Build & Tests](https://img.shields.io/badge/pytest-26%20passed-success)](backend/tests)
+
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.115+-009688.svg?logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com)
 [![React](https://img.shields.io/badge/React-19.0-61DAFB.svg?logo=react&logoColor=black)](https://react.dev)
 [![Gemini](https://img.shields.io/badge/Google%20Gemini-3.5%20Flash-4285F4.svg?logo=google&logoColor=white)](https://ai.google.dev)
