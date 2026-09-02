@@ -26,11 +26,13 @@ export function AnalysisScreen({
   analysis,
   answers = [],
   workload = {},
+  voiceResult = null,
   onNavigateToChat,
   onNavigateToMood,
   onOpenResearchModal,
 }) {
   const level = String(analysis?.risk_level || "unknown").toLowerCase();
+
 
   // Compute subscale clinical indicators if answers exist
   const validAnswers = Array.isArray(answers) && answers.length === 6 && answers.every((a) => a !== null);
@@ -321,6 +323,98 @@ export function AnalysisScreen({
           </details>
         </div>
       </div>
+
+      {/* Multimodal Decision Support & Voice Paralinguistics */}
+      {voiceResult ? (
+        <div className="card" style={{ marginTop: "28px", border: "1px solid var(--border-medium)", background: "var(--bg-surface-elevated)" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+              <span style={{ fontSize: "1.5rem" }}>🎙️</span>
+              <div>
+                <span className="eyebrow" style={{ color: "var(--primary)" }}>MULTIMODAL DECISION-SUPPORT</span>
+                <h3 style={{ fontSize: "1.15rem", fontWeight: 800, margin: 0 }}>
+                  Speech Paralinguistics vs. Self-Reported Signals
+                </h3>
+              </div>
+            </div>
+            <span
+              className="badge"
+              style={{
+                background: voiceResult.audio_quality === "good" ? "rgba(16, 185, 129, 0.15)" : "rgba(245, 158, 11, 0.15)",
+                color: voiceResult.audio_quality === "good" ? "#10b981" : "#f59e0b",
+                border: "1px solid currentColor",
+              }}
+            >
+              Voice Quality: {voiceResult.audio_quality?.toUpperCase()} · Confidence {Math.round((voiceResult.confidence || 0.8) * 100)}%
+            </span>
+          </div>
+
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: 16, marginBottom: 16 }}>
+            {/* Depression Cross-Modal Compare */}
+            <div style={{ padding: "14px 16px", background: "var(--bg-input)", borderRadius: "var(--radius-md)", border: "1px solid var(--border-subtle)" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }}>
+                <span style={{ fontSize: "0.82rem", fontWeight: 700, textTransform: "uppercase" }}>Depressive Strain</span>
+                <span className="dimension-badge">Cross-Modal</span>
+              </div>
+              <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.85rem", marginBottom: 4 }}>
+                <span style={{ color: "var(--text-secondary)" }}>Self-Reported Indicator (DSI):</span>
+                <strong style={{ color: depressionScore >= 70 ? "#ef4444" : "#10b981" }}>{depressionScore}%</strong>
+              </div>
+              <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.85rem" }}>
+                <span style={{ color: "var(--text-secondary)" }}>Voice-Derived Signal (ML):</span>
+                <strong style={{ color: voiceResult.depression_signal >= 70 ? "#ef4444" : "#10b981" }}>{voiceResult.depression_signal}%</strong>
+              </div>
+            </div>
+
+            {/* Trauma Cross-Modal Compare */}
+            <div style={{ padding: "14px 16px", background: "var(--bg-input)", borderRadius: "var(--radius-md)", border: "1px solid var(--border-subtle)" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }}>
+                <span style={{ fontSize: "0.82rem", fontWeight: 700, textTransform: "uppercase" }}>Hyperarousal & Trauma</span>
+                <span className="dimension-badge" style={{ background: "rgba(245, 158, 11, 0.15)", color: "var(--warning)" }}>Proxy</span>
+              </div>
+              <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.85rem", marginBottom: 4 }}>
+                <span style={{ color: "var(--text-secondary)" }}>Self-Reported Indicator (TSI):</span>
+                <strong style={{ color: traumaScore >= 70 ? "#ef4444" : "#10b981" }}>{traumaScore}%</strong>
+              </div>
+              <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.85rem" }}>
+                <span style={{ color: "var(--text-secondary)" }}>Voice Stress Signal:</span>
+                <strong>{voiceResult.trauma_signal}%</strong>
+              </div>
+            </div>
+          </div>
+
+          {/* Concordance / Disagreement Narrative */}
+          <div style={{ padding: "12px 14px", background: "var(--bg-surface)", borderRadius: "var(--radius-md)", border: "1px solid var(--border-subtle)", marginBottom: 12 }}>
+            <span style={{ fontSize: "0.78rem", fontWeight: 700, textTransform: "uppercase", color: "var(--text-muted)", display: "block", marginBottom: 4 }}>
+              Multimodal Concordance Analysis:
+            </span>
+            <p style={{ fontSize: "0.85rem", color: "var(--text-primary)", margin: 0, lineHeight: 1.5 }}>
+              {Math.abs((depressionScore || 50) - (voiceResult.depression_signal || 50)) <= 20
+                ? "Cross-Modal Concordance: Self-reported mental health indicators and vocal acoustic biomarkers align closely, providing reinforced decision support."
+                : (depressionScore || 50) > (voiceResult.depression_signal || 50)
+                ? "Modal Divergence: Self-reported fatigue is elevated while vocal prosody reflects steady phonation. This suggests subjective mental load or operational strain without deep vocal psychomotor slowing."
+                : "Modal Divergence: Speech acoustic markers (pitch flattening / hesitation) indicate latent fatigue despite lower self-reported scores. Consider proactive rest monitoring."}
+            </p>
+          </div>
+
+          {/* Top Acoustic Features */}
+          {voiceResult.top_acoustic_contributors && voiceResult.top_acoustic_contributors.length > 0 && (
+            <div>
+              <span style={{ fontSize: "0.75rem", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase", display: "block", marginBottom: 6 }}>
+                Extracted Acoustic Biomarkers:
+              </span>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                {voiceResult.top_acoustic_contributors.map((c, idx) => (
+                  <span key={idx} className="dimension-badge" style={{ fontSize: "0.75rem" }}>
+                    {c.label}: {typeof c.measured_value === "number" ? c.measured_value.toFixed(2) : c.measured_value} ({c.direction})
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      ) : null}
+
 
       {/* Multi-Dimensional Tailored Action Pathways */}
       <div style={{ marginTop: "32px", marginBottom: "16px" }}>

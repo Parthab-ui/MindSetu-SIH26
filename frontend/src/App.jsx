@@ -6,6 +6,7 @@ import { HomeScreen } from "./components/screens/HomeScreen";
 import { StartScreen } from "./components/screens/StartScreen";
 import { WellnessScreen } from "./components/screens/WellnessScreen";
 import { WorkloadScreen } from "./components/screens/WorkloadScreen";
+import { VoiceScreen } from "./components/screens/VoiceScreen";
 import { AnalysisScreen } from "./components/screens/AnalysisScreen";
 import { ResearchLabModal } from "./components/screens/ResearchLabModal";
 import { ChatScreen } from "./components/screens/ChatScreen";
@@ -30,6 +31,7 @@ export default function App() {
     high_pressure_assignment: false,
     duty_change_frequency: 1,
   });
+  const [voiceResult, setVoiceResult] = useState(null);
   const [analysis, setAnalysis] = useState(null);
   const [assessmentHistory, setAssessmentHistory] = useState([]);
 
@@ -75,6 +77,7 @@ export default function App() {
     setScreen("home");
     setSessionId(null);
     setAnswers(Array(6).fill(null));
+    setVoiceResult(null);
     setAnalysis(null);
     setAssessmentHistory([]);
     setChatMessages([]);
@@ -115,11 +118,26 @@ export default function App() {
     }
   }
 
+  // Transition from Workload to Voice Check
+  async function handleProceedToVoice() {
+    setError("");
+    setLoading(true);
+    setLoadingLabel("Saving duty context…");
+    try {
+      await api.submitWorkload(sessionId, { role, unit, ...workload });
+      setScreen("voice");
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  }
+
   // Run Main SIH26186 Triage Analysis
   async function handleRunAnalysis() {
     setError("");
     setLoading(true);
-    setLoadingLabel("Generating your triage analysis…");
+    setLoadingLabel("Generating your multimodal triage analysis…");
     try {
       await api.submitWorkload(sessionId, { role, unit, ...workload });
       const result = await api.runAnalysis(sessionId);
@@ -310,10 +328,23 @@ export default function App() {
           <WorkloadScreen
             workload={workload}
             setWorkload={setWorkload}
-            onAnalyze={handleRunAnalysis}
+            onAnalyze={handleProceedToVoice}
             onBack={() => setScreen("wellness")}
             loading={loading}
             error={error}
+          />
+        )}
+
+        {screen === "voice" && (
+          <VoiceScreen
+            sessionId={sessionId}
+            onNext={handleRunAnalysis}
+            onBack={() => setScreen("workload")}
+            voiceResult={voiceResult}
+            setVoiceResult={setVoiceResult}
+            loading={loading}
+            error={error}
+            setError={setError}
           />
         )}
 
@@ -322,6 +353,7 @@ export default function App() {
             analysis={analysis}
             answers={answers}
             workload={workload}
+            voiceResult={voiceResult}
             onNavigateToChat={() => setScreen("chat")}
             onNavigateToMood={() => setScreen("mood")}
             onOpenResearchModal={() => setIsResearchModalOpen(true)}

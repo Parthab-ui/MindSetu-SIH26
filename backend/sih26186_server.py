@@ -376,6 +376,11 @@ def sih26186_history(session_id: uuid.UUID):
 from sih26186_ml_routes import register_ml_routes
 register_ml_routes(app)
 
+from sih26186_voice_routes import register_voice_routes
+register_voice_routes(app)
+
+
+
 frontend_dist = Path(__file__).resolve().parent.parent / "frontend" / "dist"
 if frontend_dist.exists():
     from fastapi.staticfiles import StaticFiles

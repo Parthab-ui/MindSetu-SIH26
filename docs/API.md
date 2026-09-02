@@ -9,7 +9,7 @@ Comprehensive specification of all REST and Streaming NDJSON endpoints provided 
 - **Local Development Base URL**: `http://127.0.0.1:8000`
 - **Interactive Swagger UI**: `http://127.0.0.1:8000/docs`
 - **OpenAPI Schema**: `http://127.0.0.1:8000/openapi.json`
-- **Content-Type**: `application/json` (Standard endpoints) or `application/x-ndjson` (Streaming chat)
+- **Content-Type**: `application/json`, `multipart/form-data`, or `application/x-ndjson` (Streaming chat)
 
 ---
 
@@ -68,8 +68,6 @@ Submits responses for the 6-question uniformed personnel wellbeing pulse (each 0
 ### `POST /api/sih26186/workload`
 Submits operational duty context and workload parameters.
 
-- **Workload Formula Weights**:
-  - Duty Hours (max 25 pts), Rest Hours deficit (max 15 pts), Night Duties (max 15 pts), Leave Gap (max 10 pts), Workload Intensity (max 20 pts), Critical Assignment (10 pts), Duty Changes (max 5 pts). Total = 0 to 100.
 - **Request Body**:
   ```json
   {
@@ -116,52 +114,90 @@ Assigns the deterministic risk band (`low`, `moderate`, `high`), and returns str
 
 ---
 
-### `GET /api/sih26186/history/{session_id}`
-Retrieves all historical assessment records for the given session to power the longitudinal timeline.
+## 4. Multimodal Voice ML Endpoints
 
-- **Path Parameter**: `session_id` (string UUID)
-- **Response `200 OK`**:
-  ```json
-  {
-    "session_id": "9f2e3b1a-4c5d-6e7f-8a9b-0c1d2e3f4a5b",
-    "count": 2,
-    "history": [
-      {
-        "id": "c1f7a02b-1a2b-3c4d-5e6f-7a8b9c0d1e2f",
-        "created_at": "2026-09-02T19:42:00Z",
-        "wellness_score": 66.67,
-        "workload_score": 75.05,
-        "combined_score": 70.44,
-        "risk_level": "high",
-        "recommendation": "Prioritise an immediate welfare check-in..."
-      }
-    ]
-  }
-  ```
-
----
-
-## 4. Explainable Machine Learning (TreeSHAP) Endpoints
-
-### `GET /api/sih26186/ml/health`
-Returns the status of the LightGBM research model and feature schema.
+### `GET /api/sih26186/voice/health`
+Returns the status, version, and feature count of the Voice ML model.
 
 - **Response `200 OK`**:
   ```json
   {
     "status": "ready",
-    "model": "LightGBM",
-    "target": "multiplesymptoms_case",
-    "threshold": 0.45,
-    "features": [
-      "Q29_Total", "Q12_weapon", "Q13_feltdie",
-      "Q23a_cutdowntime", "Q23b_Accomplished_less",
-      "Q23c_limited_work", "Q23d_difficulty_performing"
-    ]
+    "model": "GradientBoostingClassifier",
+    "model_version": "1.0.0-voice-gbdt",
+    "features_count": 24,
+    "features": ["rms_energy", "pitch_f0_mean", "pitch_f0_std", "pause_ratio", "speech_rate_estimate", "..."],
+    "clinical_diagnosis": false
   }
   ```
 
 ---
+
+### `POST /api/sih26186/voice/demo-sample`
+Generates a synthetic 16kHz PCM WAV demo sample for noisy hackathon environments.
+
+- **Query Parameter**: `scenario` (`strained` | `resilient` | `moderate`)
+- **Response `200 OK`**:
+  ```json
+  {
+    "scenario": "strained",
+    "audio_base64": "data:audio/wav;base64,...",
+    "analysis": {
+      "depression_signal": 84.5,
+      "trauma_signal": 72.0,
+      "confidence": 0.85,
+      "audio_quality": "good"
+    }
+  }
+  ```
+
+---
+
+### `POST /api/sih26186/voice/analyze`
+Extracts 24 acoustic & prosodic biomarkers in-memory from raw WAV audio bytes or base64. **Zero raw audio is stored.**
+
+- **Request Body (JSON option)**:
+  ```json
+  {
+    "session_id": "9f2e3b1a-4c5d-6e7f-8a9b-0c1d2e3f4a5b",
+    "audio_base64": "data:audio/wav;base64,..."
+  }
+  ```
+- **Response `200 OK`**:
+  ```json
+  {
+    "status": "success",
+    "session_id": "9f2e3b1a-4c5d-6e7f-8a9b-0c1d2e3f4a5b",
+    "depression_signal": 78.5,
+    "trauma_signal": 65.0,
+    "trauma_status": "experimental_proxy",
+    "confidence": 0.82,
+    "audio_quality": "good",
+    "diagnostics": {
+      "duration_seconds": 12.4,
+      "snr_db_estimate": 22.5,
+      "quality": "good"
+    },
+    "top_acoustic_contributors": [
+      {
+        "feature": "pitch_range",
+        "label": "Dynamic Pitch Range",
+        "direction": "increases signal"
+      },
+      {
+        "feature": "pause_ratio",
+        "label": "Hesitation & Pause Proportion",
+        "direction": "increases signal"
+      }
+    ],
+    "signal_interpretation": "Voice acoustic patterns exhibit constrained pitch variability and higher hesitation intervals.",
+    "clinical_diagnosis": false
+  }
+  ```
+
+---
+
+## 5. Explainable Research ML (TreeSHAP) Endpoints
 
 ### `POST /api/sih26186/ml/predict`
 Runs inference through the trained LightGBM booster and calculates exact TreeSHAP feature attributions.
@@ -192,12 +228,6 @@ Runs inference through the trained LightGBM booster and calculates exact TreeSHA
         "label": "wellbeing score",
         "shap_value": 2.5957,
         "direction": "increases signal"
-      },
-      {
-        "feature": "Q23d_difficulty_performing",
-        "label": "difficulty performing duties",
-        "shap_value": 0.7117,
-        "direction": "increases signal"
       }
     ]
   }
@@ -205,47 +235,9 @@ Runs inference through the trained LightGBM booster and calculates exact TreeSHA
 
 ---
 
-## 5. Conversational AI & Streaming Endpoints
+## 6. Longitudinal History & AI Companion Endpoints
 
-### `POST /api/chat`
-Streams real-time empathetic coping responses as Server-Sent NDJSON (`application/x-ndjson`).
-
-- **Request Body**:
-  ```json
-  {
-    "session_id": "9f2e3b1a-4c5d-6e7f-8a9b-0c1d2e3f4a5b",
-    "message": "I'm having trouble stepping down from high alert off duty.",
-    "history": [],
-    "wellbeing_context": {
-      "risk_level": "high",
-      "wellness_summary": "High hyperarousal and sleep disruption noted."
-    }
-  }
-  ```
-- **Streaming NDJSON Chunk Structure**:
-  ```json
-  {"type": "token", "content": "Thank you "}
-  {"type": "token", "content": "for sharing that. "}
-  {"type": "done", "is_safety": false}
-  ```
-
----
-
-## 6. Daily Mood & Longitudinal Tracking Endpoints
-
-### `POST /api/mood`
-Records a self-reported daily mood rating (1 to 5) with optional notes.
-
-- **Request Body**:
-  ```json
-  {
-    "session_id": "9f2e3b1a-4c5d-6e7f-8a9b-0c1d2e3f4a5b",
-    "mood": 3,
-    "note": "Night watch completed. Resting."
-  }
-  ```
-
----
-
-### `GET /api/dashboard/mood-trend`
-Returns aggregated 7-day mood averages and daily entries for recovery monitoring.
+- `GET /api/sih26186/history/{session_id}`: Retrieves all historical triage check-ins for the session.
+- `POST /api/chat`: Streams real-time empathetic coping responses as Server-Sent NDJSON (`application/x-ndjson`).
+- `POST /api/mood`: Logs daily recovery mood rating (1–5).
+- `GET /api/dashboard/mood-trend`: Fetches 7-day mood trend averages.

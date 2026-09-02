@@ -28,6 +28,10 @@ def test_sih_routes_registered():
         "/api/sih26186/ml/health",
         "/api/sih26186/ml/predict",
         "/api/sih26186/ml/analyze",
+        "/api/sih26186/voice/health",
+        "/api/sih26186/voice/demo-sample",
+        "/api/sih26186/voice/analyze",
     ):
         assert path in routes
+
 

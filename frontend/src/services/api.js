@@ -112,6 +112,21 @@ export const api = {
     });
   },
 
+  // Voice ML Analysis
+  async analyzeVoice(sessionId, audioBase64) {
+    return request("/api/sih26186/voice/analyze", {
+      method: "POST",
+      body: JSON.stringify({ session_id: sessionId, audio_base64: audioBase64 }),
+    });
+  },
+
+  async getVoiceDemoSample(scenario = "strained") {
+    return request(`/api/sih26186/voice/demo-sample?scenario=${encodeURIComponent(scenario)}`, {
+      method: "POST",
+    });
+  },
+
+
   // Gemini AI Companion Streaming
   async streamChat({ sessionId, message, history, wellbeingContext, onToken, onComplete, onError }) {
     const controller = new AbortController();
