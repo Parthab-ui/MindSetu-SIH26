@@ -114,6 +114,12 @@ def test_session_lifecycle_with_mock_or_live_db():
         assert wl_res.status_code == 200
         assert "workload_score" in wl_res.json()
 
+        # Test Voice Analysis Step
+        v_res = client.post(f"/api/sih26186/voice/demo-sample?scenario=strained")
+        assert v_res.status_code == 200
+        assert "analysis" in v_res.json()
+        assert 0 <= v_res.json()["analysis"]["depression_signal"] <= 100
+
         # Test Triage Analysis
         a_res = client.post(f"/api/sih26186/analyze/{session_id}")
         assert a_res.status_code == 200
@@ -134,3 +140,4 @@ def test_session_lifecycle_with_mock_or_live_db():
         assert h_res.status_code == 200
         assert h_res.json()["count"] >= 1
         assert len(h_res.json()["history"]) >= 1
+
