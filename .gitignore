@@ -40,3 +40,4 @@ scratch/
 
 # Local ML training data
 backend/ml/data/
+.neon
