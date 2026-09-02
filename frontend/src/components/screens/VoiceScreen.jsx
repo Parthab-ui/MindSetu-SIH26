@@ -72,12 +72,82 @@ export function VoiceScreen({ sessionId, onNext, onBack, voiceResult, setVoiceRe
     }
   }
 
+function audioBufferToWav(audioBuffer) {
+  const numChannels = 1;
+  const sampleRate = audioBuffer.sampleRate;
+  const bitDepth = 16;
+  
+  let channelData;
+  if (audioBuffer.numberOfChannels > 1) {
+    const ch0 = audioBuffer.getChannelData(0);
+    const ch1 = audioBuffer.getChannelData(1);
+    channelData = new Float32Array(ch0.length);
+    for (let i = 0; i < ch0.length; i++) {
+      channelData[i] = (ch0[i] + ch1[i]) / 2;
+    }
+  } else {
+    channelData = audioBuffer.getChannelData(0);
+  }
+
+  const numFrames = channelData.length;
+  const blockAlign = numChannels * (bitDepth / 8);
+  const byteRate = sampleRate * blockAlign;
+  const dataSize = numFrames * blockAlign;
+  const buffer = new ArrayBuffer(44 + dataSize);
+  const view = new DataView(buffer);
+
+  function writeString(offset, string) {
+    for (let i = 0; i < string.length; i++) {
+      view.setUint8(offset + i, string.charCodeAt(i));
+    }
+  }
+
+  writeString(0, "RIFF");
+  view.setUint32(4, 36 + dataSize, true);
+  writeString(8, "WAVE");
+  writeString(12, "fmt ");
+  view.setUint32(16, 16, true);
+  view.setUint16(20, 1, true); // PCM
+  view.setUint16(22, numChannels, true);
+  view.setUint32(24, sampleRate, true);
+  view.setUint32(28, byteRate, true);
+  view.setUint16(32, blockAlign, true);
+  view.setUint16(34, bitDepth, true);
+  writeString(36, "data");
+  view.setUint32(40, dataSize, true);
+
+  let offset = 44;
+  for (let i = 0; i < channelData.length; i++, offset += 2) {
+    const s = Math.max(-1, Math.min(1, channelData[i]));
+    view.setInt16(offset, s < 0 ? s * 0x8000 : s * 0x7fff, true);
+  }
+
+  return new Blob([view], { type: "audio/wav" });
+}
+
   async function analyzeRecordedBlob(blob) {
     setLocalProcessing(true);
     if (setError) setError("");
     try {
+      let finalBlob = blob;
+      // Convert to standard WAV using Web Audio API if not already WAV
+      if (!blob.type || !blob.type.includes("wav")) {
+        try {
+          const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+          if (AudioContextClass) {
+            const audioCtx = new AudioContextClass();
+            const arrayBuffer = await blob.arrayBuffer();
+            const audioBuffer = await audioCtx.decodeAudioData(arrayBuffer);
+            finalBlob = audioBufferToWav(audioBuffer);
+            await audioCtx.close();
+          }
+        } catch (convErr) {
+          console.warn("AudioContext WAV conversion fallback:", convErr);
+        }
+      }
+
       const reader = new FileReader();
-      reader.readAsDataURL(blob);
+      reader.readAsDataURL(finalBlob);
       reader.onloadend = async () => {
         const base64Audio = reader.result;
         try {
@@ -94,6 +164,7 @@ export function VoiceScreen({ sessionId, onNext, onBack, voiceResult, setVoiceRe
       setLocalProcessing(false);
     }
   }
+
 
   async function handleLoadDemoSample(scenario) {
     setLocalProcessing(true);
