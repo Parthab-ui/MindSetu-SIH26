@@ -1161,6 +1161,29 @@ a:focus-visible,
   margin-top: 10px;
 }
 
+.ai-editorial-heading {
+  margin: 14px 0 6px;
+  font-size: 0.98rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  line-height: 1.4;
+}
+
+.ai-editorial-heading:first-child {
+  margin-top: 0;
+}
+
+.ai-inline-code {
+  display: inline-block;
+  padding: 1px 6px;
+  background: var(--bg-input);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  font-family: monospace;
+  font-size: 0.85em;
+  color: var(--primary);
+}
+
 .action-copy-btn {
   display: inline-flex;
   align-items: center;
@@ -1181,6 +1204,29 @@ a:focus-visible,
   background: var(--bg-surface-elevated);
   color: var(--text-primary);
   border-color: var(--border-medium);
+}
+
+.action-go-on-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 12px;
+  border-radius: var(--radius-full);
+  background: var(--primary-light);
+  border: 1px solid var(--border-subtle);
+  color: var(--primary);
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  font-family: inherit;
+}
+
+.action-go-on-btn:hover {
+  background: var(--primary);
+  color: #ffffff;
+  border-color: var(--primary);
+  transform: translateY(-1px);
 }
 
 /* ── STATE C: Thinking / Loading State ────────────────────────── */

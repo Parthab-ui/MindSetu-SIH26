@@ -124,11 +124,11 @@ function CheckIcon({ size = 14 }) {
 }
 
 /**
- * Format inline text (e.g. **bold**) safely into React elements
+ * Format inline text (e.g. **bold**, `code`) safely into React elements
  */
 function formatInlineText(text) {
   if (!text) return null;
-  const parts = text.split(/(\*\*[^*]+\*\*)/g);
+  const parts = text.split(/(\*\*[^*]+\*\*|`[^`]+`)/g);
   return parts.map((part, i) => {
     if (part.startsWith("**") && part.endsWith("**")) {
       return (
@@ -137,12 +137,19 @@ function formatInlineText(text) {
         </strong>
       );
     }
+    if (part.startsWith("`") && part.endsWith("`")) {
+      return (
+        <code key={i} className="ai-inline-code">
+          {part.slice(1, -1)}
+        </code>
+      );
+    }
     return part;
   });
 }
 
 /**
- * Editorial Formatter for AI responses supporting paragraphs,
+ * Editorial Formatter for AI responses supporting headings, paragraphs,
  * bullet lists, numbered lists, and bold highlights.
  */
 function FormattedAIResponse({ content }) {
@@ -162,10 +169,20 @@ function FormattedAIResponse({ content }) {
       return;
     }
 
+    const isH3 = /^###\s+/.test(trimmed);
+    const isH2 = /^##\s+/.test(trimmed);
+    const isH1 = /^#\s+/.test(trimmed);
     const isBullet = /^[-*•]\s+/.test(trimmed);
     const isNumber = /^\d+\.\s+/.test(trimmed);
 
-    if (isBullet) {
+    if (isH1 || isH2 || isH3) {
+      if (currentList) {
+        blocks.push(currentList);
+        currentList = null;
+      }
+      const title = trimmed.replace(/^#+\s+/, "");
+      blocks.push({ type: "heading", content: title });
+    } else if (isBullet) {
       const itemText = trimmed.replace(/^[-*•]\s+/, "");
       if (!currentList || currentList.type !== "bullet") {
         if (currentList) blocks.push(currentList);
@@ -195,6 +212,13 @@ function FormattedAIResponse({ content }) {
   return (
     <div className="ai-editorial-content">
       {blocks.map((block, bIdx) => {
+        if (block.type === "heading") {
+          return (
+            <h4 key={bIdx} className="ai-editorial-heading">
+              {formatInlineText(block.content)}
+            </h4>
+          );
+        }
         if (block.type === "paragraph") {
           return (
             <p key={bIdx} className="ai-editorial-p">
@@ -352,11 +376,12 @@ export function ChatScreen({
               {messages.map((msg, idx) => {
                 const isAI = msg.sender === "ai";
                 const isLatestAI = idx === messages.length - 1 && isAI;
-                const isStreamingWaiting = isLatestAI && loading && !msg.text;
+                const isStreamingThis = msg.isStreaming || (isLatestAI && loading);
+                const isStreamingWaiting = isStreamingThis && !msg.text;
 
                 return (
                   <div
-                    key={idx}
+                    key={msg.id || idx}
                     className={`conversation-entry ${isAI ? "assistant-entry" : "user-entry"}`}
                   >
                     {isAI && (
@@ -392,7 +417,8 @@ export function ChatScreen({
                         ) : (
                           <>
                             <FormattedAIResponse content={msg.text} />
-                            {msg.text && (
+                            {/* Message Actions — ONLY rendered after streaming is complete */}
+                            {!isStreamingThis && !loading && msg.text && (
                               <div className="message-action-bar">
                                 <button
                                   type="button"
@@ -413,6 +439,18 @@ export function ChatScreen({
                                     </>
                                   )}
                                 </button>
+
+                                {isLatestAI && (
+                                  <button
+                                    type="button"
+                                    className="action-go-on-btn"
+                                    onClick={() => onSendMessage("Go on, please tell me more about this.")}
+                                    aria-label="Ask MindSetu AI to continue or elaborate"
+                                    title="Continue and elaborate on this topic"
+                                  >
+                                    <span>Go on →</span>
+                                  </button>
+                                )}
                               </div>
                             )}
                           </>

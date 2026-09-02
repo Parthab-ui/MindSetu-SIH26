@@ -144,16 +144,21 @@ export default function App() {
   }
 
   // Send Chat Message with Streaming
-  async function handleSendMessage() {
-    const text = chatInput.trim();
+  async function handleSendMessage(customText = null) {
+    const text = (typeof customText === "string" ? customText : chatInput).trim();
     if (!text || !sessionId || chatLoading) return;
+
+    const userMsgId = `user-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+    const aiMsgId = `ai-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
 
     setChatMessages((prev) => [
       ...prev,
-      { sender: "user", text },
-      { sender: "ai", text: "" },
+      { id: userMsgId, sender: "user", text, timestamp: new Date().toISOString() },
+      { id: aiMsgId, sender: "ai", text: "", isStreaming: true, timestamp: new Date().toISOString() },
     ]);
-    setChatInput("");
+    if (!customText) {
+      setChatInput("");
+    }
     setChatLoading(true);
 
     try {
@@ -166,41 +171,43 @@ export default function App() {
           wellness_summary: analysis?.recommendation ?? null,
         },
         onToken: (token) => {
-          setChatMessages((prev) => {
-            const next = [...prev];
-            const lastIdx = next.length - 1;
-            if (lastIdx >= 0 && next[lastIdx].sender === "ai") {
-              next[lastIdx] = {
-                ...next[lastIdx],
-                text: (next[lastIdx].text || "") + token,
-              };
-            }
-            return next;
-          });
+          setChatMessages((prev) =>
+            prev.map((msg) =>
+              msg.id === aiMsgId
+                ? {
+                    ...msg,
+                    text: (msg.text || "") + token,
+                    isStreaming: true,
+                  }
+                : msg
+            )
+          );
         },
         onComplete: ({ text: replyText, isSafety }) => {
-          setChatMessages((prev) => {
-            const next = [...prev];
-            const lastIdx = next.length - 1;
-            if (lastIdx >= 0 && next[lastIdx].sender === "ai") {
-              next[lastIdx] = { sender: "ai", text: replyText || next[lastIdx].text };
-            }
-            return next;
-          });
+          setChatMessages((prev) =>
+            prev.map((msg) =>
+              msg.id === aiMsgId
+                ? {
+                    ...msg,
+                    text: replyText || msg.text,
+                    isStreaming: false,
+                  }
+                : msg
+            )
+          );
           if (isSafety) setIsCrisis(true);
         },
         onError: (err) => {
           setChatMessages((prev) => {
-            const next = [...prev];
-            const lastIdx = next.length - 1;
             const fallbackText =
               err.name === "AbortError"
                 ? "MindSetu AI took too long to respond. Take a short pause and consider connecting with a trusted colleague or welfare officer."
                 : "MindSetu AI is momentarily reconnecting. You can still use your wellbeing summary and recovery guidance.";
-            if (lastIdx >= 0 && next[lastIdx].sender === "ai") {
-              next[lastIdx] = { sender: "ai", text: fallbackText };
-            }
-            return next;
+            return prev.map((msg) =>
+              msg.id === aiMsgId
+                ? { ...msg, text: msg.text || fallbackText, isStreaming: false, isError: true }
+                : msg
+            );
           });
         },
       });
