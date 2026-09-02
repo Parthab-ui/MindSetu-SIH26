@@ -12,6 +12,13 @@
   --radius-2xl: 36px;
   --radius-full: 9999px;
 
+  /* Safe Area & Mobile Insets */
+  --safe-area-top: env(safe-area-inset-top, 0px);
+  --safe-area-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-area-left: env(safe-area-inset-left, 0px);
+  --safe-area-right: env(safe-area-inset-right, 0px);
+  --touch-target-min: 44px;
+
   /* Easing & Transitions */
   --ease-spring: cubic-bezier(0.175, 0.885, 0.32, 1.275);
   --ease-smooth: cubic-bezier(0.2, 0.8, 0.2, 1);

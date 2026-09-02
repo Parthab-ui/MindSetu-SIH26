@@ -121,7 +121,7 @@ export function WorkloadScreen({ workload, setWorkload, onAnalyze, onBack, loadi
           </div>
         )}
 
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: "8px" }}>
+        <div className="screen-actions-wrap">
           <button type="button" className="btn btn-ghost" onClick={onBack} disabled={loading}>
             ← Back
           </button>

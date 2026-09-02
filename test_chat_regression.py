@@ -6,7 +6,7 @@ import urllib.request
 
 BASE_URL = "https://mindsetu-sih26.vercel.app"
 
-def test_chat_turn(session_id, message, history=None):
+def _execute_chat_turn(session_id, message, history=None):
     url = f"{BASE_URL}/api/chat"
     payload = {
         "session_id": session_id,
@@ -67,7 +67,7 @@ def run_regression():
     # 2. Test Prompt 1: Boundaries under continuous duty
     p1 = "How can I set realistic boundaries when duty pressure is continuous?"
     print(f"\n--- Testing Prompt 1: '{p1}' ---")
-    events1, reply1 = test_chat_turn(session_id, p1)
+    events1, reply1 = _execute_chat_turn(session_id, p1)
     
     # Assertions for single response bubble
     token_events1 = [e for e in events1 if e.get("type") == "token"]
@@ -85,7 +85,7 @@ def run_regression():
         {"sender": "user", "text": p1},
         {"sender": "ai", "text": reply1}
     ]
-    events2, reply2 = test_chat_turn(session_id, p2, history)
+    events2, reply2 = _execute_chat_turn(session_id, p2, history)
     
     token_events2 = [e for e in events2 if e.get("type") == "token"]
     assert len(token_events2) > 0, "Expected token events in stream"
@@ -103,7 +103,7 @@ def run_regression():
         {"sender": "user", "text": p2},
         {"sender": "ai", "text": reply2}
     ])
-    events3, reply3 = test_chat_turn(session_id, p3, history)
+    events3, reply3 = _execute_chat_turn(session_id, p3, history)
     assert len(reply3) > 10, f"Expected continuation, got {reply3}"
     print(f" [PASS] Continuation Response Assembled (length: {len(reply3)} chars)")
     print(f" [PASS] Sample Text: '{reply3[:120]}...'")

@@ -117,7 +117,7 @@ export function WellnessScreen({ answers, setAnswers, onNext, onBack, loading, e
         </div>
       )}
 
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: "32px" }}>
+      <div className="screen-actions-wrap">
         <button type="button" className="btn btn-ghost" onClick={onBack} disabled={loading}>
           ← Back
         </button>

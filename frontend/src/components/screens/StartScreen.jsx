@@ -96,7 +96,7 @@ export function StartScreen({ onStartSession, onCancel, loading, error }) {
             </div>
           )}
 
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: "8px" }}>
+          <div className="screen-actions-wrap">
             <button type="button" className="btn btn-ghost" onClick={onCancel} disabled={loading}>
               ← Back
             </button>

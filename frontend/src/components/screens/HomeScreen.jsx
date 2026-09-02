@@ -66,33 +66,17 @@ export function HomeScreen({ onStart }) {
           </button>
 
           {/* Trust chips */}
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "1fr 1fr",
-              gap: "10px",
-              maxWidth: "520px",
-            }}
-          >
+          <div className="trust-grid">
             {trustItems.map((item, i) => (
               <div
                 key={i}
+                className="trust-card"
                 style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "10px",
-                  padding: "10px 14px",
-                  borderRadius: "var(--radius-md)",
-                  background: "var(--bg-surface-card)",
-                  border: "1px solid var(--border-subtle)",
-                  fontSize: "0.83rem",
-                  color: "var(--text-secondary)",
-                  fontWeight: 500,
                   animation: `slideUp ${360 + i * 60}ms cubic-bezier(0.2,0.8,0.2,1) both`,
                 }}
               >
-                <span style={{ fontSize: "1rem", flexShrink: 0 }}>{item.icon}</span>
-                {item.text}
+                <span className="trust-icon">{item.icon}</span>
+                <span className="trust-text">{item.text}</span>
               </div>
             ))}
           </div>
