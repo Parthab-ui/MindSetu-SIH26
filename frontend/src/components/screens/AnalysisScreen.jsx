@@ -30,6 +30,7 @@ export function AnalysisScreen({
   onNavigateToChat,
   onNavigateToMood,
   onOpenResearchModal,
+  onNavigateToDoctors,
 }) {
   const level = String(analysis?.risk_level || "unknown").toLowerCase();
 
@@ -137,8 +138,11 @@ export function AnalysisScreen({
 
         {/* Action Buttons */}
         <div className="triage-actions-wrap">
-          <button id="analysis-chat-btn" className="btn btn-primary" onClick={onNavigateToChat}>
-            Talk to AI Companion →
+          <button id="analysis-doctor-btn" className="btn btn-primary" onClick={onNavigateToDoctors}>
+            Connect With a Doctor →
+          </button>
+          <button id="analysis-chat-btn" className="btn btn-secondary" onClick={onNavigateToChat}>
+            Talk to AI Companion
           </button>
           <button className="btn btn-secondary" onClick={onNavigateToMood}>
             Record Mood
@@ -152,6 +156,44 @@ export function AnalysisScreen({
             <span className="research-btn-secondary">Explainable ML Lab 🔬</span>
           </button>
         </div>
+      </div>
+
+      {/* Supportive Next Step: Professional Consultation */}
+      <div
+        className="card card-elevated"
+        style={{
+          marginTop: "20px",
+          padding: "20px 24px",
+          background: "linear-gradient(135deg, rgba(20, 184, 166, 0.08) 0%, var(--bg-surface-elevated) 100%)",
+          border: "1.5px solid var(--primary-dim)",
+          borderRadius: "var(--radius-lg)",
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          flexWrap: "wrap",
+          gap: "16px",
+        }}
+      >
+        <div style={{ flex: 1, minWidth: "260px" }}>
+          <span className="eyebrow" style={{ color: "var(--primary)", letterSpacing: "0.06em" }}>
+            YOUR NEXT STEP
+          </span>
+          <h3 style={{ fontSize: "1.15rem", fontWeight: 800, margin: "2px 0 6px", color: "var(--text-primary)" }}>
+            Connect With a Qualified Doctor
+          </h3>
+          <p style={{ margin: 0, fontSize: "0.88rem", color: "var(--text-secondary)", lineHeight: "1.5", maxWidth: "560px" }}>
+            Talking with a qualified professional can help you better understand your results and decide what to do next in complete confidentiality.
+          </p>
+        </div>
+
+        <button
+          type="button"
+          className="btn btn-primary"
+          onClick={onNavigateToDoctors}
+          style={{ padding: "12px 22px", fontSize: "0.92rem", fontWeight: 800, whiteSpace: "nowrap" }}
+        >
+          Connect With a Doctor →
+        </button>
       </div>
 
       {/* Metrics Section */}

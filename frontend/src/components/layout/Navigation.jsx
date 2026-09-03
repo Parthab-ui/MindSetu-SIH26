@@ -3,6 +3,7 @@ export function Navigation({ screen, setScreen, hasAnalysis }) {
     { id: "wellness", label: "Wellbeing Pulse" },
     { id: "workload", label: "Duty & Context" },
     { id: "analysis", label: "Welfare Summary", disabled: !hasAnalysis },
+    { id: "doctors",  label: "Doctor Connect",  disabled: !hasAnalysis },
     { id: "chat",     label: "AI Companion",   disabled: !hasAnalysis },
     { id: "mood",     label: "Mood Check-in" },
   ];
@@ -10,7 +11,13 @@ export function Navigation({ screen, setScreen, hasAnalysis }) {
   return (
     <nav className="stepper-nav" aria-label="Workflow progress">
       {steps.map((step, index) => {
-        const isActive = screen === step.id;
+        const isDoctorGroup = step.id === "doctors" && (
+          screen === "doctors" ||
+          screen === "doctor-profile" ||
+          screen === "appointments" ||
+          screen === "consultation"
+        );
+        const isActive = isDoctorGroup || screen === step.id;
         return (
           <button
             key={step.id}

@@ -11,6 +11,12 @@ import { AnalysisScreen } from "./components/screens/AnalysisScreen";
 import { ResearchLabModal } from "./components/screens/ResearchLabModal";
 import { ChatScreen } from "./components/screens/ChatScreen";
 import { MoodScreen } from "./components/screens/MoodScreen";
+import { DoctorDirectoryScreen } from "./components/screens/DoctorDirectoryScreen";
+import { DoctorProfileScreen } from "./components/screens/DoctorProfileScreen";
+import { AppointmentsScreen } from "./components/screens/AppointmentsScreen";
+import { ConsultationScreen } from "./components/screens/ConsultationScreen";
+import { BookingConfirmationModal } from "./components/screens/BookingConfirmationModal";
+import { PreCallCheckModal } from "./components/screens/PreCallCheckModal";
 import { api } from "./services/api";
 
 export default function App() {
@@ -61,6 +67,14 @@ export default function App() {
   const [moodHistory, setMoodHistory] = useState([]);
   const [moodTrend, setMoodTrend] = useState([]);
 
+  // Doctor & Appointment State
+  const [selectedDoctor, setSelectedDoctor] = useState(null);
+  const [confirmedAppointment, setConfirmedAppointment] = useState(null);
+  const [activeAppointment, setActiveAppointment] = useState(null);
+  const [initialConsultationDevices, setInitialConsultationDevices] = useState({ cameraOn: true, micOn: true });
+  const [showPreCallModal, setShowPreCallModal] = useState(false);
+  const [hasAppointments, setHasAppointments] = useState(false);
+
   // Global UI State
   const [loading, setLoading] = useState(false);
   const [loadingLabel, setLoadingLabel] = useState("Processing…");
@@ -83,6 +97,10 @@ export default function App() {
     setChatMessages([]);
     setSelectedMood(null);
     setMoodNote("");
+    setSelectedDoctor(null);
+    setConfirmedAppointment(null);
+    setActiveAppointment(null);
+    setShowPreCallModal(false);
     setError("");
   }
 
@@ -276,6 +294,28 @@ export default function App() {
       .catch(() => {});
   }, []);
 
+  function handleSelectDoctor(doc) {
+    setSelectedDoctor(doc);
+    setScreen("doctor-profile");
+  }
+
+  function handleBookingSuccess(appointment) {
+    setConfirmedAppointment(appointment);
+    setHasAppointments(true);
+  }
+
+  function handleStartJoinAppointment(apt) {
+    setActiveAppointment(apt);
+    setShowPreCallModal(true);
+  }
+
+  function handleConfirmJoinConsultation(apt, deviceSettings) {
+    setShowPreCallModal(false);
+    setActiveAppointment(apt);
+    setInitialConsultationDevices(deviceSettings);
+    setScreen("consultation");
+  }
+
   return (
     <div className="app-shell">
       {loading && (
@@ -356,6 +396,43 @@ export default function App() {
             onNavigateToChat={() => setScreen("chat")}
             onNavigateToMood={() => setScreen("mood")}
             onOpenResearchModal={() => setIsResearchModalOpen(true)}
+            onNavigateToDoctors={() => setScreen("doctors")}
+          />
+        )}
+
+        {screen === "doctors" && (
+          <DoctorDirectoryScreen
+            onSelectDoctor={handleSelectDoctor}
+            onNavigateToAppointments={() => setScreen("appointments")}
+            onBack={() => setScreen(analysis ? "analysis" : "home")}
+            hasAppointments={hasAppointments}
+          />
+        )}
+
+        {screen === "doctor-profile" && selectedDoctor && (
+          <DoctorProfileScreen
+            doctor={selectedDoctor}
+            sessionId={sessionId}
+            onBookingSuccess={handleBookingSuccess}
+            onBack={() => setScreen("doctors")}
+          />
+        )}
+
+        {screen === "appointments" && (
+          <AppointmentsScreen
+            sessionId={sessionId}
+            onJoinAppointment={handleStartJoinAppointment}
+            onNavigateToDoctors={() => setScreen("doctors")}
+            onBack={() => setScreen(analysis ? "analysis" : "home")}
+          />
+        )}
+
+        {screen === "consultation" && activeAppointment && (
+          <ConsultationScreen
+            appointment={activeAppointment}
+            initialDevices={initialConsultationDevices}
+            onEndCall={() => setScreen("appointments")}
+            onNavigateToSummary={() => setScreen("analysis")}
           />
         )}
 
@@ -385,6 +462,25 @@ export default function App() {
           />
         )}
       </main>
+
+      {confirmedAppointment && (
+        <BookingConfirmationModal
+          appointment={confirmedAppointment}
+          onViewAppointments={() => {
+            setConfirmedAppointment(null);
+            setScreen("appointments");
+          }}
+          onClose={() => setConfirmedAppointment(null)}
+        />
+      )}
+
+      {showPreCallModal && activeAppointment && (
+        <PreCallCheckModal
+          appointment={activeAppointment}
+          onJoin={handleConfirmJoinConsultation}
+          onClose={() => setShowPreCallModal(false)}
+        />
+      )}
 
       <ResearchLabModal
         isOpen={isResearchModalOpen}

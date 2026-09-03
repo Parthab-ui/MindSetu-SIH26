@@ -126,6 +126,50 @@ export const api = {
     });
   },
 
+  // Doctor Connect & Appointment Scheduling
+  async getDoctors({ specialization = "", availability = "" } = {}) {
+    const params = new URLSearchParams();
+    if (specialization) params.append("specialization", specialization);
+    if (availability) params.append("availability", availability);
+    const qs = params.toString() ? `?${params.toString()}` : "";
+    return request(`/api/doctors${qs}`);
+  },
+
+  async getDoctor(doctorId) {
+    return request(`/api/doctors/${doctorId}`);
+  },
+
+  async getDoctorAvailability(doctorId, dateStr) {
+    return request(`/api/doctors/${doctorId}/availability?date=${encodeURIComponent(dateStr)}`);
+  },
+
+  async bookAppointment({ sessionId, doctorId, appointmentDate, appointmentTime, notes = "" }) {
+    return request("/api/appointments", {
+      method: "POST",
+      body: JSON.stringify({
+        session_id: sessionId,
+        doctor_id: doctorId,
+        appointment_date: appointmentDate,
+        appointment_time: appointmentTime,
+        notes: notes || null,
+      }),
+    });
+  },
+
+  async getAppointments(sessionId) {
+    return request(`/api/appointments?session_id=${encodeURIComponent(sessionId)}`);
+  },
+
+  async getAppointment(appointmentId) {
+    return request(`/api/appointments/${appointmentId}`);
+  },
+
+  async cancelAppointment(appointmentId) {
+    return request(`/api/appointments/${appointmentId}/cancel`, {
+      method: "POST",
+    });
+  },
+
 
   // Gemini AI Companion Streaming
   async streamChat({ sessionId, message, history, wellbeingContext, onToken, onComplete, onError }) {
