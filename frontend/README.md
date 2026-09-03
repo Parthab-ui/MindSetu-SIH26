@@ -20,18 +20,22 @@ The frontend runs locally on `http://localhost:5173` and connects to the FastAPI
 
 ## 2. Core User Journey
 
-```
-Start Screen (Anonymous Consent)
+```text
+Start Screen (Anonymous Consent & Branch Selection)
        ↓
-Wellness Pulse (6-Item Check-In)
+Wellness Pulse (6-Item Clinically Mapped Check-In)
        ↓
 Workload & Duty Context (Shift Hours, Night Duties, Recovery)
+       ↓
+Calibrated Voice Check (10–15s Standardized Script + Live Waveform)
        ↓
 Deterministic Welfare Triage Dashboard (55% Wellness + 45% Workload)
        ↓
 Research Lab Modal (LightGBM Inference + TreeSHAP Waterfall XAI)
        ↓
-MindSetu AI Companion (Google Gemini 2.5 Flash Streaming NDJSON)
+Doctor Connect & Video Consultation (Appointment Booking & WebRTC Video)
+       ↓
+MindSetu AI Companion (Google Gemini 3.5 Flash Streaming NDJSON)
        ↓
 Crisis Escalation (Tele-MANAS 14416 & KIRAN 1800-599-0019)
 ```
@@ -40,6 +44,8 @@ Crisis Escalation (Tele-MANAS 14416 & KIRAN 1800-599-0019)
 
 ## 3. UI/UX & Design System Features
 
+- **Calibrated Voice Screening Experience**: 10–15s target (~12s preferred) with a standardized speaking script, compact `00:07 / 00:12` readout, dynamic progress bar, and real-time Web Audio API `AnalyserNode` frequency waveform rendering.
+- **In-Browser Tele-Consultation**: Direct appointment booking with Military Medical Officers and Clinical Psychologists, complete with WebRTC camera/microphone controls, encrypted session notes, and timer.
 - **Integrated Capsule Composer**: Auto-growing prompt input with circular send action, keyboard shortcuts (<kbd>Enter</kbd> / <kbd>Shift</kbd>+<kbd>Enter</kbd>).
 - **Rich Suggestion Cards**: 2x2 responsive grid on desktop, single-column stack on mobile with full context descriptions.
 - **Editorial Conversational Typography**: Clean line spacing, structured bullet lists, copy-to-clipboard actions with checkmark feedback.

@@ -249,3 +249,96 @@ Runs inference through the trained LightGBM booster and calculates exact TreeSHA
 - `POST /api/chat`: Streams real-time empathetic coping responses as Server-Sent NDJSON (`application/x-ndjson`).
 - `POST /api/mood`: Logs daily recovery mood rating (1–5).
 - `GET /api/dashboard/mood-trend`: Fetches 7-day mood trend averages.
+
+---
+
+## 7. Doctor Directory, Appointments & Tele-Consultation Endpoints
+
+### `GET /api/doctors`
+Lists verified Medical Officers and Clinical Psychologists. Supports filtering by specialization.
+
+- **Query Parameters**:
+  - `specialization` (optional, string): Filter by clinical domain (e.g. `Trauma & PTSD`, `Operational Stress`, `Sleep & Circadian`).
+- **Response `200 OK`**:
+  ```json
+  [
+    {
+      "id": "doc-001",
+      "name": "Col. Dr. Rajesh Sharma",
+      "rank_or_title": "Col. (Retd.) / Senior Psychiatrist",
+      "specialization": "Trauma & Operational Stress",
+      "experience_years": 18,
+      "bio": "Former Armed Forces Medical Services (AFMS) lead specializing in combat trauma recovery.",
+      "avatar_url": "/avatars/doc1.png",
+      "available_today": true,
+      "languages": ["English", "Hindi"],
+      "rating": 4.9,
+      "total_consultations": 342
+    }
+  ]
+  ```
+
+---
+
+### `GET /api/doctors/{doctor_id}/availability`
+Fetches available consultation time slots for a given doctor on a specific date.
+
+- **Path Parameter**: `doctor_id` (string)
+- **Query Parameter**: `date` (string, `YYYY-MM-DD`)
+- **Response `200 OK`**:
+  ```json
+  {
+    "doctor_id": "doc-001",
+    "date": "2026-09-04",
+    "slots": [
+      { "slot": "10:00 - 10:30", "available": true },
+      { "slot": "11:00 - 11:30", "available": false },
+      { "slot": "14:00 - 14:30", "available": true }
+    ]
+  }
+  ```
+
+---
+
+### `POST /api/appointments`
+Schedules a confidential tele-consultation appointment.
+
+- **Request Body**:
+  ```json
+  {
+    "doctor_id": "doc-001",
+    "session_id": "9f2e3b1a-4c5d-6e7f-8a9b-0c1d2e3f4a5b",
+    "appointment_date": "2026-09-04",
+    "time_slot": "10:00 - 10:30",
+    "reason_for_consultation": "Tactical hypervigilance and sleep disruption after deployment.",
+    "confidentiality_acknowledged": true
+  }
+  ```
+- **Response `201 Created`**:
+  ```json
+  {
+    "id": "appt-7c89f",
+    "doctor_id": "doc-001",
+    "session_id": "9f2e3b1a-4c5d-6e7f-8a9b-0c1d2e3f4a5b",
+    "appointment_date": "2026-09-04",
+    "time_slot": "10:00 - 10:30",
+    "status": "scheduled",
+    "consultation_room_id": "room-appt-7c89f"
+  }
+  ```
+
+---
+
+### `GET /api/appointments/session/{session_id}`
+Retrieves all appointments scheduled under the current anonymous session.
+
+---
+
+### `POST /api/appointments/{appointment_id}/cancel`
+Cancels a scheduled appointment with a mandatory cancellation reason.
+
+---
+
+### `GET /api/consultation/{appointment_id}` & `POST /api/consultation/{appointment_id}/notes`
+Manages the in-browser consultation room metadata and allows attending medical personnel to record encrypted clinical observations.
+
