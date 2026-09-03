@@ -116,8 +116,8 @@ a:focus-visible,
   inset: 0;
   z-index: 100;
   background: var(--bg-overlay);
-  backdrop-filter: blur(6px);
   -webkit-backdrop-filter: blur(6px);
+  backdrop-filter: blur(6px);
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -167,8 +167,8 @@ a:focus-visible,
   justify-content: space-between;
   padding: max(12px, var(--safe-area-top, 0px)) 24px 12px;
   background: var(--nav-backdrop);
-  backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
+  backdrop-filter: blur(20px);
   border-bottom: 1px solid var(--border-subtle);
   box-shadow: 0 1px 0 var(--border-subtle);
   gap: 12px;
@@ -257,12 +257,10 @@ a:focus-visible,
   gap: 6px;
   padding: 8px 20px;
   background: var(--nav-backdrop);
-  backdrop-filter: blur(14px);
   -webkit-backdrop-filter: blur(14px);
+  backdrop-filter: blur(14px);
   border-bottom: 1px solid var(--border-subtle);
   overflow-x: auto;
-  -webkit-overflow-scrolling: touch;
-  scrollbar-width: none;
 }
 .stepper-nav::-webkit-scrollbar { display: none; }
 
@@ -332,8 +330,8 @@ a:focus-visible,
 /* ── Cards & Surfaces ────────────────────────────────────────── */
 .card {
   background: var(--bg-surface-card);
-  backdrop-filter: blur(18px);
   -webkit-backdrop-filter: blur(18px);
+  backdrop-filter: blur(18px);
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-lg);
   padding: 28px;
@@ -705,6 +703,7 @@ a:focus-visible,
   cursor: pointer;
   outline: none;
   touch-action: manipulation;
+  -webkit-user-select: none;
   user-select: none;
   transition: all 180ms var(--ease-smooth);
 }
@@ -1104,8 +1103,8 @@ a:focus-visible,
   border-radius: var(--radius-2xl);
   overflow: hidden;
   box-shadow: var(--shadow-lg);
-  backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
+  backdrop-filter: blur(20px);
   position: relative;
   animation: slideUp 320ms var(--ease-smooth) both;
 }
@@ -1259,6 +1258,7 @@ a:focus-visible,
   line-height: 1.42;
   display: -webkit-box;
   -webkit-line-clamp: 2;
+  line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
@@ -1813,8 +1813,8 @@ a:focus-visible,
   inset: 0;
   z-index: 50;
   background: var(--bg-overlay);
-  backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1951,8 +1951,8 @@ a:focus-visible,
   border: 1px solid var(--border-strong);
   border-radius: var(--radius-md);
   box-shadow: var(--shadow-lg);
-  backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
+  backdrop-filter: blur(20px);
   animation: fadeIn 150ms var(--ease-smooth);
 }
 
@@ -2170,6 +2170,7 @@ a:focus-visible,
   font-weight: 600;
   outline: none;
   transition: color var(--transition-fast);
+  -webkit-user-select: none;
   user-select: none;
 }
 
@@ -2228,7 +2229,7 @@ a:focus-visible,
   .hero-grid {
     grid-template-columns: 1fr;
     gap: 32px;
-    min-height: auto;
+    min-height: 0;
     padding: 16px 0;
   }
   .page-container {
@@ -2303,7 +2304,6 @@ a:focus-visible,
   .mood-chart-box {
     padding: 16px 14px;
     overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
   }
   .mood-bar-chart {
     min-width: 260px;

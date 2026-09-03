@@ -1,6 +1,4 @@
-import { useState } from "react";
 import { Badge } from "../common/Badge";
-import { InfoTooltip } from "../common/InfoTooltip";
 
 function ScoreBar({ value, level, label = "Score progress" }) {
   const pct = Math.min(Math.max(Number(value) || 0, 0), 100);
@@ -25,7 +23,6 @@ function ScoreBar({ value, level, label = "Score progress" }) {
 export function AnalysisScreen({
   analysis,
   answers = [],
-  workload = {},
   voiceResult = null,
   onNavigateToChat,
   onNavigateToMood,
@@ -89,7 +86,6 @@ export function AnalysisScreen({
       ? "Check in again in 3–5 days."
       : "Check in again in 1–2 weeks.";
 
-  const wellnessVal = analysis?.wellness_score ?? null;
   const workloadVal = analysis?.workload_score ?? null;
 
   const workloadLevel =

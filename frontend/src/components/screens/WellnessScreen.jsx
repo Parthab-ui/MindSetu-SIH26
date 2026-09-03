@@ -2,7 +2,7 @@ import { useState } from "react";
 import { ProgressBar } from "../common/ProgressBar";
 import { InfoTooltip } from "../common/InfoTooltip";
 
-export const UNIFORMED_WELLNESS_QUESTIONS = [
+const UNIFORMED_WELLNESS_QUESTIONS = [
   {
     domain: "Depression Dimension",
     tag: "Exhaustion",

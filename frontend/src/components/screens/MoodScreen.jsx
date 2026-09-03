@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { InfoTooltip } from "../common/InfoTooltip";
 import { Badge } from "../common/Badge";
 
 const MOODS = [
@@ -16,14 +15,12 @@ export function MoodScreen({
   moodNote,
   setMoodNote,
   onSaveMood,
-  moodHistory,
   moodTrend,
   assessmentHistory = [],
   loading,
 }) {
   const [activeTab, setActiveTab] = useState("mood");
   const trendEntries = moodTrend || [];
-  const historyEntries = moodHistory || [];
 
   const totalEntries = trendEntries.reduce((acc, curr) => acc + (curr.entries || 1), 0);
   const avgMood =
