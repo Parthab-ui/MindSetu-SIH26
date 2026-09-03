@@ -1,8 +1,9 @@
+import os
 import urllib.request
 import json
 import uuid
 
-BASE = "https://mindsetu-sih26.vercel.app"
+BASE = os.getenv("TEST_BASE_URL", "http://127.0.0.1:8000")
 
 def post_json(path, data):
     req = urllib.request.Request(

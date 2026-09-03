@@ -1,10 +1,11 @@
 """MindSetu-SIH26 Chat Streaming Regression & Contract Test Suite."""
 import json
+import os
 import sys
 import urllib.error
 import urllib.request
 
-BASE_URL = "https://mindsetu-sih26.vercel.app"
+BASE_URL = os.getenv("TEST_BASE_URL", "http://127.0.0.1:8000")
 
 def _execute_chat_turn(session_id, message, history=None):
     url = f"{BASE_URL}/api/chat"

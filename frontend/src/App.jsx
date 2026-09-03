@@ -139,7 +139,6 @@ export default function App() {
     setLoading(true);
     setLoadingLabel("Generating your multimodal triage analysis…");
     try {
-      await api.submitWorkload(sessionId, { role, unit, ...workload });
       const result = await api.runAnalysis(sessionId);
       setAnalysis(result);
 

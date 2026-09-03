@@ -341,9 +341,15 @@ function audioBufferToWav(audioBuffer) {
           <span>In-memory analysis. Audio is not saved.</span>
         </div>
 
+        {error && (
+          <div className="error-alert" role="alert" style={{ marginBottom: "16px" }}>
+            {error}
+          </div>
+        )}
+
         {/* Actions */}
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-          <button type="button" className="btn btn-ghost" onClick={onBack} disabled={isRecording || localProcessing}>
+          <button type="button" className="btn btn-ghost" onClick={onBack} disabled={isRecording || localProcessing || loading}>
             ← Back
           </button>
           <div style={{ display: "flex", gap: "8px" }}>
@@ -351,7 +357,7 @@ function audioBufferToWav(audioBuffer) {
               type="button"
               className="btn btn-ghost"
               onClick={onNext}
-              disabled={isRecording || localProcessing}
+              disabled={isRecording || localProcessing || loading}
             >
               Skip
             </button>
@@ -359,9 +365,9 @@ function audioBufferToWav(audioBuffer) {
               type="button"
               className="btn btn-primary"
               onClick={onNext}
-              disabled={isRecording || localProcessing}
+              disabled={isRecording || localProcessing || loading}
             >
-              View Summary →
+              {loading ? "Analyzing…" : "View Summary →"}
             </button>
           </div>
         </div>

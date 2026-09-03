@@ -1,8 +1,9 @@
+import os
 import urllib.request
 import json
 import uuid
 
-BASE = "https://mindsetu-sih26.vercel.app"
+BASE = os.getenv("TEST_BASE_URL", "http://127.0.0.1:8000")
 
 print("=== 1. Testing Frontend Static SPA Root Page ===")
 req = urllib.request.Request(BASE, headers={"User-Agent": "Mozilla/5.0"})

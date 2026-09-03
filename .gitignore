@@ -42,5 +42,4 @@ scratch/
 backend/ml/data/
 .neon
 
-.vercel
 .env*

@@ -66,6 +66,8 @@ def _init_pool():
             min_size=0,
             max_size=10,
             open=True,
+            check=ConnectionPool.check_connection,
+            max_idle=60.0,
         )
 
 
@@ -117,7 +119,6 @@ app = FastAPI(
 app.add_middleware(
     CORSMiddleware,
     allow_origins=CORS_ORIGINS,
-    allow_origin_regex=r"https:\/\/.*\.vercel\.app",
     allow_credentials=True,
     allow_methods=["GET", "POST", "OPTIONS"],
     allow_headers=["Content-Type", "Authorization"],

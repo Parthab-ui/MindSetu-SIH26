@@ -22,7 +22,7 @@
 
 - **Frontend Client:** React 19 + Vite (281 KB production bundle, compiling in ~320ms).
 - **Backend API:** FastAPI (Async ASGI, Python 3.11+).
-- **Serverless Production Adapter:** Vercel Serverless Function (`api/index.py`).
+- **Backend Service:** FastAPI application (`backend/sih26186_server.py`).
 - **Persistence:** PostgreSQL (Neon Lakebase) via connection pool (`psycopg_pool`).
 - **Research ML Engine:** LightGBM classifier with polynomial-time TreeSHAP ($O(TLD^2)$) feature attribution (<15ms latency).
 - **Voice ML Engine:** 24-feature acoustic and prosodic biomarker extractor (NumPy/SciPy) + trained GradientBoostingClassifier (<15ms latency).
