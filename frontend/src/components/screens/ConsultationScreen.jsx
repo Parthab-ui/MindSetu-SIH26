@@ -9,10 +9,13 @@ export function ConsultationScreen({
   const localVideoRef = useRef(null);
   const localStreamRef = useRef(null);
 
+  const initialCameraOn = initialDevices?.cameraOn ?? true;
+  const initialMicOn = initialDevices?.micOn ?? true;
+
   const [callStatus, setCallStatus] = useState("connecting"); // 'connecting', 'connected', 'ended', 'error'
   const [errorMessage, setErrorMessage] = useState("");
-  const [cameraOn, setCameraOn] = useState(initialDevices.cameraOn ?? true);
-  const [micOn, setMicOn] = useState(initialDevices.micOn ?? true);
+  const [cameraOn, setCameraOn] = useState(initialCameraOn);
+  const [micOn, setMicOn] = useState(initialMicOn);
   const [callDuration, setCallDuration] = useState(0);
   const [showNotesDrawer, setShowNotesDrawer] = useState(false);
   const [showEndDialog, setShowEndDialog] = useState(false);
@@ -20,6 +23,7 @@ export function ConsultationScreen({
   // Setup user's local video feed
   useEffect(() => {
     let active = true;
+    const videoElement = localVideoRef.current;
 
     async function initUserMedia() {
       try {
@@ -41,10 +45,10 @@ export function ConsultationScreen({
 
         // Apply initial mute/video states
         stream.getVideoTracks().forEach((t) => {
-          t.enabled = initialDevices.cameraOn ?? true;
+          t.enabled = initialCameraOn;
         });
         stream.getAudioTracks().forEach((t) => {
-          t.enabled = initialDevices.micOn ?? true;
+          t.enabled = initialMicOn;
         });
 
         if (localVideoRef.current) {
@@ -69,11 +73,32 @@ export function ConsultationScreen({
 
     return () => {
       active = false;
+      if (videoElement) {
+        videoElement.srcObject = null;
+      }
       if (localStreamRef.current) {
         localStreamRef.current.getTracks().forEach((t) => t.stop());
+        localStreamRef.current = null;
       }
     };
-  }, [initialDevices]);
+  }, [initialCameraOn, initialMicOn]);
+
+  // Synchronize video element playback and stream attachment when camera is turned on
+  useEffect(() => {
+    if (cameraOn && localVideoRef.current && localStreamRef.current) {
+      if (localVideoRef.current.srcObject !== localStreamRef.current) {
+        localVideoRef.current.srcObject = localStreamRef.current;
+      }
+      const playPromise = localVideoRef.current.play();
+      if (playPromise !== undefined) {
+        playPromise.catch((err) => {
+          if (err?.name !== "AbortError") {
+            console.warn("Local video play warning:", err);
+          }
+        });
+      }
+    }
+  }, [cameraOn]);
 
   // Call timer
   useEffect(() => {
@@ -87,26 +112,45 @@ export function ConsultationScreen({
   }, [callStatus]);
 
   const toggleCamera = () => {
+    const nextCameraOn = !cameraOn;
     if (localStreamRef.current) {
       localStreamRef.current.getVideoTracks().forEach((track) => {
-        track.enabled = !cameraOn;
+        track.enabled = nextCameraOn;
       });
     }
-    setCameraOn(!cameraOn);
+    if (nextCameraOn && localVideoRef.current && localStreamRef.current) {
+      if (localVideoRef.current.srcObject !== localStreamRef.current) {
+        localVideoRef.current.srcObject = localStreamRef.current;
+      }
+      const playPromise = localVideoRef.current.play();
+      if (playPromise !== undefined) {
+        playPromise.catch((err) => {
+          if (err?.name !== "AbortError") {
+            console.warn("Local video play warning:", err);
+          }
+        });
+      }
+    }
+    setCameraOn(nextCameraOn);
   };
 
   const toggleMic = () => {
+    const nextMicOn = !micOn;
     if (localStreamRef.current) {
       localStreamRef.current.getAudioTracks().forEach((track) => {
-        track.enabled = !micOn;
+        track.enabled = nextMicOn;
       });
     }
-    setMicOn(!micOn);
+    setMicOn(nextMicOn);
   };
 
   const handleEndCall = () => {
+    if (localVideoRef.current) {
+      localVideoRef.current.srcObject = null;
+    }
     if (localStreamRef.current) {
       localStreamRef.current.getTracks().forEach((t) => t.stop());
+      localStreamRef.current = null;
     }
     setCallStatus("ended");
   };
@@ -459,20 +503,20 @@ export function ConsultationScreen({
               justifyContent: "center",
             }}
           >
-            {cameraOn ? (
-              <video
-                ref={localVideoRef}
-                autoPlay
-                playsInline
-                muted
-                style={{
-                  width: "100%",
-                  height: "100%",
-                  objectFit: "cover",
-                  transform: "scaleX(-1)",
-                }}
-              />
-            ) : (
+            <video
+              ref={localVideoRef}
+              autoPlay
+              playsInline
+              muted
+              style={{
+                width: "100%",
+                height: "100%",
+                objectFit: "cover",
+                transform: "scaleX(-1)",
+                display: cameraOn ? "block" : "none",
+              }}
+            />
+            {!cameraOn && (
               <div style={{ textAlign: "center", color: "var(--text-muted)", fontSize: "0.72rem" }}>
                 <span style={{ fontSize: "1.4rem", display: "block" }}>📷</span>
                 <span>Camera off</span>

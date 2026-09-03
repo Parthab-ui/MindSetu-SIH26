@@ -104,3 +104,59 @@ def test_voice_corrupted_audio_rejection():
     assert res.status_code in (400, 422)
     assert "detail" in res.json() or "error" in res.json()
 
+
+def test_voice_analyze_with_10s_12s_15s_durations():
+    import numpy as np
+    sr = 16000
+    for d in (10.0, 12.0, 15.0):
+        n = int(sr * d)
+        t = np.linspace(0, d, n, endpoint=False)
+        f0 = 140.0 + 25.0 * np.sin(2 * np.pi * 1.5 * t)
+        audio = 0.05 * np.sin(2 * np.pi * f0 * t) + 0.02 * np.sin(2 * np.pi * 2 * f0 * t)
+        pause_mask = (t % 1.5) > 1.1
+        audio[pause_mask] = 0.001 * np.random.randn(int(np.sum(pause_mask)))
+        pcm = (np.clip(audio, -1.0, 1.0) * 32767).astype(np.int16)
+
+        bio = io.BytesIO()
+        with wave.open(bio, "wb") as wf:
+            wf.setnchannels(1)
+            wf.setsampwidth(2)
+            wf.setframerate(sr)
+            wf.writeframes(pcm.tobytes())
+        wav_bytes = bio.getvalue()
+
+        files = {"audio": (f"sample_{int(d)}s.wav", wav_bytes, "audio/wav")}
+        data = {"session_id": f"test-duration-{int(d)}s"}
+        res = client.post("/api/sih26186/voice/analyze", data=data, files=files)
+        assert res.status_code == 200
+        body = res.json()
+        assert body["status"] == "success"
+        assert len(body["features"]) == 24
+        assert not any(np.isnan(v) or np.isinf(v) for v in body["features"].values())
+        assert body["audio_quality"] == "good"
+        assert body["confidence"] >= 0.70
+        assert 0 <= body["depression_signal"] <= 100
+
+
+def test_voice_analyze_rejects_silent_audio():
+    import numpy as np
+    sr = 16000
+    d = 12.0
+    n = int(sr * d)
+    # Silent audio with barely 1e-5 noise
+    audio = np.random.normal(0, 1e-5, n)
+    pcm = (np.clip(audio, -1.0, 1.0) * 32767).astype(np.int16)
+    bio = io.BytesIO()
+    with wave.open(bio, "wb") as wf:
+        wf.setnchannels(1)
+        wf.setsampwidth(2)
+        wf.setframerate(sr)
+        wf.writeframes(pcm.tobytes())
+    silent_wav = bio.getvalue()
+
+    files = {"audio": ("silent.wav", silent_wav, "audio/wav")}
+    res = client.post("/api/sih26186/voice/analyze", files=files)
+    assert res.status_code == 422
+    assert "low" in res.json().get("detail", "").lower() or "silent" in res.json().get("detail", "").lower()
+
+
