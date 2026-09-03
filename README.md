@@ -136,6 +136,7 @@ npm --prefix frontend run build
 
 - **Zero-PII Storage**: Sessions use anonymous UUIDs without requiring personal names, phone numbers, or defense service IDs.
 - **In-Memory Audio Processing**: Raw audio recordings are decoded in-memory, acoustic features extracted, and raw audio immediately discarded (zero audio files stored on disk or DB).
+- **Session Refresh Safeguard**: Active anonymous session UUID is preserved across accidental browser reloads using client-side `sessionStorage` with automatic backend validation, preventing demo disruptions without persisting sensitive check-in answers in browser storage.
 - **Server-Side Credentials**: `GEMINI_API_KEY` and PostgreSQL connection strings exist exclusively in backend `.env` variables and are never transmitted to client browsers.
 - **SQL Injection Defense**: Parameterized SQL queries via `psycopg` connection pooling.
 - **Emergency Fallbacks**: Pre-configured deterministic coping responses activate seamlessly if external AI provider limits or timeouts occur.

@@ -27,7 +27,7 @@
 - **Research ML Engine:** LightGBM classifier with polynomial-time TreeSHAP ($O(TLD^2)$) feature attribution (<15ms latency).
 - **Voice ML Engine:** 24-feature acoustic and prosodic biomarker extractor (NumPy/SciPy) + trained GradientBoostingClassifier (<15ms latency).
 - **Conversational Support:** Google Gemini 3.5 Flash via official Google GenAI SDK (Server-Sent NDJSON streaming) with strict crisis interception and deterministic fallback.
-- **Automated Test Suite:** Pytest (26/26 passing tests across AI self-audit, contracts, scoring math, ML schemas, voice routes, and local e2e lifecycles).
+- **Automated Test Suite:** Pytest (33/33 passing tests across AI self-audit, contracts, scoring math, ML schemas, voice routes, and local e2e lifecycles).
 
 ---
 

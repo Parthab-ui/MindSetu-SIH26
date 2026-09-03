@@ -340,5 +340,5 @@ Cancels a scheduled appointment with a mandatory cancellation reason.
 ---
 
 ### `GET /api/consultation/{appointment_id}` & `POST /api/consultation/{appointment_id}/notes`
-Manages the in-browser consultation room metadata and allows attending medical personnel to record encrypted clinical observations.
+Manages the in-browser consultation room metadata and allows attending medical personnel to record confidential clinical observations.
 

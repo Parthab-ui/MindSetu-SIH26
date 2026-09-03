@@ -45,7 +45,8 @@ Crisis Escalation (Tele-MANAS 14416 & KIRAN 1800-599-0019)
 ## 3. UI/UX & Design System Features
 
 - **Calibrated Voice Screening Experience**: 10–15s target (~12s preferred) with a standardized speaking script, compact `00:07 / 00:12` readout, dynamic progress bar, and real-time Web Audio API `AnalyserNode` frequency waveform rendering.
-- **In-Browser Tele-Consultation**: Direct appointment booking with Military Medical Officers and Clinical Psychologists, complete with WebRTC camera/microphone controls, encrypted session notes, and timer.
+- **In-Browser Tele-Consultation**: Direct appointment booking with Military Medical Officers and Clinical Psychologists, complete with camera/microphone preview & controls, confidential session notes, call timer, and active provider interface.
+- **Session Refresh Safeguard**: Active anonymous session UUID is preserved across accidental browser reloads using client-side `sessionStorage` with automatic backend validation, ensuring zero workflow interruption without storing sensitive check-in data.
 - **Integrated Capsule Composer**: Auto-growing prompt input with circular send action, keyboard shortcuts (<kbd>Enter</kbd> / <kbd>Shift</kbd>+<kbd>Enter</kbd>).
 - **Rich Suggestion Cards**: 2x2 responsive grid on desktop, single-column stack on mobile with full context descriptions.
 - **Editorial Conversational Typography**: Clean line spacing, structured bullet lists, copy-to-clipboard actions with checkmark feedback.

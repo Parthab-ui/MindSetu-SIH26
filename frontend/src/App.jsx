@@ -19,6 +19,8 @@ import { BookingConfirmationModal } from "./components/screens/BookingConfirmati
 import { PreCallCheckModal } from "./components/screens/PreCallCheckModal";
 import { api } from "./services/api";
 
+const SESSION_STORAGE_KEY = "mindsetu_session_id";
+
 export default function App() {
   const [screen, setScreen] = useState("home");
   const [darkMode, setDarkMode] = useState(() => localStorage.getItem("mindsetu-theme") === "dark");
@@ -86,8 +88,67 @@ export default function App() {
     localStorage.setItem("mindsetu-theme", darkMode ? "dark" : "light");
   }, [darkMode]);
 
+  // Restore active session across accidental page refresh
+  useEffect(() => {
+    const savedSessionId = sessionStorage.getItem(SESSION_STORAGE_KEY);
+    if (!savedSessionId) return;
+
+    let isMounted = true;
+    async function restoreSession() {
+      try {
+        const historyRes = await api.getAssessmentHistory(savedSessionId);
+        if (!isMounted) return;
+
+        setSessionId(savedSessionId);
+
+        // Check for completed assessment analysis
+        if (historyRes?.history && historyRes.history.length > 0) {
+          setAssessmentHistory(historyRes.history);
+          try {
+            const dashRes = await api.getDashboard(savedSessionId);
+            if (isMounted && dashRes) {
+              setAnalysis(dashRes);
+              setScreen("analysis");
+            }
+          } catch {
+            if (isMounted) setScreen("wellness");
+          }
+        } else {
+          if (isMounted) setScreen("wellness");
+        }
+
+        // Check if any appointments exist for this session
+        try {
+          const apts = await api.getAppointments(savedSessionId);
+          if (
+            isMounted &&
+            apts &&
+            ((apts.upcoming && apts.upcoming.length > 0) || (apts.past && apts.past.length > 0))
+          ) {
+            setHasAppointments(true);
+          }
+        } catch {
+          // Non-fatal
+        }
+      } catch {
+        // Stale, malformed, or rejected session ID
+        if (isMounted) {
+          sessionStorage.removeItem(SESSION_STORAGE_KEY);
+          setSessionId(null);
+          setScreen("home");
+        }
+      }
+    }
+
+    restoreSession();
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
   // Reset or Start Session
   function handleResetSession() {
+    sessionStorage.removeItem(SESSION_STORAGE_KEY);
     setScreen("home");
     setSessionId(null);
     setAnswers(Array(6).fill(null));
@@ -111,7 +172,9 @@ export default function App() {
     setRole(contextData.role);
     setUnit(contextData.unit);
     try {
+      sessionStorage.removeItem(SESSION_STORAGE_KEY);
       const res = await api.createSession(true);
+      sessionStorage.setItem(SESSION_STORAGE_KEY, res.session_id);
       setSessionId(res.session_id);
       setScreen("wellness");
     } catch (err) {

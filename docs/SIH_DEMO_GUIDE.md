@@ -28,7 +28,7 @@
 | **0:50 - 1:10** | **Workload Demands** | Click `⚔️ Forward Field Deployment` preset → Click *Proceed to Voice Check* | *"We combine self-reported symptoms with objective duty demands—14h shifts, 4 night duties, and sleep deficit—weighted into an Operational Workload Index."* |
 | **1:10 - 1:45** | **Calibrated Voice Check (10–15s)** | Click *Start Recording* (or `⚡ Strained Voice Sample`) → Read standardized script with live waveform → Click *View Summary →* | ***THE FLAGSHIP MOMENT:*** *"Now our third modality—calibrated speech paralinguistics. Personnel read a standardized 10–15 second reflection with a live Web Audio waveform visualizer. In under 15ms, our in-memory Voice ML classifier extracts 24 acoustic parameters like pitch range and pause ratios, immediately discarding the raw audio for privacy."* |
 | **1:45 - 2:20** | **Multimodal Results** | Scroll to DSI, TSI, Voice Signal & Cross-Modal Concordance | *"Here is our multimodal summary: Depression Indicator (DSI), PTSD/Trauma Indicator (TSI), and Voice ML Signal, alongside a cross-modal concordance analysis that explains any divergence between self-report and vocal biomarkers."* |
-| **2:20 - 2:40** | **Doctor Connect & Tele-Consultation** | Click *Connect with Doctor / MO* → Choose Medical Officer → Schedule Appointment → Launch Video Call | *"When triage indicates elevated strain, personnel can seamlessly schedule a confidential consultation with a Military Medical Officer or Clinical Psychologist, complete with in-browser video, camera/mic controls, and encrypted clinical session notes."* |
+| **2:20 - 2:40** | **Doctor Connect & Tele-Consultation** | Click *Connect with Doctor / MO* → Choose Medical Officer → Schedule Appointment → Launch Video Call | *"When triage indicates elevated strain, personnel can seamlessly schedule a confidential consultation with a Military Medical Officer or Clinical Psychologist, complete with in-browser video, camera/mic controls, and confidential clinical session notes."* |
 | **2:40 - 2:55** | **TreeSHAP Lab** | Click *Explainable ML Research Lab 🔬* → Click `⚡ Special Forces Active Combat` | *"For technical decision-support, our LightGBM model trained on military research data (DOI 10.5061/dryad.j1r30) computes exact TreeSHAP feature attributions in <15ms."* |
 | **2:55 - 3:00** | **History & Trends** | Click *Record Daily Mood* → Click *Assessment History* tab | *"Finally, personnel can track recovery milestones chronologically over time. MindSetu transforms multimodal signals into timely human support."* |
 
@@ -51,7 +51,7 @@
 7. **Q: What if the microphone fails or the room is noisy?**  
    *A:* MindSetu provides real-time audio quality validation (SNR estimation, duration check, and silence detection). If recording is <10s or inaudible, friendly prompts guide the user to retry, and evaluation presets (`⚡ Strained Voice Sample` / `🌿 Resilient Voice Sample`) are available for noisy demonstration rooms.
 8. **Q: How does the Doctor Tele-Consultation feature work?**  
-   *A:* Personnel can browse verified Medical Officers and Clinical Psychologists filtered by specialization (Trauma/PTSD, Operational Stress, Sleep). Appointments can be booked into real database slots, launching an in-browser WebRTC consultation room with camera/mic controls, session timers, and clinical notes for the healthcare professional.
+   *A:* Personnel can browse verified Medical Officers and Clinical Psychologists filtered by specialization (Trauma/PTSD, Operational Stress, Sleep). Appointments can be booked into real database slots, launching an in-browser consultation room with live camera/mic preview and controls, session timer, and confidential clinical notes for the healthcare professional.
 9. **Q: What if self-reported answers and voice signals disagree?**  
    *A:* This is a vital clinical feature! If self-reported fatigue is high but voice is steady, it indicates cognitive load without deep vocal psychomotor slowing. If voice is strained despite low self-report, it highlights possible underreporting due to duty stigma.
 10. **Q: What is the scoring formula?**  
@@ -60,6 +60,8 @@
     *A:* The published Dryad dataset from the *Sri Lanka Navy Personnel Follow-up Study* (DOI: `10.5061/dryad.j1r30`), containing 495 military personnel.
 12. **Q: What happens in a crisis?**  
     *A:* Real-time keyword safety detection triggers immediate escalation to the National Mental Health Helpline (Tele-MANAS `14416` / `1800-891-4416`).
-13. **Q: What are the 5 Pillars of MindSetu?**  
+13. **Q: What happens if the browser is accidentally refreshed during a live demo?**  
+    *A:* MindSetu implements an active session refresh safeguard using browser `sessionStorage`. The active anonymous session UUID is preserved and re-validated against the backend upon reload, restoring the user to their active workflow or completed analysis dashboard without persisting sensitive answers in browser storage.
+14. **Q: What are the 5 Pillars of MindSetu?**  
     *A:* Self-Report Pulse → Operational Duty Demands → Voice ML Paralinguistics → LightGBM/TreeSHAP (Explainability) → Qualified Human Welfare Officer.
 
