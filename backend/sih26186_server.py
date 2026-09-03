@@ -79,6 +79,8 @@ def ensure_sih26186_tables():
                 );
                 """
             )
+    from sih26186_doctor_routes import ensure_doctor_tables
+    ensure_doctor_tables()
 
 
 def _require_session(session_id: uuid.UUID):
@@ -378,6 +380,9 @@ register_ml_routes(app)
 
 from sih26186_voice_routes import register_voice_routes
 register_voice_routes(app)
+
+from sih26186_doctor_routes import register_doctor_routes
+register_doctor_routes(app)
 
 
 
