@@ -138,3 +138,86 @@ def test_appointment_booking_and_double_booking_prevention():
     avail_res_after = client.get(f"/api/doctors/{doctor_id}/availability?date={test_date}").json()
     slot_map_after = {s["time"]: s["available"] for s in avail_res_after["slots"]}
     assert slot_map_after["14:30"] is True
+
+
+def test_consultation_profile_create_and_fetch():
+    # 1. Create a session
+    s_res = client.post("/api/sessions", json={"consent_given": True})
+    assert s_res.status_code == 200
+    session_id = s_res.json()["session_id"]
+
+    # 2. Getting non-existent profile returns 404
+    get_res_empty = client.get(f"/api/consultation-profile?session_id={session_id}")
+    assert get_res_empty.status_code == 404
+
+    # 3. Save valid consultation profile
+    profile_payload = {
+        "session_id": session_id,
+        "age": 27,
+        "role": "Field Operations Personnel",
+        "gender": "Prefer not to say",
+        "years_of_service": 4,
+        "posting_unit": "Sector Unit Bravo",
+        "consultation_note": "Duty exhaustion and sleep disruptions post-rotation.",
+    }
+    save_res = client.post("/api/consultation-profile", json=profile_payload)
+    assert save_res.status_code == 200
+    data = save_res.json()
+    assert data["session_id"] == session_id
+    assert data["age"] == 27
+    assert data["role"] == "Field Operations Personnel"
+    assert data["gender"] == "Prefer not to say"
+    assert data["years_of_service"] == 4
+    assert data["posting_unit"] == "Sector Unit Bravo"
+    assert "Duty exhaustion" in data["consultation_note"]
+    assert "id" in data
+    assert "created_at" in data
+
+    # 4. Fetch the profile
+    fetch_res = client.get(f"/api/consultation-profile?session_id={session_id}")
+    assert fetch_res.status_code == 200
+    fetch_data = fetch_res.json()
+    assert fetch_data["age"] == 27
+    assert fetch_data["role"] == "Field Operations Personnel"
+
+    # 5. Upsert: Update profile with new age and note
+    update_payload = {
+        "session_id": session_id,
+        "age": 28,
+        "role": "Tactical Watch Officer",
+        "gender": "Male",
+        "years_of_service": 5,
+        "posting_unit": "Northern Command",
+        "consultation_note": "Updated consultation focus.",
+    }
+    update_res = client.post("/api/consultation-profile", json=update_payload)
+    assert update_res.status_code == 200
+    updated_data = update_res.json()
+    assert updated_data["age"] == 28
+    assert updated_data["role"] == "Tactical Watch Officer"
+    assert updated_data["gender"] == "Male"
+    assert updated_data["years_of_service"] == 5
+
+    # 6. Validation: Age < 18 rejected
+    bad_age_res = client.post("/api/consultation-profile", json={
+        "session_id": session_id,
+        "age": 16,
+        "role": "Officer",
+    })
+    assert bad_age_res.status_code == 422
+
+    # 7. Validation: Age > 100 rejected
+    bad_age_high = client.post("/api/consultation-profile", json={
+        "session_id": session_id,
+        "age": 105,
+        "role": "Officer",
+    })
+    assert bad_age_high.status_code == 422
+
+    # 8. Validation: Missing / empty role rejected
+    empty_role_res = client.post("/api/consultation-profile", json={
+        "session_id": session_id,
+        "age": 30,
+        "role": "",
+    })
+    assert empty_role_res.status_code == 422

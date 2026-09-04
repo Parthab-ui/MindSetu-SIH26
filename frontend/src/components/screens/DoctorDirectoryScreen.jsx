@@ -16,6 +16,8 @@ const AVAILABILITY_FILTERS = [
 export function DoctorDirectoryScreen({
   onSelectDoctor,
   onNavigateToAppointments,
+  consultationProfile = null,
+  onEditProfile = null,
   onBack,
   hasAppointments = false,
 }) {
@@ -63,16 +65,54 @@ export function DoctorDirectoryScreen({
               Find the right professional for a confidential, one-on-one welfare consultation.
             </p>
           </div>
-          {hasAppointments && (
-            <button
-              type="button"
-              className="btn btn-secondary"
-              onClick={onNavigateToAppointments}
-              style={{ fontSize: "0.85rem", padding: "8px 16px" }}
-            >
-              📅 My Appointments →
-            </button>
-          )}
+          <div style={{ display: "flex", gap: "10px", alignItems: "center", flexWrap: "wrap" }}>
+            {consultationProfile && (
+              <div
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: "6px",
+                  padding: "6px 12px",
+                  borderRadius: "var(--radius-full)",
+                  background: "var(--primary-light)",
+                  border: "1px solid var(--primary-dim)",
+                  fontSize: "0.82rem",
+                  color: "var(--text-primary)",
+                }}
+              >
+                <span style={{ color: "var(--primary)", fontWeight: 700 }}>✓ Profile Attached:</span>
+                <span>{consultationProfile.role} ({consultationProfile.age} yrs)</span>
+                {onEditProfile && (
+                  <button
+                    type="button"
+                    onClick={onEditProfile}
+                    style={{
+                      background: "none",
+                      border: "none",
+                      color: "var(--primary)",
+                      fontWeight: 700,
+                      cursor: "pointer",
+                      fontSize: "0.8rem",
+                      textDecoration: "underline",
+                      padding: "0 2px",
+                    }}
+                  >
+                    Edit
+                  </button>
+                )}
+              </div>
+            )}
+            {hasAppointments && (
+              <button
+                type="button"
+                className="btn btn-secondary"
+                onClick={onNavigateToAppointments}
+                style={{ fontSize: "0.85rem", padding: "8px 16px" }}
+              >
+                📅 My Appointments →
+              </button>
+            )}
+          </div>
         </div>
 
         {/* Trust Indicators */}

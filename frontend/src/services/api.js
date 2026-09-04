@@ -170,6 +170,34 @@ export const api = {
     });
   },
 
+  // Consultation Profile (Biodata Intake)
+  async saveConsultationProfile({
+    sessionId,
+    age,
+    role,
+    gender = "Prefer not to say",
+    yearsOfService = null,
+    postingUnit = null,
+    consultationNote = null,
+  }) {
+    return request("/api/consultation-profile", {
+      method: "POST",
+      body: JSON.stringify({
+        session_id: sessionId,
+        age: Number(age),
+        role,
+        gender: gender || "Prefer not to say",
+        years_of_service: yearsOfService !== null && yearsOfService !== "" ? Number(yearsOfService) : null,
+        posting_unit: postingUnit || null,
+        consultation_note: consultationNote || null,
+      }),
+    });
+  },
+
+  async getConsultationProfile(sessionId) {
+    return request(`/api/consultation-profile?session_id=${encodeURIComponent(sessionId)}`);
+  },
+
 
   // Gemini AI Companion Streaming
   async streamChat({ sessionId, message, history, wellbeingContext, onToken, onComplete, onError }) {

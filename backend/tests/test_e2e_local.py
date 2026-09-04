@@ -141,3 +141,61 @@ def test_session_lifecycle_with_mock_or_live_db():
         assert h_res.json()["count"] >= 1
         assert len(h_res.json()["history"]) >= 1
 
+        # Test Step: Complete Consultation Intake Profile immediately before doctor appointment
+        prof_res = client.post("/api/consultation-profile", json={
+            "session_id": session_id,
+            "age": 29,
+            "gender": "Male",
+            "role": "Field Operations Personnel",
+            "years_of_service": 5,
+            "posting_unit": "Sector Unit Bravo",
+            "consultation_note": "Experiencing sleep disruption and fatigue after shift rotation."
+        })
+        assert prof_res.status_code == 200
+        saved_prof = prof_res.json()
+        assert saved_prof["age"] == 29
+        assert saved_prof["gender"] == "Male"
+        assert saved_prof["role"] == "Field Operations Personnel"
+        assert saved_prof["years_of_service"] == 5
+        assert saved_prof["posting_unit"] == "Sector Unit Bravo"
+
+        # Verify retrieval of consultation profile
+        get_prof_res = client.get(f"/api/consultation-profile?session_id={session_id}")
+        assert get_prof_res.status_code == 200
+        assert get_prof_res.json()["consultation_note"] == "Experiencing sleep disruption and fatigue after shift rotation."
+
+        # Fetch doctor list
+        doc_res = client.get("/api/doctors")
+        assert doc_res.status_code == 200
+        doctors = doc_res.json()
+        assert len(doctors) >= 1
+        first_doc = doctors[0]
+
+        # Fetch slots for tomorrow
+        import datetime
+        tomorrow_str = (datetime.date.today() + datetime.timedelta(days=1)).isoformat()
+        slots_res = client.get(f"/api/doctors/{first_doc['id']}/availability?date={tomorrow_str}")
+        assert slots_res.status_code == 200
+        slots = slots_res.json()["slots"]
+        available_slots = [s for s in slots if s["available"]]
+        assert len(available_slots) >= 1
+        chosen_time = available_slots[0]["time"]
+
+        # Book appointment with consultation context
+        book_res = client.post("/api/appointments", json={
+            "session_id": session_id,
+            "doctor_id": first_doc["id"],
+            "appointment_date": tomorrow_str,
+            "appointment_time": chosen_time,
+            "patient_notes": "Prior welfare score: " + str(a_data["risk_level"])
+        })
+        assert book_res.status_code == 200
+        apt = book_res.json()
+        assert apt["status"] == "confirmed"
+        assert apt["doctor_id"] == first_doc["id"]
+        assert apt["appointment_time"] == chosen_time
+
+        # Verify appointment in session list
+        session_apts = client.get(f"/api/appointments?session_id={session_id}").json()
+        assert any(a["id"] == apt["id"] for a in session_apts["upcoming"])
+

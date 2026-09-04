@@ -15,7 +15,8 @@ export function Navigation({ screen, setScreen, hasAnalysis }) {
           screen === "doctors" ||
           screen === "doctor-profile" ||
           screen === "appointments" ||
-          screen === "consultation"
+          screen === "consultation" ||
+          screen === "consultation-profile"
         );
         const isActive = isDoctorGroup || screen === step.id;
         return (

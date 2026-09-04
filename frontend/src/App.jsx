@@ -17,6 +17,7 @@ import { AppointmentsScreen } from "./components/screens/AppointmentsScreen";
 import { ConsultationScreen } from "./components/screens/ConsultationScreen";
 import { BookingConfirmationModal } from "./components/screens/BookingConfirmationModal";
 import { PreCallCheckModal } from "./components/screens/PreCallCheckModal";
+import { ConsultationProfileScreen } from "./components/screens/ConsultationProfileScreen";
 import { api } from "./services/api";
 
 const SESSION_STORAGE_KEY = "mindsetu_session_id";
@@ -28,10 +29,26 @@ export default function App() {
   });
   const [darkMode, setDarkMode] = useState(() => localStorage.getItem("mindsetu-theme") === "dark");
   const [sessionId, setSessionId] = useState(null);
+  const [consultationProfile, setConsultationProfile] = useState(() => {
+    try {
+      const savedSid = sessionStorage.getItem(SESSION_STORAGE_KEY);
+      if (savedSid) {
+        const raw = sessionStorage.getItem(`mindsetu_consultation_profile_${savedSid}`);
+        return raw ? JSON.parse(raw) : null;
+      }
+    } catch {
+      // Fallback
+    }
+    return null;
+  });
 
   function setScreen(newScreen) {
-    setScreenState(newScreen);
-    sessionStorage.setItem(SCREEN_STORAGE_KEY, newScreen);
+    let effectiveScreen = newScreen;
+    if (newScreen === "doctors" && !consultationProfile) {
+      effectiveScreen = "consultation-profile";
+    }
+    setScreenState(effectiveScreen);
+    sessionStorage.setItem(SCREEN_STORAGE_KEY, effectiveScreen);
   }
 
   // Workflow state
@@ -141,12 +158,28 @@ export default function App() {
         } catch {
           // Non-fatal
         }
+
+        // Check if consultation profile exists for this session
+        try {
+          const prof = await api.getConsultationProfile(savedSessionId);
+          if (isMounted && prof) {
+            setConsultationProfile(prof);
+            try {
+              sessionStorage.setItem(`mindsetu_consultation_profile_${savedSessionId}`, JSON.stringify(prof));
+            } catch {
+              // Ignore
+            }
+          }
+        } catch {
+          // Non-fatal if no profile exists yet
+        }
       } catch {
         // Stale, malformed, or rejected session ID
         if (isMounted) {
           sessionStorage.removeItem(SESSION_STORAGE_KEY);
           sessionStorage.removeItem(SCREEN_STORAGE_KEY);
           setSessionId(null);
+          setConsultationProfile(null);
           setScreenState("home");
         }
       }
@@ -160,10 +193,14 @@ export default function App() {
 
   // Reset or Start Session
   function handleResetSession() {
+    if (sessionId) {
+      sessionStorage.removeItem(`mindsetu_consultation_profile_${sessionId}`);
+    }
     sessionStorage.removeItem(SESSION_STORAGE_KEY);
     sessionStorage.removeItem(SCREEN_STORAGE_KEY);
     setScreenState("home");
     setSessionId(null);
+    setConsultationProfile(null);
     setAnswers(Array(6).fill(null));
     setVoiceResult(null);
     setAnalysis(null);
@@ -490,7 +527,13 @@ export default function App() {
               onNavigateToChat={() => setScreen("chat")}
               onNavigateToMood={() => setScreen("mood")}
               onOpenResearchModal={() => setIsResearchModalOpen(true)}
-              onNavigateToDoctors={() => setScreen("doctors")}
+              onNavigateToDoctors={() => {
+                if (consultationProfile) {
+                  setScreen("doctors");
+                } else {
+                  setScreen("consultation-profile");
+                }
+              }}
             />
           ) : (
             <WellnessScreen
@@ -504,10 +547,30 @@ export default function App() {
           )
         )}
 
+        {screen === "consultation-profile" && (
+          <ConsultationProfileScreen
+            sessionId={sessionId}
+            initialData={consultationProfile}
+            defaultRole={role}
+            defaultUnit={unit}
+            onContinue={(profile) => {
+              setConsultationProfile(profile);
+              setScreenState("doctors");
+              sessionStorage.setItem(SCREEN_STORAGE_KEY, "doctors");
+            }}
+            onBack={() => setScreen(analysis ? "analysis" : "home")}
+          />
+        )}
+
         {screen === "doctors" && (
           <DoctorDirectoryScreen
             onSelectDoctor={handleSelectDoctor}
             onNavigateToAppointments={() => setScreen("appointments")}
+            consultationProfile={consultationProfile}
+            onEditProfile={() => {
+              setScreenState("consultation-profile");
+              sessionStorage.setItem(SCREEN_STORAGE_KEY, "consultation-profile");
+            }}
             onBack={() => setScreen(analysis ? "analysis" : "home")}
             hasAppointments={hasAppointments}
           />
@@ -517,6 +580,11 @@ export default function App() {
           <DoctorProfileScreen
             doctor={selectedDoctor}
             sessionId={sessionId}
+            consultationProfile={consultationProfile}
+            onEditProfile={() => {
+              setScreenState("consultation-profile");
+              sessionStorage.setItem(SCREEN_STORAGE_KEY, "consultation-profile");
+            }}
             onBookingSuccess={handleBookingSuccess}
             onBack={() => setScreen("doctors")}
           />

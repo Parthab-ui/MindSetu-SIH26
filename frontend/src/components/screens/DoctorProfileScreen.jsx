@@ -23,6 +23,8 @@ function getNext5Days() {
 export function DoctorProfileScreen({
   doctor,
   sessionId,
+  consultationProfile = null,
+  onEditProfile = null,
   onBookingSuccess,
   onBack,
 }) {
@@ -32,7 +34,7 @@ export function DoctorProfileScreen({
   const [slots, setSlots] = useState([]);
   const [loadingSlots, setLoadingSlots] = useState(true);
   const [bookingLoading, setBookingLoading] = useState(false);
-  const [notes, setNotes] = useState("");
+  const [notes, setNotes] = useState(consultationProfile?.consultation_note || "");
   const [error, setError] = useState("");
 
   // Fetch availability when selectedDate or doctor changes
@@ -387,26 +389,94 @@ export function DoctorProfileScreen({
             />
           </div>
 
-          {/* Selection Preview Card */}
+          {/* Selection Preview & Compact Consultation Summary Card */}
           {selectedSlot && (
             <div
               style={{
-                padding: "12px 16px",
-                background: "var(--primary-light)",
-                border: "1px solid var(--primary-dim)",
-                borderRadius: "var(--radius-md)",
+                padding: "16px",
+                background: "var(--bg-surface-elevated)",
+                border: "1.5px solid var(--primary-dim)",
+                borderRadius: "var(--radius-lg)",
                 marginBottom: "20px",
                 animation: "fadeIn 200ms ease",
               }}
             >
-              <div style={{ fontSize: "0.78rem", fontWeight: 700, textTransform: "uppercase", color: "var(--primary)", marginBottom: "2px" }}>
-                Selected Consultation Slot
-              </div>
-              <div style={{ fontSize: "0.95rem", fontWeight: 800, color: "var(--text-primary)" }}>
-                {displayFormattedDate} • {selectedSlot}
-              </div>
-              <div style={{ fontSize: "0.78rem", color: "var(--text-secondary)", marginTop: "2px" }}>
-                30-min confidential video consultation with {doctor.name}
+              {consultationProfile ? (
+                <div style={{ marginBottom: "14px", paddingBottom: "12px", borderBottom: "1px solid var(--border-subtle)" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px" }}>
+                    <span style={{ fontSize: "0.78rem", fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.06em", color: "var(--primary)" }}>
+                      Consultation Profile
+                    </span>
+                    {onEditProfile && (
+                      <button
+                        type="button"
+                        onClick={onEditProfile}
+                        style={{
+                          background: "none",
+                          border: "none",
+                          color: "var(--primary)",
+                          fontSize: "0.76rem",
+                          fontWeight: 700,
+                          cursor: "pointer",
+                          padding: 0,
+                          textDecoration: "underline",
+                        }}
+                      >
+                        Edit Profile
+                      </button>
+                    )}
+                  </div>
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(130px, 1fr))", gap: "6px 12px", fontSize: "0.84rem" }}>
+                    <div>
+                      <span style={{ color: "var(--text-muted)", fontSize: "0.75rem", display: "block" }}>Age</span>
+                      <strong style={{ color: "var(--text-primary)" }}>{consultationProfile.age} yrs</strong>
+                    </div>
+                    <div>
+                      <span style={{ color: "var(--text-muted)", fontSize: "0.75rem", display: "block" }}>Gender</span>
+                      <strong style={{ color: "var(--text-primary)" }}>{consultationProfile.gender || "—"}</strong>
+                    </div>
+                    <div>
+                      <span style={{ color: "var(--text-muted)", fontSize: "0.75rem", display: "block" }}>Role</span>
+                      <strong style={{ color: "var(--text-primary)" }}>{consultationProfile.role}</strong>
+                    </div>
+                    {consultationProfile.years_of_service !== null && consultationProfile.years_of_service !== undefined && (
+                      <div>
+                        <span style={{ color: "var(--text-muted)", fontSize: "0.75rem", display: "block" }}>Years of Service</span>
+                        <strong style={{ color: "var(--text-primary)" }}>{consultationProfile.years_of_service} yrs</strong>
+                      </div>
+                    )}
+                    {consultationProfile.posting_unit && (
+                      <div style={{ gridColumn: "1 / -1" }}>
+                        <span style={{ color: "var(--text-muted)", fontSize: "0.75rem", display: "block" }}>Unit</span>
+                        <strong style={{ color: "var(--text-primary)" }}>{consultationProfile.posting_unit}</strong>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ) : null}
+
+              <div>
+                <span style={{ fontSize: "0.78rem", fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.06em", color: "var(--primary)", display: "block", marginBottom: "8px" }}>
+                  Appointment
+                </span>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(130px, 1fr))", gap: "6px 12px", fontSize: "0.84rem" }}>
+                  <div>
+                    <span style={{ color: "var(--text-muted)", fontSize: "0.75rem", display: "block" }}>Doctor</span>
+                    <strong style={{ color: "var(--text-primary)" }}>{doctor.name}</strong>
+                  </div>
+                  <div>
+                    <span style={{ color: "var(--text-muted)", fontSize: "0.75rem", display: "block" }}>Date</span>
+                    <strong style={{ color: "var(--text-primary)" }}>{displayFormattedDate}</strong>
+                  </div>
+                  <div>
+                    <span style={{ color: "var(--text-muted)", fontSize: "0.75rem", display: "block" }}>Time</span>
+                    <strong style={{ color: "var(--primary)" }}>{selectedSlot}</strong>
+                  </div>
+                  <div>
+                    <span style={{ color: "var(--text-muted)", fontSize: "0.75rem", display: "block" }}>Type</span>
+                    <strong style={{ color: "var(--text-primary)" }}>Tele-consultation</strong>
+                  </div>
+                </div>
               </div>
             </div>
           )}
@@ -441,7 +511,7 @@ export function DoctorProfileScreen({
                 Confirming Appointment…
               </>
             ) : (
-              "Confirm & Book Appointment →"
+              "Confirm Appointment"
             )}
           </button>
         </div>

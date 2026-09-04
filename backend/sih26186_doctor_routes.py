@@ -114,6 +114,21 @@ def ensure_doctor_tables():
                 CREATE UNIQUE INDEX IF NOT EXISTS idx_active_doctor_slot
                 ON appointments (doctor_id, appointment_date, appointment_time)
                 WHERE status != 'cancelled';
+
+                CREATE TABLE IF NOT EXISTS consultation_profiles (
+                    id UUID PRIMARY KEY,
+                    session_id UUID NOT NULL REFERENCES sessions(id),
+                    age INTEGER NOT NULL,
+                    role VARCHAR(120) NOT NULL,
+                    gender VARCHAR(50) DEFAULT 'Prefer not to say',
+                    years_of_service INTEGER,
+                    posting_unit VARCHAR(120),
+                    consultation_note TEXT,
+                    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+                );
+
+                CREATE UNIQUE INDEX IF NOT EXISTS idx_consultation_profile_session
+                ON consultation_profiles (session_id);
                 """
             )
 
@@ -198,6 +213,28 @@ class AppointmentResponse(BaseModel):
 class AppointmentsListResponse(BaseModel):
     upcoming: List[AppointmentResponse]
     past: List[AppointmentResponse]
+
+
+class ConsultationProfileCreate(BaseModel):
+    session_id: uuid.UUID
+    age: int = Field(..., ge=18, le=100, description="Age must be between 18 and 100")
+    role: str = Field(..., min_length=1, max_length=120, description="Role or designation")
+    gender: Optional[str] = Field(default="Prefer not to say", max_length=50)
+    years_of_service: Optional[int] = Field(default=None, ge=0, le=60)
+    posting_unit: Optional[str] = Field(default=None, max_length=120)
+    consultation_note: Optional[str] = Field(default=None, max_length=1000)
+
+
+class ConsultationProfileResponse(BaseModel):
+    id: str
+    session_id: str
+    age: int
+    role: str
+    gender: str
+    years_of_service: Optional[int] = None
+    posting_unit: Optional[str] = None
+    consultation_note: Optional[str] = None
+    created_at: str
 
 
 def _require_valid_session(session_id: uuid.UUID):
@@ -492,3 +529,85 @@ def register_doctor_routes(app: FastAPI):
                     (appointment_id,),
                 )
         return {"message": "Appointment cancelled successfully.", "status": "cancelled"}
+
+    @app.post("/api/consultation-profile", response_model=ConsultationProfileResponse)
+    def save_consultation_profile(req: ConsultationProfileCreate):
+        _require_valid_session(req.session_id)
+        profile_id = uuid.uuid4()
+        now_utc = datetime.now(timezone.utc)
+        clean_gender = (req.gender or "Prefer not to say").strip()
+        clean_role = req.role.strip()
+        clean_unit = req.posting_unit.strip() if req.posting_unit else None
+        clean_note = req.consultation_note.strip() if req.consultation_note else None
+
+        with get_connection() as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    """
+                    INSERT INTO consultation_profiles
+                    (id, session_id, age, role, gender, years_of_service, posting_unit, consultation_note, created_at)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+                    ON CONFLICT (session_id) DO UPDATE SET
+                        age = EXCLUDED.age,
+                        role = EXCLUDED.role,
+                        gender = EXCLUDED.gender,
+                        years_of_service = EXCLUDED.years_of_service,
+                        posting_unit = EXCLUDED.posting_unit,
+                        consultation_note = EXCLUDED.consultation_note,
+                        created_at = EXCLUDED.created_at
+                    RETURNING id, session_id, age, role, gender, years_of_service, posting_unit, consultation_note, created_at
+                    """,
+                    (
+                        profile_id,
+                        req.session_id,
+                        req.age,
+                        clean_role,
+                        clean_gender,
+                        req.years_of_service,
+                        clean_unit,
+                        clean_note,
+                        now_utc,
+                    ),
+                )
+                row = cur.fetchone()
+
+        return ConsultationProfileResponse(
+            id=str(row[0]),
+            session_id=str(row[1]),
+            age=row[2],
+            role=row[3],
+            gender=row[4],
+            years_of_service=row[5],
+            posting_unit=row[6],
+            consultation_note=row[7],
+            created_at=row[8].isoformat() if hasattr(row[8], "isoformat") else str(row[8]),
+        )
+
+    @app.get("/api/consultation-profile", response_model=ConsultationProfileResponse)
+    def get_consultation_profile(session_id: uuid.UUID = Query(...)):
+        _require_valid_session(session_id)
+        with get_connection() as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    """
+                    SELECT id, session_id, age, role, gender, years_of_service, posting_unit, consultation_note, created_at
+                    FROM consultation_profiles
+                    WHERE session_id = %s
+                    """,
+                    (session_id,),
+                )
+                row = cur.fetchone()
+                if not row:
+                    raise HTTPException(status_code=404, detail="Consultation profile not found.")
+
+        return ConsultationProfileResponse(
+            id=str(row[0]),
+            session_id=str(row[1]),
+            age=row[2],
+            role=row[3],
+            gender=row[4],
+            years_of_service=row[5],
+            posting_unit=row[6],
+            consultation_note=row[7],
+            created_at=row[8].isoformat() if hasattr(row[8], "isoformat") else str(row[8]),
+        )
