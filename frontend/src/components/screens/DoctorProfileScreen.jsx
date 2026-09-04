@@ -69,7 +69,7 @@ export function DoctorProfileScreen({
   };
 
   const handleBook = async () => {
-    if (!selectedSlot) return;
+    if (bookingLoading || !selectedSlot) return;
     if (!sessionId) {
       setError("Active protected session required to schedule an appointment.");
       return;

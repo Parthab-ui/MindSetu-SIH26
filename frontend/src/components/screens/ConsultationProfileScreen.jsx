@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { api } from "../../services/api";
 
 const ROLE_OPTIONS = [
@@ -53,27 +53,6 @@ export function ConsultationProfileScreen({
   const [roleError, setRoleError] = useState("");
   const [submitError, setSubmitError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
-
-  // Sync if initialData loads later
-  useEffect(() => {
-    if (initialData) {
-      if (initialData.age) setAge(String(initialData.age));
-      if (initialData.gender) setGender(initialData.gender);
-      if (initialData.role) {
-        if (ROLE_OPTIONS.includes(initialData.role)) {
-          setSelectedRoleOption(initialData.role);
-        } else {
-          setSelectedRoleOption("Other");
-          setCustomRole(initialData.role);
-        }
-      }
-      if (initialData.years_of_service !== undefined && initialData.years_of_service !== null) {
-        setYearsOfService(String(initialData.years_of_service));
-      }
-      if (initialData.posting_unit) setPostingUnit(initialData.posting_unit);
-      if (initialData.consultation_note) setConsultationNote(initialData.consultation_note);
-    }
-  }, [initialData]);
 
   const effectiveRole = selectedRoleOption === "Other" ? customRole.trim() : selectedRoleOption;
 

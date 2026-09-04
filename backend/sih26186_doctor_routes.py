@@ -13,8 +13,9 @@ import uuid
 from datetime import date, datetime, timedelta, timezone
 from typing import List, Optional
 
+import psycopg.errors
 from fastapi import FastAPI, HTTPException, Query
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator, model_validator
 
 def get_connection():
     import main
@@ -224,6 +225,20 @@ class ConsultationProfileCreate(BaseModel):
     posting_unit: Optional[str] = Field(default=None, max_length=120)
     consultation_note: Optional[str] = Field(default=None, max_length=1000)
 
+    @field_validator("role")
+    @classmethod
+    def validate_role(cls, v: str) -> str:
+        s = v.strip()
+        if not s:
+            raise ValueError("Role or designation cannot be empty or whitespace only.")
+        return s
+
+    @model_validator(mode="after")
+    def validate_service_years(self):
+        if self.years_of_service is not None and self.years_of_service >= self.age:
+            raise ValueError("Years of service cannot exceed or equal age.")
+        return self
+
 
 class ConsultationProfileResponse(BaseModel):
     id: str
@@ -353,6 +368,12 @@ def register_doctor_routes(app: FastAPI):
         except ValueError:
             raise HTTPException(status_code=400, detail="Invalid date format. Use YYYY-MM-DD.")
 
+        today = date.today()
+        if target_date < today:
+            raise HTTPException(status_code=400, detail="Cannot book an appointment for a past date.")
+        if target_date > today + timedelta(days=60):
+            raise HTTPException(status_code=400, detail="Appointments can only be booked up to 60 days in advance.")
+
         # Ensure slot is in supported list
         if req.appointment_time not in DEFAULT_SLOTS:
             raise HTTPException(
@@ -390,25 +411,31 @@ def register_doctor_routes(app: FastAPI):
                         detail="This time slot has already been reserved. Please select another slot.",
                     )
 
-                # Insert appointment
+                # Insert appointment with atomic race protection against concurrent double-booking
                 now_utc = datetime.now(timezone.utc)
-                cur.execute(
-                    """
-                    INSERT INTO appointments
-                    (id, session_id, doctor_id, appointment_date, appointment_time, status, meeting_id, notes, created_at)
-                    VALUES (%s, %s, %s, %s, %s, 'confirmed', %s, %s, %s)
-                    """,
-                    (
-                        appointment_id,
-                        req.session_id,
-                        req.doctor_id,
-                        target_date,
-                        req.appointment_time,
-                        meeting_id,
-                        req.notes,
-                        now_utc,
-                    ),
-                )
+                try:
+                    cur.execute(
+                        """
+                        INSERT INTO appointments
+                        (id, session_id, doctor_id, appointment_date, appointment_time, status, meeting_id, notes, created_at)
+                        VALUES (%s, %s, %s, %s, %s, 'confirmed', %s, %s, %s)
+                        """,
+                        (
+                            appointment_id,
+                            req.session_id,
+                            req.doctor_id,
+                            target_date,
+                            req.appointment_time,
+                            meeting_id,
+                            req.notes,
+                            now_utc,
+                        ),
+                    )
+                except psycopg.errors.UniqueViolation:
+                    raise HTTPException(
+                        status_code=409,
+                        detail="This time slot has already been reserved. Please select another slot.",
+                    )
 
         return AppointmentResponse(
             id=str(appointment_id),

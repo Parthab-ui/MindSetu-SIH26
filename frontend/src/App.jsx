@@ -549,6 +549,7 @@ export default function App() {
 
         {screen === "consultation-profile" && (
           <ConsultationProfileScreen
+            key={consultationProfile?.id || "consultation-profile"}
             sessionId={sessionId}
             initialData={consultationProfile}
             defaultRole={role}
