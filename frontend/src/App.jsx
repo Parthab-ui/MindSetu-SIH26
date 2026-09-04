@@ -20,11 +20,19 @@ import { PreCallCheckModal } from "./components/screens/PreCallCheckModal";
 import { api } from "./services/api";
 
 const SESSION_STORAGE_KEY = "mindsetu_session_id";
+const SCREEN_STORAGE_KEY = "mindsetu_active_screen";
 
 export default function App() {
-  const [screen, setScreen] = useState("home");
+  const [screen, setScreenState] = useState(() => {
+    return sessionStorage.getItem(SCREEN_STORAGE_KEY) || "home";
+  });
   const [darkMode, setDarkMode] = useState(() => localStorage.getItem("mindsetu-theme") === "dark");
   const [sessionId, setSessionId] = useState(null);
+
+  function setScreen(newScreen) {
+    setScreenState(newScreen);
+    sessionStorage.setItem(SCREEN_STORAGE_KEY, newScreen);
+  }
 
   // Workflow state
   const [role, setRole] = useState("Field Operations Personnel");
@@ -107,14 +115,17 @@ export default function App() {
           try {
             const dashRes = await api.getDashboard(savedSessionId);
             if (isMounted && dashRes) {
-              setAnalysis(dashRes);
-              setScreen("analysis");
+              const currentSavedScreen = sessionStorage.getItem(SCREEN_STORAGE_KEY) || "home";
+              const isScreeningInProgress = ["start", "wellness", "workload", "voice"].includes(currentSavedScreen);
+
+              // Only restore analysis into active state if not in an incomplete screening flow
+              if (!isScreeningInProgress) {
+                setAnalysis(dashRes);
+              }
             }
           } catch {
-            if (isMounted) setScreen("wellness");
+            // Non-fatal
           }
-        } else {
-          if (isMounted) setScreen("wellness");
         }
 
         // Check if any appointments exist for this session
@@ -134,8 +145,9 @@ export default function App() {
         // Stale, malformed, or rejected session ID
         if (isMounted) {
           sessionStorage.removeItem(SESSION_STORAGE_KEY);
+          sessionStorage.removeItem(SCREEN_STORAGE_KEY);
           setSessionId(null);
-          setScreen("home");
+          setScreenState("home");
         }
       }
     }
@@ -149,7 +161,8 @@ export default function App() {
   // Reset or Start Session
   function handleResetSession() {
     sessionStorage.removeItem(SESSION_STORAGE_KEY);
-    setScreen("home");
+    sessionStorage.removeItem(SCREEN_STORAGE_KEY);
+    setScreenState("home");
     setSessionId(null);
     setAnswers(Array(6).fill(null));
     setVoiceResult(null);
@@ -171,8 +184,12 @@ export default function App() {
     setLoadingLabel("Creating protected session…");
     setRole(contextData.role);
     setUnit(contextData.unit);
+    setAnswers(Array(6).fill(null));
+    setAnalysis(null);
+    setVoiceResult(null);
     try {
       sessionStorage.removeItem(SESSION_STORAGE_KEY);
+      sessionStorage.removeItem(SCREEN_STORAGE_KEY);
       const res = await api.createSession(true);
       sessionStorage.setItem(SESSION_STORAGE_KEY, res.session_id);
       setSessionId(res.session_id);
@@ -399,12 +416,25 @@ export default function App() {
         <Navigation
           screen={screen}
           setScreen={setScreen}
-          hasAnalysis={Boolean(analysis)}
+          hasAnalysis={Boolean(analysis) && screen !== "wellness" && screen !== "start"}
         />
       )}
 
       <main style={{ flex: 1, display: "flex", flexDirection: "column" }}>
-        {screen === "home" && <HomeScreen onStart={() => (sessionId ? setScreen("wellness") : setScreen("start"))} />}
+        {screen === "home" && (
+          <HomeScreen
+            onStart={() => {
+              if (sessionId) {
+                setAnswers(Array(6).fill(null));
+                setAnalysis(null);
+                setVoiceResult(null);
+                setScreen("wellness");
+              } else {
+                setScreen("start");
+              }
+            }}
+          />
+        )}
 
         {screen === "start" && (
           <StartScreen
@@ -451,16 +481,27 @@ export default function App() {
         )}
 
         {screen === "analysis" && (
-          <AnalysisScreen
-            analysis={analysis}
-            answers={answers}
-            workload={workload}
-            voiceResult={voiceResult}
-            onNavigateToChat={() => setScreen("chat")}
-            onNavigateToMood={() => setScreen("mood")}
-            onOpenResearchModal={() => setIsResearchModalOpen(true)}
-            onNavigateToDoctors={() => setScreen("doctors")}
-          />
+          analysis ? (
+            <AnalysisScreen
+              analysis={analysis}
+              answers={answers}
+              workload={workload}
+              voiceResult={voiceResult}
+              onNavigateToChat={() => setScreen("chat")}
+              onNavigateToMood={() => setScreen("mood")}
+              onOpenResearchModal={() => setIsResearchModalOpen(true)}
+              onNavigateToDoctors={() => setScreen("doctors")}
+            />
+          ) : (
+            <WellnessScreen
+              answers={answers}
+              setAnswers={setAnswers}
+              onNext={handleSaveWellness}
+              onBack={() => setScreen("start")}
+              loading={loading}
+              error="Please complete your wellbeing check-in first."
+            />
+          )
         )}
 
         {screen === "doctors" && (

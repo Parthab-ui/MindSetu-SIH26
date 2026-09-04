@@ -43,3 +43,6 @@ backend/ml/data/
 .neon
 
 .env*
+
+# Archives
+*.zip
